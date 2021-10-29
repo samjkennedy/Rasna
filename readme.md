@@ -1,4 +1,4 @@
-#Bixbite
+# Bixbite
 
 Bixbite is my attempt at making a working high-level programming language.
 
@@ -10,9 +10,9 @@ Bixbite is planned to be:
 - [ ] Type Oriented
 - [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Bixbite)
 
-##Features
+## Features
 
-###Loops
+### Loops
 
 Simple programs that print numbers from 0 to 99 in an ascending order:
 
@@ -104,13 +104,13 @@ Implemented:
    - [ ] simulation
    - [ ] compilation
    
-##Planned Features
+## Planned Features
 
 - Primitive types like `Int`, `Num`, `Str`, `Bool`, and `Array`
 - Custom Type system
 - Function declarations and calls
 
-##Acknowledgements
+## Acknowledgements
 
 The architecture of this compiler is heavily based on the one built by Immo Landwerth in his Building a Compiler series:
 
