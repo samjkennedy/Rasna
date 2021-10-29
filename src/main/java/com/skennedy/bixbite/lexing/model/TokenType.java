@@ -9,12 +9,13 @@ public enum TokenType {
     IDENTIFIER(null),
     COMMENT(null),
 
+    //Operators
     PLUS("+"),
     MINUS("-"),
     STAR("*"),
     SLASH("/"),
-    PERCENT("%"), //Duplicate with MOD
-    COLON(":"), //Duplicate with MOD
+    PERCENT("%"),
+    COLON(":"),
     EQUALS("="),
     EQUALS_EQUALS("=="),
     BANG_EQUALS("!="),
@@ -23,12 +24,13 @@ public enum TokenType {
     LT("<"),
     LTEQ("<="),
 
+    //Blocks
     OPEN_PARENTHESIS("("),
     CLOSE_PARENTHESIS(")"),
     OPEN_CURLY_BRACE("{"),
     CLOSE_CURLY_BRACE("}"),
-    //SEMICOLON(";"), //Not needed
 
+    //Keywords
     OR_KEYWORD("or"),
     AND_KEYWORD("and"),
     IF_KEYWORD("if"),
@@ -38,12 +40,21 @@ public enum TokenType {
     TO_KEYWORD("to"),
     BY_KEYWORD("by"),
     MOD_KEYWORD("mod"),
+    TRUE_KEYWORD("true"),
+    FALSE_KEYWORD("false"),
+
+    //Types
     VAR_KEYWORD("var"), //Temporary until we add types
+    INT_KEYWORD("Int"),
+    NUM_KEYWORD("Num"),
+    BOOL_KEYWORD("Bool"),
     CONST_KEYWORD("const"),
 
+    //Intrinsics
     PRINT_INTR("print"),
     TYPEOF_INTR("typeof"),
 
+    //Other
     BAD_TOKEN(null),
     EOF_TOKEN(null);
 

@@ -44,6 +44,10 @@ public class Lexer {
                     if (tokenType == TokenType.IDENTIFIER) {
                         //TODO: This feels like an inelegant way to deal with identifiers
                         tokens.add(new Token(tokenType, new Location(lineNumber, start), tokenText));
+                    } else if (tokenType == TokenType.TRUE_KEYWORD) {
+                        tokens.add(new Token(tokenType, new Location(lineNumber, start), true));
+                    } else if (tokenType == TokenType.FALSE_KEYWORD) {
+                        tokens.add(new Token(tokenType, new Location(lineNumber, start), false));
                     } else {
                         tokens.add(new Token(tokenType, new Location(lineNumber, start)));
                     }
