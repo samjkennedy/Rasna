@@ -1,4 +1,4 @@
-var i = 10 //To prevent const folding
+Int i = 10 //To prevent const folding
 print(i + 1)
 print(i - 1)
 print(i * 2)
