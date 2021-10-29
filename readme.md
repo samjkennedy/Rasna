@@ -17,13 +17,13 @@ Lazuli is planned to be:
 Simple programs that print numbers from 0 to 99 in an ascending order:
 
 ```javascript
-for (var N = 0 to 100) {
+for (Int N = 0 to 100) {
     print(N)
 }
 ```
 
 ```javascript
-var N = 0
+Int N = 0
 while (N < 100) {
     print(N)
     N = N + 1
@@ -38,10 +38,10 @@ Implemented:
 
 Lazuli features **Subset Notation** where an expression can be defined for a specific **Subset** of its full domain. 
 
-For example with variables:
+For example with Intiables:
 
 ```javascript
-var i : (i mod 2 == 0) = 0 //variable i can only contain the set of even integers
+Int i : (i mod 2 == 0) = 0 //Intiable i can only contain the set of even integers
 ...
 i = 3 //runtime error
 ```
@@ -49,7 +49,7 @@ i = 3 //runtime error
 This can be combined with for expressions to loop over only a **specific subset** of the range:
 
 ```javascript
-for (var N = 0 to 10 : N % 2 == 0) {
+for (Int N = 0 to 10 : N % 2 == 0) {
     print(N) //prints 0, 2, 4, 6, 8
 }
 ```
@@ -60,15 +60,15 @@ Implemented:
 
 ### Everything is an expression
 
-In Lazuli, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a variable:
+In Lazuli, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
 
 ```javascript
-var i = if (x > y) 1 else 2
+Int i = if (x > y) 1 else 2
 ```
 If x > y then i will be assigned the value 1, else 2. If the body of the if is multiline, only the last line will be returned:
 
 ```javascript
-var i = if (x > y) {
+Int i = if (x > y) {
     x = x + 1
     1
 } else {
@@ -86,7 +86,7 @@ This extends to loops as well, whose return type is an `Array`:
 
 ```javascript
 //Assigns x to an Array of Ints from 0 to 99
-var x = for (var N = 0 to 100) {
+Int x = for (Int N = 0 to 100) {
     N
 }
 ```
@@ -95,7 +95,7 @@ These act as normal for loops and can contain multiple lines, as with if express
 
 ```javascript
 //Assigns x to an Array of the squares of all even numbers from 0 to 99
-var x = for (var N = 0 to 100 : N % 2 == 0) {
+Int x = for (Int N = 0 to 100 : N % 2 == 0) {
     N * N
 }
 ```

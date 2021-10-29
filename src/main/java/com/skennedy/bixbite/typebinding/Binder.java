@@ -85,7 +85,7 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
         BoundExpression initialiser = bind(forExpression.getInitialiser());
 
-        TypeSymbol type = parseType(forExpression.getVarKeyword(), initialiser);
+        TypeSymbol type = parseType(forExpression.getVarKeyword());
 
         if (!type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
@@ -115,10 +115,8 @@ public class Binder {
         return new BoundForExpression(variable, initialiser, terminator, step, range, body);
     }
 
-    private TypeSymbol parseType(IdentifierExpression keyword, BoundExpression initialiser) {
+    private TypeSymbol parseType(IdentifierExpression keyword) {
         switch (keyword.getTokenType()) {
-            case VAR_KEYWORD:
-                return initialiser.getType();
             case INT_KEYWORD:
                 return TypeSymbol.INT;
             case BOOL_KEYWORD:
@@ -229,7 +227,7 @@ public class Binder {
             assert range.getType().isAssignableFrom(TypeSymbol.BOOL);
         }
 
-        TypeSymbol type = parseType(variableDeclarationExpression.getDeclarationKeyword(), initialiser);
+        TypeSymbol type = parseType(variableDeclarationExpression.getDeclarationKeyword());
 
         if (!type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));

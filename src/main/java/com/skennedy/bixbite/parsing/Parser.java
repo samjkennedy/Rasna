@@ -72,7 +72,6 @@ public class Parser {
                 return parseWhileExpression();
             case FOR_KEYWORD:
                 return parseForExpression();
-            case VAR_KEYWORD:
             case INT_KEYWORD:
             case BOOL_KEYWORD:
             case NUM_KEYWORD:
@@ -137,9 +136,6 @@ public class Parser {
         }
         IdentifierExpression declarationKeyword;
         switch (current().getTokenType()) {
-            case VAR_KEYWORD:
-                declarationKeyword = matchToken(TokenType.VAR_KEYWORD);
-                break;
             case INT_KEYWORD:
                 declarationKeyword = matchToken(TokenType.INT_KEYWORD);
                 break;
