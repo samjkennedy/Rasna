@@ -9,6 +9,7 @@ import java.util.Iterator;
 
 public class VariableDeclarationExpression extends Expression {
 
+    private final IdentifierExpression constKeyword;
     private final IdentifierExpression declarationKeyword;
     private final IdentifierExpression identifier;
     private final IdentifierExpression colon;
@@ -16,7 +17,8 @@ public class VariableDeclarationExpression extends Expression {
     private final IdentifierExpression equals;
     private final Expression initialiser;
 
-    public VariableDeclarationExpression(IdentifierExpression declarationKeyword, IdentifierExpression identifier, IdentifierExpression colon, Expression range, IdentifierExpression equals, Expression initialiser) {
+    public VariableDeclarationExpression(IdentifierExpression constKeyword, IdentifierExpression declarationKeyword, IdentifierExpression identifier, IdentifierExpression colon, Expression range, IdentifierExpression equals, Expression initialiser) {
+        this.constKeyword = constKeyword;
         this.declarationKeyword = declarationKeyword;
         this.identifier = identifier;
         this.colon = colon;
@@ -32,7 +34,11 @@ public class VariableDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) declarationKeyword, identifier, equals, initialiser).iterator();
+        return Arrays.asList((SyntaxNode) constKeyword, declarationKeyword, identifier, equals, initialiser).iterator();
+    }
+
+    public IdentifierExpression getConstKeyword() {
+        return constKeyword;
     }
 
     public IdentifierExpression getDeclarationKeyword() {

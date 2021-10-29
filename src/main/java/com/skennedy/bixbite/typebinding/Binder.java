@@ -234,10 +234,10 @@ public class Binder {
         if (!type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
         }
-        VariableSymbol variable = getVariableSymbol(type, identifier, range, false);
+        VariableSymbol variable = getVariableSymbol(type, identifier, range, variableDeclarationExpression.getConstKeyword() != null);
 
         currentScope.reassignVariable((String) identifier.getValue(), variable);
-        return new BoundVariableDeclarationExpression(variable, range, initialiser, false);
+        return new BoundVariableDeclarationExpression(variable, range, initialiser, variableDeclarationExpression.getConstKeyword() != null);
     }
 
     private BoundExpression bindWhileExpression(WhileExpression whileExpression) {

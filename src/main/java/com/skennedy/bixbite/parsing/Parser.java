@@ -131,6 +131,10 @@ public class Parser {
 
     //TODO: This is a declaration AND assignment, currently cannot declare a variable without an assignment
     private Expression parseVariableDeclarationExpression() {
+        IdentifierExpression constKeyword = null;
+        if (current().getTokenType() == TokenType.CONST_KEYWORD) {
+           constKeyword = matchToken(TokenType.CONST_KEYWORD);
+        }
         IdentifierExpression declarationKeyword;
         switch (current().getTokenType()) {
             case VAR_KEYWORD:
@@ -144,9 +148,6 @@ public class Parser {
                 break;
             case NUM_KEYWORD:
                 declarationKeyword = matchToken(TokenType.NUM_KEYWORD);
-                break;
-            case CONST_KEYWORD:
-                declarationKeyword = matchToken(TokenType.CONST_KEYWORD);
                 break;
             default:
                 throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
@@ -163,7 +164,7 @@ public class Parser {
         IdentifierExpression equals = matchToken(TokenType.EQUALS);
         Expression initialiser = parseExpression();
 
-        return new VariableDeclarationExpression(declarationKeyword, identifier, colon, range, equals, initialiser);
+        return new VariableDeclarationExpression(constKeyword, declarationKeyword, identifier, colon, range, equals, initialiser);
     }
 
     private Expression parseWhileExpression() {

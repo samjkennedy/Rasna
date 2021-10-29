@@ -1,6 +1,4 @@
-Bool b = false
+const Bool b = true
 if (b) {
     print(1)
-} else {
-    print(2)
 }
