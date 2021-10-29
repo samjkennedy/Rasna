@@ -44,7 +44,6 @@ public enum TokenType {
     FALSE_KEYWORD("false"),
 
     //Types
-    VAR_KEYWORD("var"), //Temporary until we add types
     INT_KEYWORD("Int"),
     NUM_KEYWORD("Num"),
     BOOL_KEYWORD("Bool"),
