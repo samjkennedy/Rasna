@@ -5,7 +5,7 @@ Bixbite is my attempt at making a working high-level programming language.
 Bixbite is planned to be:
 - [x] Compiled to Java Bytecode
 - [ ] Turing-complete
-- [ ] Statically typed
+- [x] Statically typed
 - [ ] Everything is an expression (everything can be assigned, see Examples)
 - [ ] Type Oriented
 - [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Bixbite)
@@ -32,7 +32,7 @@ while (N < 100) {
 
 Implemented:
    - [x] simulation
-   - [ ] compilation
+   - [x] compilation
 
 ### Subset Notation
 

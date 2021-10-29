@@ -1,10 +1,11 @@
 package com.skennedy.bixbite;
 
 import com.skennedy.assertclauses.Assert;
+import com.skennedy.bixbite.graphing.LowLevelTreeGrapher;
 import com.skennedy.bixbite.simulation.Simulator;
 import com.skennedy.bixbite.compilation.JavaBytecodeCompiler;
 import com.skennedy.bixbite.diagnostics.Error;
-import com.skennedy.bixbite.graphing.Grapher;
+import com.skennedy.bixbite.graphing.HighLevelTreeGrapher;
 import com.skennedy.bixbite.lowering.BoundProgramRewriter;
 import com.skennedy.bixbite.lowering.Lowerer;
 import com.skennedy.bixbite.parsing.Parser;
@@ -90,17 +91,23 @@ public class Bixbite {
             }
 
             //TODO: make this a flag
-            boolean graphProgram = true;
+            boolean graphProgram = false;
             //Write first in case of errors in compilation or simulation
             if (graphProgram) {
-                log.info("Writing AST graph");
-                Grapher grapher = new Grapher();
-                grapher.graphAST(boundProgram);
+                log.info("Writing high level AST graph");
+                HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
+                highLevelTreeGrapher.graphAST(boundProgram);
             }
 
             //Lower the program to a linear series of instructions
             BoundProgramRewriter rewriter = new Lowerer();
             boundProgram = rewriter.rewrite(boundProgram);
+
+            if (graphProgram) {
+                log.info("Writing low level AST graph");
+                LowLevelTreeGrapher lowLevelTreeGrapher = new LowLevelTreeGrapher();
+                lowLevelTreeGrapher.graphAST(boundProgram);
+            }
 
             switch (mode) {
                 case SIMULATION:

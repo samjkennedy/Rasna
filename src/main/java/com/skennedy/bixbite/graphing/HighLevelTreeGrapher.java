@@ -32,11 +32,11 @@ import java.util.List;
 import static guru.nidi.graphviz.model.Factory.mutGraph;
 import static guru.nidi.graphviz.model.Factory.mutNode;
 
-public class Grapher {
+public class HighLevelTreeGrapher {
 
     private static int id;
 
-    public Grapher() {
+    public HighLevelTreeGrapher() {
         Graphviz.useEngine(new GraphvizV8Engine());
         id = 0;
     }
@@ -45,7 +45,7 @@ public class Grapher {
         MutableGraph graph = mutGraph("Graph Test")
                 .setDirected(true).use((gr, ctx) -> graphProgram(program));
 
-        Graphviz.fromGraph(graph).render(Format.SVG).toFile(new File("graphs/test.svg"));
+        Graphviz.fromGraph(graph).render(Format.SVG).toFile(new File("graphs/highlevel.svg"));
     }
 
     private void graphProgram(BoundProgram program) {
@@ -95,10 +95,6 @@ public class Grapher {
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
-    }
-
-    private MutableNode graphGoto(BoundGotoExpression gotoExpression) {
-        return mutNode(Label.of(gotoExpression.getLabel().getName())).add(Label.of(gotoExpression.getLabel().getName())).add(Shape.BOX);
     }
 
     private MutableNode graphAssignmentExpression(BoundAssignmentExpression assignmentExpression) {

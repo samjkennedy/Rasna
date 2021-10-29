@@ -28,7 +28,7 @@ public class Lexer {
                     tokens.add(new Token(TokenType.WHITESPACE, new Location(lineNumber, start)));
                 } else if (Character.isDigit(current(line))) {
 
-                    tokens.add(new Token(TokenType.INT_LITERAL, new Location(lineNumber, cursor), parseInteger(line)));
+                    tokens.add(new Token(TokenType.INT_LITERAL, new Location(lineNumber, cursor), parseNum(line)));
 
                 } else if (Character.isAlphabetic(current(line)) || current(line) == '_') {
                     int start = cursor;
@@ -144,7 +144,7 @@ public class Lexer {
         return tokens;
     }
 
-    private int parseInteger(String line) {
+    private int parseNum(String line) {
 
         int start = cursor;
 

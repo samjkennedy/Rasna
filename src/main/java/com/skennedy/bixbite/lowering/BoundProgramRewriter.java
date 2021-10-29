@@ -109,6 +109,20 @@ public abstract class BoundProgramRewriter {
             range = rewriteExpression(assignmentExpression.getRange());
         }
 
+        if (expression instanceof BoundBlockExpression) {
+            List<BoundExpression> expressions = ((BoundBlockExpression)expression).getExpressions();
+
+            for (int i = 0; i < expressions.size(); i++) {
+                BoundExpression expr = expressions.get(i);
+                if (expr instanceof BoundLiteralExpression) {
+                    expressions.set(i, new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getRange(), assignmentExpression.getExpression()));
+                } else if (expr instanceof BoundBinaryExpression) {
+                    expressions.set(i, new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getRange(), expr));
+                }
+            }
+            return new BoundBlockExpression(expressions);
+        }
+
         if (expression == assignmentExpression.getExpression() && range == assignmentExpression.getRange()) {
             return assignmentExpression;
         }

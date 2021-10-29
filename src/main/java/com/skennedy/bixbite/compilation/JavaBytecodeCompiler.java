@@ -1,21 +1,21 @@
 package com.skennedy.bixbite.compilation;
 
 import com.skennedy.bixbite.exceptions.UndefinedVariableException;
+import com.skennedy.bixbite.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.bixbite.lowering.BoundConditionalGotoExpression;
 import com.skennedy.bixbite.lowering.BoundGotoExpression;
 import com.skennedy.bixbite.lowering.BoundLabel;
 import com.skennedy.bixbite.lowering.BoundLabelExpression;
-import com.skennedy.bixbite.typebinding.BoundProgram;
-import com.skennedy.bixbite.typebinding.VariableSymbol;
-import com.skennedy.bixbite.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.bixbite.typebinding.BoundAssignmentExpression;
 import com.skennedy.bixbite.typebinding.BoundBinaryExpression;
 import com.skennedy.bixbite.typebinding.BoundBlockExpression;
 import com.skennedy.bixbite.typebinding.BoundExpression;
 import com.skennedy.bixbite.typebinding.BoundLiteralExpression;
 import com.skennedy.bixbite.typebinding.BoundPrintExpression;
+import com.skennedy.bixbite.typebinding.BoundProgram;
 import com.skennedy.bixbite.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.bixbite.typebinding.BoundVariableExpression;
+import com.skennedy.bixbite.typebinding.VariableSymbol;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,7 +28,28 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
+import static org.objectweb.asm.Opcodes.ACC_STATIC;
+import static org.objectweb.asm.Opcodes.ACC_SUPER;
+import static org.objectweb.asm.Opcodes.BIPUSH;
+import static org.objectweb.asm.Opcodes.F_NEW;
+import static org.objectweb.asm.Opcodes.F_SAME;
+import static org.objectweb.asm.Opcodes.GETSTATIC;
+import static org.objectweb.asm.Opcodes.GOTO;
+import static org.objectweb.asm.Opcodes.IADD;
+import static org.objectweb.asm.Opcodes.IAND;
+import static org.objectweb.asm.Opcodes.IDIV;
+import static org.objectweb.asm.Opcodes.IFLT;
+import static org.objectweb.asm.Opcodes.ILOAD;
+import static org.objectweb.asm.Opcodes.IMUL;
+import static org.objectweb.asm.Opcodes.INTEGER;
+import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
+import static org.objectweb.asm.Opcodes.IOR;
+import static org.objectweb.asm.Opcodes.IREM;
+import static org.objectweb.asm.Opcodes.ISTORE;
+import static org.objectweb.asm.Opcodes.ISUB;
+import static org.objectweb.asm.Opcodes.RETURN;
+import static org.objectweb.asm.Opcodes.V1_8;
 
 public class JavaBytecodeCompiler {
 
@@ -49,7 +70,7 @@ public class JavaBytecodeCompiler {
 
         // Variable0 is reserved for args[] in :  `main(String[] var0)`
         this.variableIndex = 1;
-        this.variableCount = 1;
+        this.variableCount = 0;
         variables = new HashMap<>();
         boundLabelToProgramLabel = new HashMap<>();
     }
@@ -95,7 +116,7 @@ public class JavaBytecodeCompiler {
 
             case ASSIGNMENT_EXPRESSION:
 
-                visit((BoundAssignmentExpression)expression);
+                visit((BoundAssignmentExpression) expression);
                 break;
             case LITERAL:
 
@@ -124,10 +145,10 @@ public class JavaBytecodeCompiler {
                 visit((BoundPrintExpression) expression);
                 break;
             case CONDITIONAL_GOTO:
-                visit((BoundConditionalGotoExpression)expression);
+                visit((BoundConditionalGotoExpression) expression);
                 break;
             case GOTO:
-                visit((BoundGotoExpression)expression);
+                visit((BoundGotoExpression) expression);
                 break;
             case LABEL:
                 BoundLabelExpression labelExpression = (BoundLabelExpression) expression;
@@ -138,7 +159,8 @@ public class JavaBytecodeCompiler {
                 }
                 label = boundLabelToProgramLabel.get(labelExpression.getLabel());
 
-                mainMethodVisitor.visitLabel(label);
+                visit(label, 0);
+
                 break;
             case NOOP:
                 break;
@@ -235,23 +257,51 @@ public class JavaBytecodeCompiler {
                 //Seems a little odd but it compares to 0
                 mainMethodVisitor.visitInsn(ISUB);
                 break;
+            case BOOLEAN_OR:
+                mainMethodVisitor.visitInsn(IOR);
+                break;
+            case BOOLEAN_AND:
+                mainMethodVisitor.visitInsn(IAND);
+                break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
         }
     }
 
     private void visit(BoundConditionalGotoExpression conditionalGotoExpression) {
-        //Assuming only LT right now
+
+        int varsBefore = variableCount;
         visit(conditionalGotoExpression.getCondition());
+        int varsAfter = variableCount;
 
         Label label;
         if (boundLabelToProgramLabel.containsKey(conditionalGotoExpression.getLabel())) {
             label = boundLabelToProgramLabel.get(conditionalGotoExpression.getLabel());
         } else {
             label = new Label();
+            visit(label, varsAfter - varsBefore);
         }
+
+        //Assuming only LT right now
         //TODO other ops
         mainMethodVisitor.visitJumpInsn(IFLT, label);
+    }
+
+    private void visit(Label label, int stackCount) {
+        mainMethodVisitor.visitLabel(label);
+
+        //I feel like this shouldn't work but hey ho, magic
+
+        Object[] local = new Object[variableCount + 1];
+        local[0] = "[Ljava/lang/String;";
+        for (int i = 1; i < local.length; i++) {
+            local[i] = INTEGER; //TODO we only have integers now
+        }
+        Object[] stack = new Object[stackCount];
+        for (int i = 0; i < stack.length; i++) {
+            stack[i] = INTEGER; //TODO we only have integers now
+        }
+        mainMethodVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
     }
 
     private void visit(BoundGotoExpression gotoExpression) {
@@ -264,6 +314,7 @@ public class JavaBytecodeCompiler {
             label = new Label();
         }
         boundLabelToProgramLabel.put(boundLabel, label);
+
         mainMethodVisitor.visitJumpInsn(GOTO, label);
     }
 
