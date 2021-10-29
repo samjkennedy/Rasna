@@ -112,7 +112,7 @@
                         <configuration>
                             <archive>
                                 <manifest>
-                                    <mainClass>com.skennedy.bixbite.Bixbite</mainClass>
+                                    <mainClass>com.skennedy.bixbite.Lazuli</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>

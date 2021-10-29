@@ -25,11 +25,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 
-public class Bixbite {
+public class Lazuli {
 
-    private static final String BIX_EXT = "bx";
+    private static final String LZL_EXT = "lzl";
 
-    private static final Logger log = LogManager.getLogger(Bixbite.class);
+    private static final Logger log = LogManager.getLogger(Lazuli.class);
 
     public static void main(String[] args) throws IOException {
         Flag<String> modeFlag = Flags.stringFlag()
@@ -45,10 +45,10 @@ public class Bixbite {
 
         Mode mode;
         if ("sim".equals(modeFlag.getValue())) {
-            log.info("Bixbite is in simulation mode");
+            log.info("Lazuli is in simulation mode");
             mode = Mode.SIMULATION;
         } else if ("com".equals(modeFlag.getValue())) {
-            log.info("Bixbite is in compilation mode");
+            log.info("Lazuli is in compilation mode");
             mode = Mode.COMPILATION;
         } else {
             Flags.usage();
@@ -61,8 +61,8 @@ public class Bixbite {
         String fileName = fileParts[0];
         String fileExt = fileParts[1];
 
-        if (!BIX_EXT.equals(fileExt)) {
-            throw new IllegalArgumentException("File must be a ." + BIX_EXT + " file.");
+        if (!LZL_EXT.equals(fileExt)) {
+            throw new IllegalArgumentException("File must be a ." + LZL_EXT + " file.");
         }
 
         Path path = Paths.get(fileNameWithExt);

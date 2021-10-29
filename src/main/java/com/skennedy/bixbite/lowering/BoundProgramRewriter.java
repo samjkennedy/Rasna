@@ -171,6 +171,8 @@ public abstract class BoundProgramRewriter {
             elseBody = rewriteExpression(boundIfExpression.getElseBody());
         }
 
+        //TODO: in the case of a const variable expression (const variable lol) currently cannot determine the const value + errors here,
+        //TODO: FIX
         if (condition.getBoundExpressionType() == BoundExpressionType.LITERAL || condition.getBoundExpressionType() == BoundExpressionType.VARIABLE_EXPRESSION && ((BoundVariableExpression) condition).getVariable().isReadOnly()) {
             boolean constValue = (boolean) calculateConstant(condition);
             if (constValue) {

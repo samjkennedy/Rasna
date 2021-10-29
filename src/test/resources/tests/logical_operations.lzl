@@ -1,4 +1,4 @@
-var i = 1
+Int i = 1
 print(i > 1)
 print(i >= 1)
 print(i < 1)
