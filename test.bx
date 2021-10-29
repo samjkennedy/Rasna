@@ -1,3 +1,4 @@
-for (var N = 0 to 10 : N > 10) {
-    print(N)
+const Bool b = true
+if (b) {
+    print(1)
 }

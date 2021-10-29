@@ -1,12 +1,12 @@
 package com.skennedy.bixbite.parsing;
 
+import com.skennedy.bixbite.diagnostics.Error;
 import com.skennedy.bixbite.lexing.Lexer;
+import com.skennedy.bixbite.lexing.model.Token;
 import com.skennedy.bixbite.lexing.model.TokenType;
 import com.skennedy.bixbite.parsing.model.IdentifierExpression;
 import com.skennedy.bixbite.parsing.model.OpType;
 import com.skennedy.bixbite.parsing.model.OperatorPrecedence;
-import com.skennedy.bixbite.diagnostics.Error;
-import com.skennedy.bixbite.lexing.model.Token;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,6 +54,10 @@ public class Parser {
         switch (current().getTokenType()) {
             case INT_LITERAL:
                 return matchToken(TokenType.INT_LITERAL);
+            case TRUE_KEYWORD:
+                return matchToken(TokenType.TRUE_KEYWORD);
+            case FALSE_KEYWORD:
+                return matchToken(TokenType.FALSE_KEYWORD);
             case OPEN_CURLY_BRACE:
                 return parseBlockExpression();
             case OPEN_PARENTHESIS:
@@ -69,6 +73,9 @@ public class Parser {
             case FOR_KEYWORD:
                 return parseForExpression();
             case VAR_KEYWORD:
+            case INT_KEYWORD:
+            case BOOL_KEYWORD:
+            case NUM_KEYWORD:
             case CONST_KEYWORD:
                 return parseVariableDeclarationExpression();
             case IDENTIFIER:
@@ -82,10 +89,7 @@ public class Parser {
 
         IdentifierExpression forKeyword = matchToken(TokenType.FOR_KEYWORD);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        IdentifierExpression varKeyword = matchToken(TokenType.VAR_KEYWORD);
-        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
-        IdentifierExpression equals = matchToken(TokenType.EQUALS);
-        Expression initialiser = parseExpression();
+        VariableDeclarationExpression variableDeclarationExpression = (VariableDeclarationExpression)parseVariableDeclarationExpression();
         IdentifierExpression toKeyword = matchToken(TokenType.TO_KEYWORD);
         Expression terminator = parseExpression();
 
@@ -104,7 +108,7 @@ public class Parser {
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
         BlockExpression body = parseBlockExpression();
 
-        return new ForExpression(forKeyword, openParen, varKeyword, identifier, equals, initialiser, toKeyword, terminator, byKeyword, step, range, closeParen, body);
+        return new ForExpression(forKeyword, openParen, variableDeclarationExpression.getDeclarationKeyword(), variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getEquals(), variableDeclarationExpression.getInitialiser(), toKeyword, terminator, byKeyword, step, range, closeParen, body);
     }
 
     private Expression parseRangeExpression() {
@@ -127,11 +131,26 @@ public class Parser {
 
     //TODO: This is a declaration AND assignment, currently cannot declare a variable without an assignment
     private Expression parseVariableDeclarationExpression() {
+        IdentifierExpression constKeyword = null;
+        if (current().getTokenType() == TokenType.CONST_KEYWORD) {
+           constKeyword = matchToken(TokenType.CONST_KEYWORD);
+        }
         IdentifierExpression declarationKeyword;
-        if (current().getTokenType() == TokenType.VAR_KEYWORD) {
-            declarationKeyword = matchToken(TokenType.VAR_KEYWORD);
-        } else {
-            declarationKeyword = matchToken(TokenType.CONST_KEYWORD);
+        switch (current().getTokenType()) {
+            case VAR_KEYWORD:
+                declarationKeyword = matchToken(TokenType.VAR_KEYWORD);
+                break;
+            case INT_KEYWORD:
+                declarationKeyword = matchToken(TokenType.INT_KEYWORD);
+                break;
+            case BOOL_KEYWORD:
+                declarationKeyword = matchToken(TokenType.BOOL_KEYWORD);
+                break;
+            case NUM_KEYWORD:
+                declarationKeyword = matchToken(TokenType.NUM_KEYWORD);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
         }
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
@@ -145,7 +164,7 @@ public class Parser {
         IdentifierExpression equals = matchToken(TokenType.EQUALS);
         Expression initialiser = parseExpression();
 
-        return new VariableDeclarationExpression(declarationKeyword, identifier, colon, range, equals, initialiser);
+        return new VariableDeclarationExpression(constKeyword, declarationKeyword, identifier, colon, range, equals, initialiser);
     }
 
     private Expression parseWhileExpression() {
@@ -299,8 +318,8 @@ public class Parser {
 
     private Token nextToken() {
         if (position >= parsedTokens.size()) {
-            return parsedTokens.get(parsedTokens.size()-1); //EOF
+            return parsedTokens.get(parsedTokens.size() - 1); //EOF
         }
-        return parsedTokens.get(position+1);
+        return parsedTokens.get(position + 1);
     }
 }

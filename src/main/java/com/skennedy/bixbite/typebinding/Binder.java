@@ -85,7 +85,14 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
         BoundExpression initialiser = bind(forExpression.getInitialiser());
 
-        VariableSymbol variable = new VariableSymbol((String) forExpression.getIdentifier().getValue(), initialiser.getType(), null, true);
+        TypeSymbol type = parseType(forExpression.getVarKeyword(), initialiser);
+
+        if (!type.isAssignableFrom(initialiser.getType())) {
+            errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
+        }
+
+        VariableSymbol variable = getVariableSymbol(type, forExpression.getIdentifier(), null, true);
+
         try {
             currentScope.declareVariable((String) forExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
@@ -108,10 +115,29 @@ public class Binder {
         return new BoundForExpression(variable, initialiser, terminator, step, range, body);
     }
 
+    private TypeSymbol parseType(IdentifierExpression keyword, BoundExpression initialiser) {
+        switch (keyword.getTokenType()) {
+            case VAR_KEYWORD:
+                return initialiser.getType();
+            case INT_KEYWORD:
+                return TypeSymbol.INT;
+            case BOOL_KEYWORD:
+                return TypeSymbol.BOOL;
+            case NUM_KEYWORD:
+                return TypeSymbol.NUM;
+            default:
+                throw new IllegalStateException("Unexpected value: " + keyword.getTokenType());
+        }
+    }
+
+    private VariableSymbol getVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression range, boolean readOnly) {
+        return new VariableSymbol((String) identifier.getValue(), type, range, readOnly);
+    }
+
     private BoundExpression bindIfExpression(IfExpression ifExpression) {
 
         BoundExpression condition = bind(ifExpression.getCondition());
-        if (!condition.getType().equals(TypeSymbol.BOOL)) {
+        if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
             errors.add(Error.raiseTypeMismatch(TypeSymbol.BOOL, condition.getType()));
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
@@ -138,6 +164,10 @@ public class Binder {
         if (identifierExpression.getTokenType() == TokenType.INT_LITERAL) {
 
             return new BoundLiteralExpression(identifierExpression.getValue());
+        } else if (identifierExpression.getTokenType() == TokenType.TRUE_KEYWORD) {
+            return new BoundLiteralExpression(true);
+        } else if (identifierExpression.getTokenType() == TokenType.FALSE_KEYWORD) {
+            return new BoundLiteralExpression(false);
         }
 
         Optional<VariableSymbol> variable = currentScope.tryLookup((String) identifierExpression.getValue());
@@ -173,7 +203,7 @@ public class Binder {
             throw new ReadOnlyVariableException(variable.getName());
         }
 
-        if (!variable.getType().equals(initialiser.getType())) {
+        if (!variable.getType().isAssignableFrom(initialiser.getType())) {
             throw new TypeMismatchException(variable.getType(), initialiser.getType());
         }
 
@@ -186,10 +216,6 @@ public class Binder {
 
         IdentifierExpression identifier = variableDeclarationExpression.getIdentifier();
 
-        IdentifierExpression declarationKeyword = variableDeclarationExpression.getDeclarationKeyword();
-
-        boolean readOnly = declarationKeyword.getTokenType() == TokenType.CONST_KEYWORD;
-
         //Create placeholder
         try {
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), initialiser.getType(), null, false));
@@ -200,19 +226,24 @@ public class Binder {
         BoundExpression range = null;
         if (variableDeclarationExpression.getRange() != null) {
             range = bind(variableDeclarationExpression.getRange());
-            assert range.getType().equals(TypeSymbol.BOOL);
+            assert range.getType().isAssignableFrom(TypeSymbol.BOOL);
         }
 
-        VariableSymbol variable = new VariableSymbol((String) identifier.getValue(), initialiser.getType(), range, readOnly);
+        TypeSymbol type = parseType(variableDeclarationExpression.getDeclarationKeyword(), initialiser);
+
+        if (!type.isAssignableFrom(initialiser.getType())) {
+            errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
+        }
+        VariableSymbol variable = getVariableSymbol(type, identifier, range, variableDeclarationExpression.getConstKeyword() != null);
 
         currentScope.reassignVariable((String) identifier.getValue(), variable);
-        return new BoundVariableDeclarationExpression(variable, range, initialiser, readOnly);
+        return new BoundVariableDeclarationExpression(variable, range, initialiser, variableDeclarationExpression.getConstKeyword() != null);
     }
 
     private BoundExpression bindWhileExpression(WhileExpression whileExpression) {
 
         BoundExpression condition = bind(whileExpression.getCondition());
-        if (!condition.getType().equals(TypeSymbol.BOOL)) {
+        if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
         BoundBlockExpression body = bindBlockExpression(whileExpression.getBody());

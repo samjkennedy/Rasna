@@ -18,8 +18,13 @@ public class BoundLiteralExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        //TODO: add more types
-        return TypeSymbol.INT;
+        if (value instanceof Integer) {
+            return TypeSymbol.INT;
+        } else if (value instanceof Boolean) {
+            return TypeSymbol.BOOL;
+        } else {
+            throw new IllegalStateException("Unsupported type of literal: " + value.getClass());
+        }
     }
 
     @Override
