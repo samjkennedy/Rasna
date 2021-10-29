@@ -1,0 +1,14 @@
+Error: Unable to initialize main class for_loop
+Caused by: java.lang.VerifyError: Expecting a stackmap frame at branch target 25
+Exception Details:
+  Location:
+    for_loop.main([Ljava/lang/String;)V @4: goto
+  Reason:
+    Expected stackmap frame at this location.
+  Bytecode:
+    0000000: 1000 3601 a700 1515 0136 02b2 000c 1cb6
+    0000010: 0012 1501 1001 6036 0115 0110 0a64 9bff
+    0000020: e910 0036 02a7 0015 1502 3603 b200 0c1d
+    0000030: b600 1215 0210 0260 3602 1502 100a 649b
+    0000040: ffe9 b1                                
+
