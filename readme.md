@@ -1,14 +1,14 @@
-# Bixbite
+# Lazuli ![Lazuli](logo.png?raw=true "Title")
 
-Bixbite is my attempt at making a working high-level programming language.
+Lazuli is my attempt at making a working high-level programming language.
 
-Bixbite is planned to be:
+Lazuli is planned to be:
 - [x] Compiled to Java Bytecode
 - [ ] Turing-complete
 - [x] Statically typed
 - [ ] Everything is an expression (everything can be assigned, see Examples)
 - [ ] Type Oriented
-- [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Bixbite)
+- [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Lazuli)
 
 ## Features
 
@@ -36,7 +36,7 @@ Implemented:
 
 ### Subset Notation
 
-Bixbite features **Subset Notation** where an expression can be defined for a specific **Subset** of its full domain. 
+Lazuli features **Subset Notation** where an expression can be defined for a specific **Subset** of its full domain. 
 
 For example with variables:
 
@@ -60,7 +60,7 @@ Implemented:
 
 ### Everything is an expression
 
-In Bixbite, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a variable:
+In Lazuli, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a variable:
 
 ```javascript
 var i = if (x > y) 1 else 2
