@@ -1,6 +1,0 @@
-for (var N = 0 to 10) {
-    print(N)
-}
-for (var M = 0 to 10 by 2) {
-    print(M)
-}

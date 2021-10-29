@@ -1,3 +1,0 @@
-for (var N = 0 to 100 : N mod 3 == 0 and N mod 5 == 0) {
-    print(N)
-}
