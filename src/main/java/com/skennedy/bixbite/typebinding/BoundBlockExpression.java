@@ -25,7 +25,7 @@ public class BoundBlockExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.ARRAY;
+        return expressions.get(expressions.size()-1).getType();
     }
 
     @Override

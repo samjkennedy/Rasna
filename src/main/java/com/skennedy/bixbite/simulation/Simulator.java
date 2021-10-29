@@ -1,12 +1,12 @@
 package com.skennedy.bixbite.simulation;
 
 import com.skennedy.bixbite.exceptions.UndefinedVariableException;
+import com.skennedy.bixbite.exceptions.VariableAlreadyDeclaredException;
+import com.skennedy.bixbite.exceptions.VariableOutsideRangeException;
 import com.skennedy.bixbite.lowering.BoundConditionalGotoExpression;
 import com.skennedy.bixbite.lowering.BoundGotoExpression;
 import com.skennedy.bixbite.lowering.BoundLabel;
 import com.skennedy.bixbite.lowering.BoundLabelExpression;
-import com.skennedy.bixbite.exceptions.VariableAlreadyDeclaredException;
-import com.skennedy.bixbite.exceptions.VariableOutsideRangeException;
 import com.skennedy.bixbite.typebinding.BoundAssignmentExpression;
 import com.skennedy.bixbite.typebinding.BoundBinaryExpression;
 import com.skennedy.bixbite.typebinding.BoundBinaryOperator;
@@ -19,6 +19,8 @@ import com.skennedy.bixbite.typebinding.BoundTypeofExpression;
 import com.skennedy.bixbite.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.bixbite.typebinding.BoundVariableExpression;
 import com.skennedy.bixbite.typebinding.VariableSymbol;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.PrintStream;
 import java.util.HashMap;
@@ -26,6 +28,8 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Simulator {
+
+    private static final Logger log = LogManager.getLogger(Simulator.class);
 
     private Scope scope;
     private int ip;
@@ -60,6 +64,7 @@ public class Simulator {
 
         while (ip < program.getExpressions().size()) {
             BoundExpression expression = program.getExpressions().get(ip);
+            log.debug(ip + " - " + expression.getBoundExpressionType());
             evaluate(expression);
         }
     }
@@ -69,7 +74,7 @@ public class Simulator {
         Object res = null;
         switch (expression.getBoundExpressionType()) {
             case LITERAL:
-                return ((BoundLiteralExpression) expression).getValue();
+                return  ((BoundLiteralExpression) expression).getValue();
             case VARIABLE_EXPRESSION:
                 return evaluateVariableExpression((BoundVariableExpression) expression);
             case VARIABLE_DECLARATION:
@@ -80,6 +85,7 @@ public class Simulator {
             case BINARY_EXPRESSION:
                 return evaluateBinaryExpression((BoundBinaryExpression) expression);
             case PRINT_INTRINSIC:
+                ip++;
                 evaluatePrintExpression((BoundPrintExpression) expression);
                 return null;
             case TYPEOF_INTRINSIC:
@@ -91,6 +97,9 @@ public class Simulator {
                     ip = labelToIp.get(conditionalGotoExpression.getLabel());
                 } else {
                     ip++;
+                }
+                if (ip >= program.getExpressions().size()) {
+                    return res;
                 }
                 return evaluate(program.getExpressions().get(ip));
             case GOTO:
@@ -171,7 +180,6 @@ public class Simulator {
 
         Object value = evaluate(printExpression.getExpression());
         out.println(value);
-        ip++;
     }
 
     private String evaluateTypeofExpression(BoundTypeofExpression typeofExpression) {
