@@ -6,8 +6,8 @@ Lazuli is planned to be:
 - [x] Compiled to Java Bytecode
 - [ ] Turing-complete
 - [x] Statically typed
-- [ ] Everything is an expression (everything can be assigned, see Examples)
-- [ ] Type Oriented
+- [ ] Everything is an expression (everything can be assigned, see Features)
+- [ ] Type Oriented/Based in set theory (rather than classes there are Types that can be subsetted)
 - [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Lazuli)
 
 ## Features
@@ -104,6 +104,8 @@ Implemented:
    - [ ] simulation
    - [ ] compilation
    
+For more see the examples directory.
+   
 ## Planned Features
 
 - Primitive types like `Int`, `Num`, `Str`, `Bool`, and `Array`
@@ -113,7 +115,6 @@ Implemented:
 ## Acknowledgements
 
 The architecture of this compiler is heavily based on the one built by Immo Landwerth in his Building a Compiler series:
-
-    - Youtube: https://www.youtube.com/c/ImmoLandwerth
-    - Twitter: https://twitter.com/terrajobst
-    - Building a Compiler: https://www.youtube.com/playlist?list=PLRAdsfhKI4OWNOSfS7EUu5GRAVmze1t2y
+- [Youtube](https://www.youtube.com/c/ImmoLandwerth)
+- [Twitter](https://twitter.com/terrajobst)
+- [Building a Compiler](https://www.youtube.com/playlist?list=PLRAdsfhKI4OWNOSfS7EUu5GRAVmze1t2y)
