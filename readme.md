@@ -1,4 +1,5 @@
-# Lazuli ![Lazuli](logo.png?raw=true "Title")
+![](logo.svg)
+# Lazuli
 
 Lazuli is my attempt at making a working high-level programming language.
 
