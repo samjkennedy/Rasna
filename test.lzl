@@ -1,6 +1,3 @@
-for (Int N = 0 to 10) {
-    print(N)
-}
-for (Int M = 0 to 10 by 2) {
-    print(M)
+for (Int x = 0 to 10 | x mod 2 == 0) {
+    print(x)
 }

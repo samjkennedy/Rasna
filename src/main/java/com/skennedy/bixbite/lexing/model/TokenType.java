@@ -16,6 +16,7 @@ public enum TokenType {
     SLASH("/"),
     PERCENT("%"),
     COLON(":"),
+    BAR("|"),
     EQUALS("="),
     EQUALS_EQUALS("=="),
     BANG_EQUALS("!="),
