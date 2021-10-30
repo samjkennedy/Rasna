@@ -22,34 +22,15 @@ import org.apache.logging.log4j.Logger;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.util.Textifier;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
-import static org.objectweb.asm.Opcodes.ACC_STATIC;
-import static org.objectweb.asm.Opcodes.ACC_SUPER;
-import static org.objectweb.asm.Opcodes.BIPUSH;
-import static org.objectweb.asm.Opcodes.F_NEW;
-import static org.objectweb.asm.Opcodes.F_SAME;
-import static org.objectweb.asm.Opcodes.GETSTATIC;
-import static org.objectweb.asm.Opcodes.GOTO;
-import static org.objectweb.asm.Opcodes.IADD;
-import static org.objectweb.asm.Opcodes.IAND;
-import static org.objectweb.asm.Opcodes.IDIV;
-import static org.objectweb.asm.Opcodes.IFLT;
-import static org.objectweb.asm.Opcodes.ILOAD;
-import static org.objectweb.asm.Opcodes.IMUL;
-import static org.objectweb.asm.Opcodes.INTEGER;
-import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
-import static org.objectweb.asm.Opcodes.IOR;
-import static org.objectweb.asm.Opcodes.IREM;
-import static org.objectweb.asm.Opcodes.ISTORE;
-import static org.objectweb.asm.Opcodes.ISUB;
-import static org.objectweb.asm.Opcodes.RETURN;
-import static org.objectweb.asm.Opcodes.V1_8;
+import static org.objectweb.asm.Opcodes.*;
 
 public class JavaBytecodeCompiler {
 
@@ -58,8 +39,11 @@ public class JavaBytecodeCompiler {
     private final ClassWriter classWriter;
 
     private MethodVisitor mainMethodVisitor;
+    private Textifier textifierVisitor;
+
+    //TODO: once we have more than just Int we need to track the types of the variables too
     private int variableIndex;
-    private int variableCount;
+    private int localStackSize;
 
     //TODO: Scopes
     private Map<String, Integer> variables;
@@ -70,12 +54,14 @@ public class JavaBytecodeCompiler {
 
         // Variable0 is reserved for args[] in :  `main(String[] var0)`
         this.variableIndex = 1;
-        this.variableCount = 0;
+        this.localStackSize = 0;
         variables = new HashMap<>();
         boundLabelToProgramLabel = new HashMap<>();
     }
 
     public void compile(BoundProgram program, String outputFileName) throws IOException {
+
+        textifierVisitor = new Textifier();
 
         classWriter.visit(
                 V1_8, // Java 1.8
@@ -85,26 +71,39 @@ public class JavaBytecodeCompiler {
                 "java/lang/Object", // Interface extends Object (Super Class),
                 null // interface names
         );
+        textifierVisitor.visitMainClass(outputFileName);
 
         /** ASM = CODE : public static void main(String args[]). */
         // BEGIN 2: creates a MethodVisitor for the 'main' method
         mainMethodVisitor = classWriter.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
+        textifierVisitor.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
 
         for (BoundExpression expression : program.getExpressions()) {
 
             visit(expression);
         }
         mainMethodVisitor.visitInsn(RETURN);
+        textifierVisitor.visitInsn(RETURN);
 
         //TODO: determine how much memory the program requires and set accordingly
         mainMethodVisitor.visitMaxs(1024, 1024);
+        textifierVisitor.visitMaxs(1024, 1024);
 
         // END 2: Close main()
         mainMethodVisitor.visitEnd();
+        textifierVisitor.visitMethodEnd();
+
         // END 1: Close class()
         classWriter.visitEnd();
+        textifierVisitor.visitClassEnd();
 
         byte[] code = classWriter.toByteArray();
+
+        File bytecodeFile = new File(outputFileName + "_bytecode.txt");
+        bytecodeFile.createNewFile();
+        PrintWriter fileWriter = new PrintWriter(bytecodeFile);
+        textifierVisitor.print(fileWriter);
+        fileWriter.close();
 
         File outputFile = new File(outputFileName + ".class");
         outputFile.createNewFile();
@@ -159,7 +158,7 @@ public class JavaBytecodeCompiler {
                 }
                 label = boundLabelToProgramLabel.get(labelExpression.getLabel());
 
-                visit(label, 0);
+                visit(label, localStackSize);
 
                 break;
             case NOOP:
@@ -173,10 +172,41 @@ public class JavaBytecodeCompiler {
 
         Object value = boundLiteralExpression.getValue();
         if (value instanceof Integer) {
-            mainMethodVisitor.visitIntInsn(BIPUSH, Integer.parseInt(value.toString()));
+            switch ((int)value) {
+                case 0:
+                    mainMethodVisitor.visitInsn(ICONST_0);
+                    textifierVisitor.visitInsn(ICONST_0);
+                    break;
+                case 1:
+                    mainMethodVisitor.visitInsn(ICONST_1);
+                    textifierVisitor.visitInsn(ICONST_1);
+                    break;
+                case 2:
+                    mainMethodVisitor.visitInsn(ICONST_2);
+                    textifierVisitor.visitInsn(ICONST_2);
+                    break;
+                case 3:
+                    mainMethodVisitor.visitInsn(ICONST_3);
+                    textifierVisitor.visitInsn(ICONST_3);
+                    break;
+                case 4:
+                    mainMethodVisitor.visitInsn(ICONST_4);
+                    textifierVisitor.visitInsn(ICONST_4);
+                    break;
+                case 5:
+                    mainMethodVisitor.visitInsn(ICONST_5);
+                    textifierVisitor.visitInsn(ICONST_5);
+                    break;
+                default:
+                    mainMethodVisitor.visitIntInsn(SIPUSH, Integer.parseInt(value.toString()));
+                    textifierVisitor.visitIntInsn(SIPUSH, Integer.parseInt(value.toString()));
+            }
         } else if (value instanceof Boolean) {
-            mainMethodVisitor.visitIntInsn(BIPUSH, (boolean) value ? 1 : 0);
+            mainMethodVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
+            textifierVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
         }
+        //Do I need to increment for the stack map frame?
+        localStackSize++;
     }
 
     private void visit(BoundVariableDeclarationExpression variableDeclarationExpression) {
@@ -184,23 +214,21 @@ public class JavaBytecodeCompiler {
         VariableSymbol variable = variableDeclarationExpression.getVariable();
         String identifer = variable.getName();
 
-        //Check for reassignment
-        if (variables.containsKey(identifer)) {
-            throw new VariableAlreadyDeclaredException(identifer);
-        }
+        //No need to check for reassignment as the type binder already did so
 
         //Evaluate the initialiser
         visit(variableDeclarationExpression.getInitialiser());
 
         //Store that in memory at the current variable IDX
         mainMethodVisitor.visitIntInsn(ISTORE, variableIndex);
+        textifierVisitor.visitIntInsn(ISTORE, variableIndex);
+        localStackSize--;
 
         //Keep track of variable for later use
         variables.put(identifer, variableIndex);
 
         //Increment the variable IDX
         variableIndex++;
-        variableCount++;
     }
 
     private void visit(BoundVariableExpression boundVariableExpression) {
@@ -212,6 +240,8 @@ public class JavaBytecodeCompiler {
         }
         int variableIdx = variables.get(variable.getName());
         mainMethodVisitor.visitIntInsn(ILOAD, variableIdx);
+        textifierVisitor.visitIntInsn(ILOAD, variableIdx);
+        localStackSize++;
     }
 
     private void visit(BoundAssignmentExpression assignmentExpression) {
@@ -225,6 +255,8 @@ public class JavaBytecodeCompiler {
 
         int variableIdx = variables.get(variable.getName());
         mainMethodVisitor.visitIntInsn(ISTORE, variableIdx);
+        textifierVisitor.visitIntInsn(ISTORE, variableIdx);
+        localStackSize--;
     }
 
     private void visit(BoundBinaryExpression binaryExpression) {
@@ -235,18 +267,23 @@ public class JavaBytecodeCompiler {
         switch (binaryExpression.getOperator().getBoundOpType()) {
             case ADDITION:
                 mainMethodVisitor.visitInsn(IADD);
+                textifierVisitor.visitInsn(IADD);
                 break;
             case SUBTRACTION:
                 mainMethodVisitor.visitInsn(ISUB);
+                textifierVisitor.visitInsn(ISUB);
                 break;
             case MULTIPLICATION:
                 mainMethodVisitor.visitInsn(IMUL);
+                textifierVisitor.visitInsn(IMUL);
                 break;
             case DIVISION:
                 mainMethodVisitor.visitInsn(IDIV);
+                textifierVisitor.visitInsn(IDIV);
                 break;
             case REMAINDER:
                 mainMethodVisitor.visitInsn(IREM);
+                textifierVisitor.visitInsn(IREM);
                 break;
             case LESS_THAN:
             case GREATER_THAN:
@@ -256,43 +293,48 @@ public class JavaBytecodeCompiler {
             case NOT_EQUALS:
                 //Seems a little odd but it compares to 0
                 mainMethodVisitor.visitInsn(ISUB);
+                textifierVisitor.visitInsn(ISUB);
                 break;
             case BOOLEAN_OR:
                 mainMethodVisitor.visitInsn(IOR);
+                textifierVisitor.visitInsn(IOR);
                 break;
             case BOOLEAN_AND:
                 mainMethodVisitor.visitInsn(IAND);
+                textifierVisitor.visitInsn(IAND);
                 break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
         }
+        localStackSize--;
     }
 
     private void visit(BoundConditionalGotoExpression conditionalGotoExpression) {
 
-        int varsBefore = variableCount;
         visit(conditionalGotoExpression.getCondition());
-        int varsAfter = variableCount;
 
         Label label;
         if (boundLabelToProgramLabel.containsKey(conditionalGotoExpression.getLabel())) {
             label = boundLabelToProgramLabel.get(conditionalGotoExpression.getLabel());
         } else {
             label = new Label();
-            visit(label, varsAfter - varsBefore);
+            boundLabelToProgramLabel.put(conditionalGotoExpression.getLabel(), label);
         }
 
         //Assuming only LT right now
         //TODO other ops
-        mainMethodVisitor.visitJumpInsn(IFLT, label);
+        mainMethodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
+        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
+        localStackSize--;
     }
 
     private void visit(Label label, int stackCount) {
         mainMethodVisitor.visitLabel(label);
+        textifierVisitor.visitLabel(label);
 
         //I feel like this shouldn't work but hey ho, magic
 
-        Object[] local = new Object[variableCount + 1];
+        Object[] local = new Object[variableIndex];
         local[0] = "[Ljava/lang/String;";
         for (int i = 1; i < local.length; i++) {
             local[i] = INTEGER; //TODO we only have integers now
@@ -302,6 +344,7 @@ public class JavaBytecodeCompiler {
             stack[i] = INTEGER; //TODO we only have integers now
         }
         mainMethodVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
+        textifierVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
     }
 
     private void visit(BoundGotoExpression gotoExpression) {
@@ -312,10 +355,11 @@ public class JavaBytecodeCompiler {
             label = boundLabelToProgramLabel.get(boundLabel);
         } else {
             label = new Label();
+            boundLabelToProgramLabel.put(boundLabel, label);
         }
-        boundLabelToProgramLabel.put(boundLabel, label);
 
         mainMethodVisitor.visitJumpInsn(GOTO, label);
+        textifierVisitor.visitJumpInsn(GOTO, label);
     }
 
     private void visit(BoundPrintExpression printExpression) {
@@ -324,13 +368,18 @@ public class JavaBytecodeCompiler {
 
         //Store top of the stack in memory
         mainMethodVisitor.visitIntInsn(ISTORE, variableIndex);
+        textifierVisitor.visitIntInsn(ISTORE, variableIndex);
 
         //CODE : System.out
         mainMethodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+        textifierVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
 
         //Load the stored value back out to put it on top of the System classpath
         mainMethodVisitor.visitVarInsn(ILOAD, variableIndex);
+        textifierVisitor.visitVarInsn(ILOAD, variableIndex);
         //INVOKE: print(int) with variable on top of the stack. /
         mainMethodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(I)V", false);
+        textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(I)V", false);
+        localStackSize--;
     }
 }

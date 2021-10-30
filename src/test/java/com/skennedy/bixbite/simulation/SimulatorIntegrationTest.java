@@ -80,6 +80,7 @@ class SimulatorIntegrationTest {
     private static Stream<String> getFilesToTest() {
         File folder = new File("src/test/resources/tests/");
         return Arrays.stream(folder.listFiles())
+                .filter(file -> file.getName().endsWith(".lzl"))
                 .map(File::getName);
     }
 

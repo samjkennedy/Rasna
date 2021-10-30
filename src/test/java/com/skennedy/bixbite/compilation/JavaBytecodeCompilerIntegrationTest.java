@@ -21,31 +21,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JavaBytecodeCompilerIntegrationTest {
 
-    private static final boolean RECORD = false;
 
     @ParameterizedTest
     @MethodSource("getFilesToTest")
     void runFile_producesCorrectOutput(String filename) throws IOException {
 
         PrintStream console = System.out;
-        if (RECORD) {
-            //Set up output stream
-            File outputFile = new File("src/test/resources/results/compilation/" + filename.split("\\.")[0] + "_result.txt");
-            outputFile.createNewFile();
-            PrintStream out = new PrintStream(outputFile);
-            // Store current System.out before assigning a new value
-            //Set output to write to file
-            System.setOut(out);
-        } else {
-            //Set up output stream
-            //TODO: figure out how to delete this
-            File outputFile = new File("src/test/resources/results/compilation/temporary_result.txt");
-            outputFile.createNewFile();
-            PrintStream out = new PrintStream(outputFile);
-            // Store current System.out before assigning a new value
-            //Set output to write to file
-            System.setOut(out);
-        }
+        //Set up output stream
+        //TODO: figure out how to delete this
+        File outputFile = new File("src/test/resources/results/compilation/temporary_result.txt");
+        outputFile.createNewFile();
+        PrintStream out = new PrintStream(outputFile);
+        // Store current System.out before assigning a new value
+        //Set output to write to file
+        System.setOut(out);
 
         String code = read("tests", filename);
 
@@ -77,12 +66,10 @@ class JavaBytecodeCompilerIntegrationTest {
         //Reset console
         System.setOut(console);
 
-        if (!RECORD) {
-            String expectedResult = read("results/simulation", filename.split("\\.")[0] + "_result.txt");
-            String actualResult = read("results/compilation", filename.split("\\.")[0] + "_result.txt");
+        String expectedResult = read("results/simulation", filename.split("\\.")[0] + "_result.txt");
+        String actualResult = read("results/compilation", filename.split("\\.")[0] + "_result.txt");
 
-            assertEquals(expectedResult, actualResult);
-        }
+        assertEquals(expectedResult, actualResult);
     }
 
 
@@ -97,6 +84,7 @@ class JavaBytecodeCompilerIntegrationTest {
         File[] listOfFiles = folder.listFiles();
 
         return Arrays.stream(listOfFiles)
+                .filter(file -> file.getName().endsWith(".lzl"))
                 .map(File::getName);
     }
 }

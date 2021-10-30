@@ -55,18 +55,23 @@ public class Lowerer extends BoundProgramRewriter {
         if (expression instanceof BoundNoOpExpression) {
             return expression;
         }
+        if (!(expression instanceof BoundForExpression)) {
+            return expression;
+        }
 
-        if (flatten(boundForExpression.getBody()).getExpressions().isEmpty()) {
+        BoundForExpression rewrittenForExpression = (BoundForExpression)expression;
+
+        if (rewrittenForExpression.getBody() instanceof BoundNoOpExpression) {
             return new BoundNoOpExpression();
         }
 
-        BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(boundForExpression.getIterator(), null, boundForExpression.getInitialiser(), false);
+        BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(rewrittenForExpression.getIterator(), null, rewrittenForExpression.getInitialiser(), false);
 
-        BoundVariableExpression variableExpression = new BoundVariableExpression(boundForExpression.getIterator());
+        BoundVariableExpression variableExpression = new BoundVariableExpression(rewrittenForExpression.getIterator());
 
         BoundExpression step;
-        if (boundForExpression.getStep() == null) {
-            step = new BoundAssignmentExpression(boundForExpression.getIterator(),
+        if (rewrittenForExpression.getStep() == null) {
+            step = new BoundAssignmentExpression(rewrittenForExpression.getIterator(),
                     null,
                     new BoundBinaryExpression(
                     variableExpression,
@@ -74,21 +79,21 @@ public class Lowerer extends BoundProgramRewriter {
                     new BoundLiteralExpression(1)
             ));
         } else {
-            step = new BoundAssignmentExpression(boundForExpression.getIterator(),
+            step = new BoundAssignmentExpression(rewrittenForExpression.getIterator(),
                     null,
                     new BoundBinaryExpression(
                             variableExpression,
                             BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT),
-                            boundForExpression.getStep()
+                            rewrittenForExpression.getStep()
                     )
             );
         }
 
         BoundBlockExpression whileBody;
-        if (boundForExpression.getRange() == null) {
-            whileBody = new BoundBlockExpression(boundForExpression.getBody(), step);
+        if (rewrittenForExpression.getRange() == null) {
+            whileBody = new BoundBlockExpression(rewrittenForExpression.getBody(), step);
         } else {
-            BoundExpression rangeCheck = new BoundIfExpression(boundForExpression.getRange(), boundForExpression.getBody(), null);
+            BoundExpression rangeCheck = new BoundIfExpression(rewrittenForExpression.getRange(), rewrittenForExpression.getBody(), null);
             whileBody = new BoundBlockExpression(rangeCheck, step);
         }
 
