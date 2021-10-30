@@ -198,6 +198,10 @@ public class JavaBytecodeCompiler {
                     textifierVisitor.visitInsn(ICONST_5);
                     break;
                 default:
+                    //TODO: This is pushing a short - maximum value is 32767
+                    if (Integer.parseInt(value.toString()) > Short.MAX_VALUE) {
+                        throw new UnsupportedOperationException("Currently only shorts can be stored");
+                    }
                     mainMethodVisitor.visitIntInsn(SIPUSH, Integer.parseInt(value.toString()));
                     textifierVisitor.visitIntInsn(SIPUSH, Integer.parseInt(value.toString()));
             }

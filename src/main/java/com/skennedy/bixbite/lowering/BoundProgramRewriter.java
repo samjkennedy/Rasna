@@ -115,7 +115,7 @@ public abstract class BoundProgramRewriter {
             for (int i = 0; i < expressions.size(); i++) {
                 BoundExpression expr = expressions.get(i);
                 if (expr instanceof BoundLiteralExpression) {
-                    expressions.set(i, new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getRange(), assignmentExpression.getExpression()));
+                    expressions.set(i, new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getRange(), expr));
                 } else if (expr instanceof BoundBinaryExpression) {
                     expressions.set(i, new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getRange(), expr));
                 }

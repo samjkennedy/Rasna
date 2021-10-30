@@ -39,10 +39,10 @@ Implemented:
 
 Lazuli features **Subset Notation** where an expression can be defined for a specific **Subset** of its full domain. 
 
-For example with Intiables:
+For example with Variables:
 
 ```javascript
-Int i : (i mod 2 == 0) = 0 //Intiable i can only contain the set of even integers
+Int i | (i mod 2 == 0) = 0 //Variable i can only contain the set of even integers
 ...
 i = 3 //runtime error
 ```
@@ -50,7 +50,7 @@ i = 3 //runtime error
 This can be combined with for expressions to loop over only a **specific subset** of the range:
 
 ```javascript
-for (Int N = 0 to 10 : N % 2 == 0) {
+for (Int N = 0 to 10 | N % 2 == 0) {
     print(N) //prints 0, 2, 4, 6, 8
 }
 ```
@@ -86,17 +86,18 @@ Implemented:
 This extends to loops as well, whose return type is an `Array`:
 
 ```javascript
-//Assigns x to an Array of Ints from 0 to 99
-Int x = for (Int N = 0 to 100) {
+//Assigns x to an Array of Ints from 0 to 4
+Int[] ns = for (Int N = 0 to 5) {
     N
 }
+print(ns) //prints [0, 1, 2, 3, 4]
 ```
 
 These act as normal for loops and can contain multiple lines, as with if expressions the last line of the body is assigned:
 
 ```javascript
 //Assigns x to an Array of the squares of all even numbers from 0 to 99
-Int x = for (Int N = 0 to 100 : N % 2 == 0) {
+Int[] xs = for (Int N = 0 to 100 | N % 2 == 0) {
     N * N
 }
 ```
@@ -109,8 +110,15 @@ For more see the examples directory.
    
 ## Planned Features
 
-- Primitive types like `Int`, `Num`, `Str`, `Bool`, and `Array`
+- Primitive types like `Int`, `Real` `Num`, `Bool` and `Str` 
+    - [x] Int 
+    - [x] Bool 
+    - [ ] Real 
+    - [ ] Num
+    - [ ] Str
+    
 - Custom Type system
+- Type subset system
 - Function declarations and calls
 
 ## Acknowledgements

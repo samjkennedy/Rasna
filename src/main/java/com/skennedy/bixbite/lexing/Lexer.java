@@ -18,6 +18,11 @@ public class Lexer {
 
         int lineNumber = 0;
         for (String line : program.split(StringUtils.LF)) {
+            if (StringUtils.isBlank(line)) {
+                tokens.add(new Token(TokenType.WHITESPACE, new Location(lineNumber, 0)));
+                lineNumber++;
+                continue;
+            }
             cursor = 0;
             do {
                 if (Character.isWhitespace(current(line))) {
@@ -83,6 +88,10 @@ public class Lexer {
                             break;
                         case ':':
                             tokens.add(new Token(TokenType.COLON, new Location(lineNumber, cursor)));
+                            next();
+                            break;
+                        case '|':
+                            tokens.add(new Token(TokenType.BAR, new Location(lineNumber, cursor)));
                             next();
                             break;
                         case '>':

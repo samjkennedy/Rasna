@@ -100,7 +100,7 @@ public class Parser {
         }
 
         Expression range = null;
-        if (current().getTokenType() == TokenType.COLON) {
+        if (current().getTokenType() == TokenType.BAR) {
             range = parseRangeExpression();
         }
 
@@ -111,7 +111,7 @@ public class Parser {
     }
 
     private Expression parseRangeExpression() {
-        matchToken(TokenType.COLON);
+        matchToken(TokenType.BAR);
         return parseExpression();
     }
 
