@@ -1,4 +1,6 @@
-const Bool b = true
-if (b) {
-    print(1)
+for (Int N = 0 to 10) {
+    print(N)
+}
+for (Int M = 0 to 10 by 2) {
+    print(M)
 }

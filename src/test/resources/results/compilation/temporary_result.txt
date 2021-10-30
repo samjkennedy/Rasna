@@ -1,12 +1,10 @@
-Error: Unable to initialize main class while_loops
-Caused by: java.lang.VerifyError: Expecting a stackmap frame at branch target 25
-Exception Details:
-  Location:
-    while_loops.main([Ljava/lang/String;)V @4: goto
-  Reason:
-    Expected stackmap frame at this location.
-  Bytecode:
-    0000000: 1000 3601 a700 1515 0136 02b2 000c 1cb6
-    0000010: 0012 1501 1001 6036 0115 0110 0a64 9bff
-    0000020: e9b1                                   
-
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
