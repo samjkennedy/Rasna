@@ -1,7 +1,8 @@
 package com.skennedy.bixbite.lexing;
 
-import com.skennedy.bixbite.lexing.model.Token;
-import com.skennedy.bixbite.lexing.model.TokenType;
+import com.skennedy.lazuli.lexing.Lexer;
+import com.skennedy.lazuli.lexing.model.Token;
+import com.skennedy.lazuli.lexing.model.TokenType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

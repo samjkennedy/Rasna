@@ -1,10 +1,11 @@
 package com.skennedy.bixbite.compilation;
 
-import com.skennedy.bixbite.lowering.Lowerer;
-import com.skennedy.bixbite.parsing.Parser;
-import com.skennedy.bixbite.parsing.Program;
-import com.skennedy.bixbite.typebinding.Binder;
-import com.skennedy.bixbite.typebinding.BoundProgram;
+import com.skennedy.lazuli.compilation.JavaBytecodeCompiler;
+import com.skennedy.lazuli.lowering.Lowerer;
+import com.skennedy.lazuli.parsing.Parser;
+import com.skennedy.lazuli.parsing.Program;
+import com.skennedy.lazuli.typebinding.Binder;
+import com.skennedy.lazuli.typebinding.BoundProgram;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,7 +30,7 @@ class JavaBytecodeCompilerIntegrationTest {
         PrintStream console = System.out;
         //Set up output stream
         //TODO: figure out how to delete this
-        File outputFile = new File("src/test/resources/results/compilation/temporary_result.txt");
+        File outputFile = new File("src/test/resources/results/compilation/" + filename.split("\\.")[0] + "_result.txt");
         outputFile.createNewFile();
         PrintStream out = new PrintStream(outputFile);
         // Store current System.out before assigning a new value
@@ -52,13 +53,13 @@ class JavaBytecodeCompilerIntegrationTest {
 
         Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
         InputStream inputStream = process.getInputStream();
-        char c = (char)inputStream.read();
+        char c = (char) inputStream.read();
         while (c != '\uFFFF') {
             System.out.print(c);
             c = (char) inputStream.read();
         }
         InputStream errorStream = process.getErrorStream();
-        c = (char)errorStream.read();
+        c = (char) errorStream.read();
         while (c != '\uFFFF') {
             System.out.print(c);
             c = (char) errorStream.read();

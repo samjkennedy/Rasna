@@ -1,0 +1,27 @@
+package com.skennedy.lazuli.typebinding;
+
+public enum BoundExpressionType {
+
+    ARRAY_ACCESS_EXPRESSION,
+    ARRAY_LENGTH_EXPRESSION,
+    ARRAY_LITERAL_EXPRESSION,
+    ASSIGNMENT_EXPRESSION,
+    BINARY_EXPRESSION,
+    BINARY_OPERATOR,
+    BLOCK,
+    CONDITIONAL_GOTO,
+    FOR,
+    FOR_IN,
+    GOTO,
+    IF,
+    LABEL,
+    LITERAL,
+    NOOP,
+    PRINT_INTRINSIC,
+    TYPEOF_INTRINSIC,
+    VARIABLE_DECLARATION,
+    VARIABLE_EXPRESSION,
+    WHILE
+
+
+}

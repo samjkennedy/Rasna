@@ -118,7 +118,7 @@
                         <configuration>
                             <archive>
                                 <manifest>
-                                    <mainClass>com.skennedy.bixbite.Lazuli</mainClass>
+                                    <mainClass>com.skennedy.lazuli.Lazuli</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>
