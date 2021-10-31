@@ -1,10 +1,11 @@
 package com.skennedy.bixbite.simulation;
 
-import com.skennedy.bixbite.lowering.Lowerer;
-import com.skennedy.bixbite.parsing.Parser;
-import com.skennedy.bixbite.parsing.Program;
-import com.skennedy.bixbite.typebinding.Binder;
-import com.skennedy.bixbite.typebinding.BoundProgram;
+import com.skennedy.lazuli.lowering.Lowerer;
+import com.skennedy.lazuli.parsing.Parser;
+import com.skennedy.lazuli.parsing.Program;
+import com.skennedy.lazuli.simulation.Simulator;
+import com.skennedy.lazuli.typebinding.Binder;
+import com.skennedy.lazuli.typebinding.BoundProgram;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;

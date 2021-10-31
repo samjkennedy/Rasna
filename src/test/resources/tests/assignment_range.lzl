@@ -1,5 +1,5 @@
-Int i : i <= 5 = 0
-for (Int N = 1 to 5) {
-    i = N
+Int i = 0 | i <= 5
+for (Int N = 1 to 6) {
     print(i)
+    i = N
 }
