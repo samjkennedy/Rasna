@@ -1,5 +1,7 @@
 package com.skennedy.lazuli.simulation;
 
+import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
+import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.VariableOutsideRangeException;
@@ -13,18 +15,24 @@ import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
+import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundConstDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
+import com.skennedy.lazuli.typebinding.BoundReturnExpression;
 import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
+import com.skennedy.lazuli.typebinding.FunctionSymbol;
 import com.skennedy.lazuli.typebinding.VariableSymbol;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.awt.*;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -67,8 +75,19 @@ public class Simulator {
         }
         ip = 0;
 
+        //Forward declare all methods
+        for (BoundExpression expression : program.getExpressions()) {
+            if (expression instanceof BoundFunctionDeclarationExpression) {
+                evaluateFunctionDeclaration((BoundFunctionDeclarationExpression) expression);
+            }
+        }
+
         while (ip < program.getExpressions().size()) {
             BoundExpression expression = program.getExpressions().get(ip);
+            if (expression instanceof BoundFunctionDeclarationExpression) {
+                ip++;
+                continue;
+            }
             log.debug(ip + " - " + expression.getBoundExpressionType());
             evaluate(expression);
         }
@@ -115,16 +134,48 @@ public class Simulator {
                 return evaluate(program.getExpressions().get(ip));
             case GOTO:
                 ip = labelToIp.get(((BoundGotoExpression) expression).getLabel());
-                return res;
+                return evaluate(program.getExpressions().get(ip));
             case ASSIGNMENT_EXPRESSION:
                 return evaluate((BoundAssignmentExpression) expression);
             case NOOP:
             case LABEL:
                 ip++;
                 return res;
+            case FUNCTION_DECLARATION:
+                return evaluateFunctionDeclaration((BoundFunctionDeclarationExpression) expression);
+            case FUNCTION_CALL:
+                return evaluateFunctionCall((BoundFunctionCallExpression) expression);
+            case RETURN:
+                return evaluateReturn((BoundReturnExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private Object evaluateReturn(BoundReturnExpression returnExpression) {
+        return evaluate(returnExpression.getReturnValue());
+    }
+
+    private Object evaluateFunctionCall(BoundFunctionCallExpression functionCallExpression) {
+
+        Optional<BoundBlockExpression> methodRef = scope.tryLookupFunction(functionCallExpression.getFunction());
+        if (methodRef.isEmpty()) {
+            throw new UndefinedFunctionException(functionCallExpression.getFunction().getName());
+        }
+        BoundBlockExpression body = methodRef.get();
+
+        Object lastReturn = null;
+        for (BoundExpression expression : body.getExpressions()) {
+            lastReturn = evaluate(expression);
+        }
+        return lastReturn;
+    }
+
+    private Object evaluateFunctionDeclaration(BoundFunctionDeclarationExpression functionDeclarationExpression) {
+
+        scope.declareFunction(functionDeclarationExpression.getFunctionSymbol(), functionDeclarationExpression.getBody());
+
+        return scope.tryLookupFunction(functionDeclarationExpression.getFunctionSymbol()).get();
     }
 
     private Object evaluateArrayLiteralExpression(BoundArrayLiteralExpression arrayLiteralExpression) {
@@ -151,7 +202,7 @@ public class Simulator {
 
         private T[] array;
 
-        public LazuliArray(T[] array) {
+        LazuliArray(T[] array) {
             this.array = array;
         }
 
@@ -181,7 +232,7 @@ public class Simulator {
     private Object evaluate(BoundAssignmentExpression assignmentExpression) {
 
         VariableSymbol variable = assignmentExpression.getVariable();
-        if (scope.tryLookup(variable.getName()).isEmpty()) {
+        if (scope.tryLookupVariable(variable.getName()).isEmpty()) {
             throw new UndefinedVariableException(variable.getName());
         }
         Object value = evaluate(assignmentExpression.getExpression());
@@ -202,7 +253,7 @@ public class Simulator {
     private Object evaluate(BoundVariableDeclarationExpression variableDeclarationExpression) {
 
         VariableSymbol variable = variableDeclarationExpression.getVariable();
-        if (scope.tryLookup(variable.getName()).isPresent()) {
+        if (scope.tryLookupVariable(variable.getName()).isPresent()) {
             throw new VariableAlreadyDeclaredException(variable.getName());
         }
 
@@ -227,7 +278,7 @@ public class Simulator {
     private Object evaluate(BoundConstDeclarationExpression constDeclarationExpression) {
 
         VariableSymbol variable = constDeclarationExpression.getVariable();
-        if (scope.tryLookup(variable.getName()).isPresent()) {
+        if (scope.tryLookupVariable(variable.getName()).isPresent()) {
             throw new VariableAlreadyDeclaredException(variable.getName());
         }
 
@@ -254,7 +305,7 @@ public class Simulator {
     }
 
     private Object evaluateVariableExpression(BoundVariableExpression boundVariableExpression) {
-        return scope.tryLookup(boundVariableExpression.getVariable().getName()).orElse(null);
+        return scope.tryLookupVariable(boundVariableExpression.getVariable().getName()).orElse(null);
     }
 
     private Object evaluateBinaryExpression(BoundBinaryExpression expression) {
@@ -292,31 +343,52 @@ public class Simulator {
 
         private Scope parentScope;
         private Map<String, Object> variables;
+        private Map<FunctionSymbol, BoundBlockExpression> functions;
 
-        public Scope(Scope parentScope) {
+        Scope(Scope parentScope) {
             this.parentScope = parentScope;
             this.variables = new HashMap<>();
+            this.functions = new HashMap<>();
         }
 
-        public Optional<Object> tryLookup(String name) {
+        Optional<Object> tryLookupVariable(String name) {
 
             if (variables.containsKey(name)) {
                 return Optional.ofNullable(variables.get(name));
             }
             if (parentScope != null) {
-                return parentScope.tryLookup(name);
+                return parentScope.tryLookupVariable(name);
             }
             return Optional.empty();
         }
 
-        public void declareVariable(String name, Object variable) {
-            if (tryLookup(name).isPresent()) {
+        Optional<BoundBlockExpression> tryLookupFunction(FunctionSymbol function) {
+
+            if (functions.containsKey(function)) {
+                return Optional.ofNullable(functions.get(function));
+            }
+            if (parentScope != null) {
+                return parentScope.tryLookupFunction(function);
+            }
+            return Optional.empty();
+        }
+
+        void declareVariable(String name, Object variable) {
+            if (tryLookupVariable(name).isPresent()) {
                 throw new VariableAlreadyDeclaredException(name);
             }
             variables.put(name, variable);
         }
 
-        public void reassignVariable(String name, Object variable) {
+        void declareFunction(FunctionSymbol function, BoundBlockExpression instructions) {
+            if (tryLookupFunction(function).isPresent()) {
+                //TODO: Get args
+                throw new FunctionAlreadyDeclaredException(function.getName());
+            }
+            functions.put(function, instructions);
+        }
+
+        void reassignVariable(String name, Object variable) {
             if (!variables.containsKey(name)) {
                 if (parentScope == null) {
                     throw new UndefinedVariableException(name);

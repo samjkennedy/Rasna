@@ -2,6 +2,8 @@ package com.skennedy.lazuli.lowering;
 
 import com.skennedy.lazuli.exceptions.InfiniteLoopException;
 import com.skennedy.lazuli.parsing.ArrayAccessExpression;
+import com.skennedy.lazuli.parsing.FunctionCallExpression;
+import com.skennedy.lazuli.parsing.FunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
@@ -13,10 +15,13 @@ import com.skennedy.lazuli.typebinding.BoundExpression;
 import com.skennedy.lazuli.typebinding.BoundExpressionType;
 import com.skennedy.lazuli.typebinding.BoundForExpression;
 import com.skennedy.lazuli.typebinding.BoundForInExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
+import com.skennedy.lazuli.typebinding.BoundReturnExpression;
 import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
@@ -47,7 +52,7 @@ public abstract class BoundProgramRewriter {
     }
 
 
-    protected BoundBlockExpression flatten(BoundExpression root) {
+    BoundBlockExpression flatten(BoundExpression root) {
         Stack<BoundExpression> stack = new Stack<>();
         List<BoundExpression> instructions = new ArrayList<>();
 
@@ -76,6 +81,11 @@ public abstract class BoundProgramRewriter {
             case ARRAY_ACCESS_EXPRESSION:
                 return rewriteArrayAccessExpression((BoundArrayAccessExpression) expression);
             case ARRAY_LENGTH_EXPRESSION:
+            case LITERAL:
+            case VARIABLE_EXPRESSION:
+            case GOTO:
+            case LABEL:
+            case NOOP:
                 return expression;
             case ASSIGNMENT_EXPRESSION:
                 return rewriteAssignmentExpression((BoundAssignmentExpression) expression);
@@ -91,10 +101,6 @@ public abstract class BoundProgramRewriter {
                 return rewriteForExpression((BoundForExpression) expression);
             case FOR_IN:
                 return rewriteForInExpression((BoundForInExpression) expression);
-            case LITERAL:
-            case VARIABLE_EXPRESSION:
-            case GOTO:
-                return expression;
             case PRINT_INTRINSIC:
                 return rewritePrintIntrinsic((BoundPrintExpression) expression);
             case TYPEOF_INTRINSIC:
@@ -105,12 +111,66 @@ public abstract class BoundProgramRewriter {
                 return rewriteWhileExpression((BoundWhileExpression) expression);
             case CONDITIONAL_GOTO:
                 return rewriteConditionalGoto((BoundConditionalGotoExpression) expression);
-            case NOOP:
-            case LABEL:
-                return expression;
+            case FUNCTION_CALL:
+                return rewriteFunctionCall((BoundFunctionCallExpression)expression);
+            case FUNCTION_DECLARATION:
+                return rewriteFunctionDeclaration((BoundFunctionDeclarationExpression) expression); //TODO: rewrite parameters
+            case RETURN:
+                return rewriteReturnCall((BoundReturnExpression)expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundExpression rewriteReturnCall(BoundReturnExpression returnExpression) {
+        BoundExpression returnValue = rewriteExpression(returnExpression.getReturnValue());
+
+        if (returnExpression.getReturnValue() instanceof BoundIfExpression) {
+
+            List<BoundExpression> expressions = ((BoundBlockExpression) returnValue).getExpressions();
+
+            for (int i = 0; i < expressions.size(); i++) {
+                BoundExpression expression = expressions.get(i);
+                if (expression instanceof BoundLiteralExpression) {
+                    expressions.set(i, new BoundReturnExpression(expression));
+                }
+            }
+            return new BoundBlockExpression(expressions);
+        }
+
+        if (returnValue != returnExpression.getReturnValue()) {
+            return new BoundReturnExpression(returnValue);
+        }
+
+        return returnExpression;
+    }
+
+    protected BoundExpression rewriteFunctionDeclaration(BoundFunctionDeclarationExpression functionDeclarationExpression) {
+
+        List<BoundExpression> rewrittenInstructions = new ArrayList<>();
+        for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
+            rewrittenInstructions.add(rewriteExpression(expression));
+        }
+
+        BoundBlockExpression rewrittenBody = flatten(rewriteBlockExpression(new BoundBlockExpression(rewrittenInstructions)));
+
+        if (rewrittenBody != functionDeclarationExpression.getBody()) {
+            return new BoundFunctionDeclarationExpression(functionDeclarationExpression.getFunctionSymbol(), rewrittenBody);
+        }
+        return functionDeclarationExpression;
+    }
+
+    protected BoundExpression rewriteFunctionCall(BoundFunctionCallExpression functionCallExpression) {
+
+        List<BoundExpression> rewrittenArgs = new ArrayList<>();
+        for (BoundExpression arg : functionCallExpression.getBoundArguments()) {
+            rewrittenArgs.add(rewriteExpression(arg));
+        }
+
+        if (rewrittenArgs != functionCallExpression.getBoundArguments()) {
+            return new BoundFunctionCallExpression(functionCallExpression.getFunction(), rewrittenArgs);
+        }
+        return functionCallExpression;
     }
 
     private BoundExpression rewriteArrayLiteralExpression(BoundArrayLiteralExpression arrayLiteralExpression) {
@@ -133,7 +193,7 @@ public abstract class BoundProgramRewriter {
         return arrayLiteralExpression;
     }
 
-    protected BoundExpression rewriteArrayAccessExpression(BoundArrayAccessExpression arrayAccessExpression) {
+    private BoundExpression rewriteArrayAccessExpression(BoundArrayAccessExpression arrayAccessExpression) {
 
         BoundExpression index = rewriteExpression(arrayAccessExpression.getIndex());
 
@@ -171,7 +231,7 @@ public abstract class BoundProgramRewriter {
         return new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getRange(), assignmentExpression.getExpression());
     }
 
-    protected BoundExpression rewriteBinaryExpression(BoundBinaryExpression boundBinaryExpression) {
+    private BoundExpression rewriteBinaryExpression(BoundBinaryExpression boundBinaryExpression) {
 
         BoundExpression left = rewriteExpression(boundBinaryExpression.getLeft());
         BoundExpression right = rewriteExpression(boundBinaryExpression.getRight());
@@ -189,11 +249,10 @@ public abstract class BoundProgramRewriter {
         return new BoundBinaryExpression(left, boundBinaryExpression.getOperator(), right);
     }
 
-    protected BoundExpression rewriteBlockExpression(BoundBlockExpression boundBlockExpression) {
+    BoundExpression rewriteBlockExpression(BoundBlockExpression boundBlockExpression) {
         if (boundBlockExpression.getExpressions().isEmpty()) {
             return new BoundNoOpExpression();
         }
-        //TODO: Return a special NOOP expression if the block is empty
         List<BoundExpression> rewrittenExpressions = new ArrayList<>();
 
         for (BoundExpression boundExpression : boundBlockExpression.getExpressions()) {
@@ -284,7 +343,7 @@ public abstract class BoundProgramRewriter {
         return new BoundForInExpression(forInExpression.getVariable(), iterable, range, body);
     }
 
-    protected BoundExpression rewriteVariableDeclaration(BoundVariableDeclarationExpression boundVariableDeclarationExpression) {
+    private BoundExpression rewriteVariableDeclaration(BoundVariableDeclarationExpression boundVariableDeclarationExpression) {
 
         BoundExpression initialiser = null;
         if (boundVariableDeclarationExpression.getInitialiser() != null) {
@@ -438,7 +497,7 @@ public abstract class BoundProgramRewriter {
     }
 
 
-    protected BoundExpression rewriteTypeofIntrinsic(BoundTypeofExpression typeofExpression) {
+    private BoundExpression rewriteTypeofIntrinsic(BoundTypeofExpression typeofExpression) {
 
         BoundExpression expression = rewriteExpression(typeofExpression.getExpression());
 
@@ -448,7 +507,7 @@ public abstract class BoundProgramRewriter {
         return new BoundTypeofExpression(typeofExpression);
     }
 
-    protected BoundExpression rewritePrintIntrinsic(BoundPrintExpression printExpression) {
+    private BoundExpression rewritePrintIntrinsic(BoundPrintExpression printExpression) {
 
         BoundExpression expression = rewriteExpression(printExpression.getExpression());
 

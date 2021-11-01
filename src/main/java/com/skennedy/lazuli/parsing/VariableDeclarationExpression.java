@@ -10,7 +10,7 @@ import java.util.Iterator;
 public class VariableDeclarationExpression extends Expression {
 
     private final IdentifierExpression constKeyword;
-    private final IdentifierExpression declarationKeyword;
+    private final IdentifierExpression typeKeyword;
     private boolean isArray;
     private final IdentifierExpression identifier;
     private final IdentifierExpression bar;
@@ -18,9 +18,9 @@ public class VariableDeclarationExpression extends Expression {
     private final IdentifierExpression equals;
     private final Expression initialiser;
 
-    public VariableDeclarationExpression(IdentifierExpression constKeyword, IdentifierExpression declarationKeyword, boolean isArray, IdentifierExpression identifier, IdentifierExpression colon, Expression range, IdentifierExpression equals, Expression initialiser) {
+    public VariableDeclarationExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, boolean isArray, IdentifierExpression identifier, IdentifierExpression colon, Expression range, IdentifierExpression equals, Expression initialiser) {
         this.constKeyword = constKeyword;
-        this.declarationKeyword = declarationKeyword;
+        this.typeKeyword = typeKeyword;
         this.isArray = isArray;
         this.identifier = identifier;
         this.bar = colon;
@@ -36,15 +36,15 @@ public class VariableDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) constKeyword, declarationKeyword, identifier, equals, initialiser).iterator();
+        return Arrays.asList((SyntaxNode) constKeyword, typeKeyword, identifier, equals, initialiser).iterator();
     }
 
     public IdentifierExpression getConstKeyword() {
         return constKeyword;
     }
 
-    public IdentifierExpression getDeclarationKeyword() {
-        return declarationKeyword;
+    public IdentifierExpression getTypeKeyword() {
+        return typeKeyword;
     }
 
     public boolean isArray() {

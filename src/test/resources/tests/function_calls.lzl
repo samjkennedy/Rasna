@@ -1,0 +1,16 @@
+Int foo() {
+    return 1
+}
+
+//Int choice(Bool condition) {
+//    return if (condition) 1 else 2
+//}
+//
+//Int sum(Int a, Int b) {
+//    return a + b
+//}
+
+print(foo())
+print(foo() + foo())
+//print(choice(true))
+//print(choice(false))
