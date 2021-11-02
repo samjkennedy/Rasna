@@ -1,16 +1,25 @@
-Int choice(Bool check) {
-    if (check) {
-        return 1
-    } else {
-        return 2
-    }
+Int x = 1
+match x {
+    0 -> print(1),
+    1 -> print(2),
+    else   -> print(0)
 }
 
-print(choice(true))
+////Guards
+//match x {
+//    x | x < 5 -> print(0),
+//    else   -> print(5)
+//}
 
-//Bool check = false
-//if (check) {
-//    print(1)
-//} else {
-//    print(2)
+////multiple pattern matching
+//match x {
+//    1 or 2 -> print(1),
+//    else -> print(0)
+//}
+
+////range matching
+//match x {
+//    0 to 9 -> print(1),
+//    10 to 99 -> print(2),
+//    else print(0)
 //}

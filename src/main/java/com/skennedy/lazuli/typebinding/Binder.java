@@ -20,6 +20,8 @@ import com.skennedy.lazuli.parsing.FunctionArgumentExpression;
 import com.skennedy.lazuli.parsing.FunctionCallExpression;
 import com.skennedy.lazuli.parsing.FunctionDeclarationExpression;
 import com.skennedy.lazuli.parsing.IfExpression;
+import com.skennedy.lazuli.parsing.MatchCaseExpression;
+import com.skennedy.lazuli.parsing.MatchExpression;
 import com.skennedy.lazuli.parsing.ParenthesisedExpression;
 import com.skennedy.lazuli.parsing.PrintExpression;
 import com.skennedy.lazuli.parsing.Program;
@@ -27,6 +29,7 @@ import com.skennedy.lazuli.parsing.ReturnExpression;
 import com.skennedy.lazuli.parsing.TypeofExpression;
 import com.skennedy.lazuli.parsing.VariableDeclarationExpression;
 import com.skennedy.lazuli.parsing.WhileExpression;
+import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
@@ -96,9 +99,44 @@ public class Binder {
                 return bindFunctionCallExpression((FunctionCallExpression) expression);
             case RETURN_EXPR:
                 return bindReturnExpression((ReturnExpression) expression);
+            case MATCH_EXPRESSION:
+                return bindMatchExpression((MatchExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindMatchExpression(MatchExpression matchExpression) {
+
+        BoundExpression operand = bind(matchExpression.getOperand());
+
+        List<BoundMatchCaseExpression> boundMatchCaseExpressions = new ArrayList<>();
+
+        TypeSymbol type = null;
+        for (MatchCaseExpression caseExpression : matchExpression.getCaseExpressions()) {
+            BoundMatchCaseExpression boundMatchCaseExpression = bindCaseExpression(caseExpression);
+            if (type != null && !type.isAssignableFrom(boundMatchCaseExpression.getType())) {
+                throw new TypeMismatchException(type, boundMatchCaseExpression.getType());
+            }
+            type = boundMatchCaseExpression.getType();
+            boundMatchCaseExpressions.add(boundMatchCaseExpression);
+        }
+
+        return new BoundMatchExpression(type, operand, boundMatchCaseExpressions);
+    }
+
+    private BoundMatchCaseExpression bindCaseExpression(MatchCaseExpression matchCaseExpression) {
+
+        BoundExpression caseExpression;
+        if (matchCaseExpression.getCaseExpression().getExpressionType() == ExpressionType.IDENTIFIER_EXPR
+            && ((IdentifierExpression)matchCaseExpression.getCaseExpression()).getTokenType() == TokenType.ELSE_KEYWORD) {
+            caseExpression = null; //TODO: Is this the best way to denote a default case?
+        } else {
+            caseExpression = bind(matchCaseExpression.getCaseExpression());
+        }
+        BoundExpression boundThenExpression = bind(matchCaseExpression.getThenExpression());
+
+        return new BoundMatchCaseExpression(caseExpression, boundThenExpression);
     }
 
     private BoundExpression bindReturnExpression(ReturnExpression returnExpression) {

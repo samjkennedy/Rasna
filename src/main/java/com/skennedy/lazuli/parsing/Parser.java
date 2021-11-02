@@ -92,9 +92,36 @@ public class Parser {
                 return parseAssignmentExpression();
             case RETURN_KEYWORD:
                 return parseReturnExpression();
+            case MATCH_KEYWORD:
+                return parseMatchExpression();
             default:
                 throw new IllegalStateException("Unexpected value: " + current().getTokenType());
         }
+    }
+
+    private Expression parseMatchExpression() {
+
+        IdentifierExpression matchKeyword = matchToken(TokenType.MATCH_KEYWORD);
+        Expression identifier = parseExpression();
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
+
+        List<MatchCaseExpression> caseExpressions = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE && current().getTokenType() != TokenType.ELSE_KEYWORD) {
+            Expression caseExpression = parseExpression();
+            IdentifierExpression arrow = matchToken(TokenType.ARROW);
+            Expression thenExpression = parseExpression();
+            IdentifierExpression comma = matchToken(TokenType.COMMA);
+
+            caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
+        }
+        IdentifierExpression elseKeyword = matchToken(TokenType.ELSE_KEYWORD);
+        IdentifierExpression arrow = matchToken(TokenType.ARROW);
+        Expression thenExpression = parseExpression();
+
+        caseExpressions.add(new MatchCaseExpression(elseKeyword, arrow, thenExpression, null));
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
+
+        return new MatchExpression(matchKeyword, identifier, openCurly, caseExpressions, closeCurly);
     }
 
     private Expression parseFunctionCallExpression() {

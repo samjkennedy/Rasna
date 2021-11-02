@@ -10,6 +10,7 @@ import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
+import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
 import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
@@ -19,6 +20,7 @@ import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
 import com.skennedy.lazuli.typebinding.BoundReturnExpression;
+import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
 import com.skennedy.lazuli.typebinding.FunctionSymbol;
@@ -64,8 +66,12 @@ import static org.objectweb.asm.Opcodes.ICONST_3;
 import static org.objectweb.asm.Opcodes.ICONST_4;
 import static org.objectweb.asm.Opcodes.ICONST_5;
 import static org.objectweb.asm.Opcodes.IDIV;
+import static org.objectweb.asm.Opcodes.IFEQ;
+import static org.objectweb.asm.Opcodes.IFGE;
 import static org.objectweb.asm.Opcodes.IFGT;
+import static org.objectweb.asm.Opcodes.IFLE;
 import static org.objectweb.asm.Opcodes.IFLT;
+import static org.objectweb.asm.Opcodes.IFNE;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
 import static org.objectweb.asm.Opcodes.INTEGER;
@@ -484,7 +490,8 @@ public class JavaBytecodeCompiler implements Compiler {
 
     private void visit(BoundConditionalGotoExpression conditionalGotoExpression, MethodVisitor methodVisitor) {
 
-        visit(conditionalGotoExpression.getCondition(), methodVisitor);
+        BoundExpression condition = conditionalGotoExpression.getCondition();
+        visit(condition, methodVisitor);
 
         Label label;
         if (boundLabelToProgramLabel.containsKey(conditionalGotoExpression.getLabel())) {
@@ -496,8 +503,45 @@ public class JavaBytecodeCompiler implements Compiler {
 
         //Assuming only LT right now
         //TODO better handle other ops
-        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
-        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
+        if (condition instanceof BoundBinaryExpression) {
+            BoundBinaryExpression binaryCondition = (BoundBinaryExpression)condition;
+            BoundBinaryOperator operator = binaryCondition.getOperator();
+            switch (operator.getBoundOpType()) {
+                case GREATER_THAN:
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    break;
+                case LESS_THAN:
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGE : IFLT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGE : IFLT, label);
+                    break;
+                case GREATER_THAN_OR_EQUAL:
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLT : IFGE, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLT : IFGE, label);
+                    break;
+                case LESS_THAN_OR_EQUAL:
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLE, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLE, label);
+                    break;
+                case EQUALS:
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFNE : IFEQ, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFNE : IFEQ, label);
+                    break;
+                case NOT_EQUALS:
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+                    break;
+                case BOOLEAN_OR:
+                    break;
+                case BOOLEAN_AND:
+                    break;
+                default:
+                    throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
+            }
+        } else {
+            methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
+            textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
+        }
         localStackSize--;
     }
 

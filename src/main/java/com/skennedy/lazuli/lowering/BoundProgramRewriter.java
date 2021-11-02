@@ -16,6 +16,8 @@ import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
+import com.skennedy.lazuli.typebinding.BoundMatchCaseExpression;
+import com.skennedy.lazuli.typebinding.BoundMatchExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
 import com.skennedy.lazuli.typebinding.BoundReturnExpression;
@@ -114,9 +116,46 @@ public abstract class BoundProgramRewriter {
                 return rewriteFunctionDeclaration((BoundFunctionDeclarationExpression) expression); //TODO: rewrite parameters
             case RETURN:
                 return rewriteReturnCall((BoundReturnExpression)expression);
+            case MATCH_EXPRESSION:
+                return rewriteMatchExpression((BoundMatchExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    protected BoundExpression rewriteMatchExpression(BoundMatchExpression matchExpression) {
+
+        if (matchExpression.getMatchCaseExpressions().isEmpty()) {
+            return new BoundNoOpExpression();
+        }
+
+        BoundExpression rewrittenOperand = rewriteExpression(matchExpression.getOperand());
+
+        List<BoundMatchCaseExpression> rewrittenCaseExpressions = new ArrayList<>();
+        for (BoundMatchCaseExpression caseExpression : matchExpression.getMatchCaseExpressions()) {
+            rewrittenCaseExpressions.add(rewriteMatchCaseExpression(caseExpression));
+        }
+
+        if (rewrittenCaseExpressions != matchExpression.getMatchCaseExpressions()
+            || rewrittenOperand != matchExpression.getOperand()) {
+            return new BoundMatchExpression(matchExpression.getType(), rewrittenOperand, rewrittenCaseExpressions);
+        }
+        return matchExpression;
+    }
+
+    protected BoundMatchCaseExpression rewriteMatchCaseExpression(BoundMatchCaseExpression matchCaseExpression) {
+        BoundExpression rewrittenCaseExpression = null;
+        if (matchCaseExpression.getCaseExpression() != null) {
+            rewrittenCaseExpression = rewriteExpression(matchCaseExpression.getCaseExpression());
+        }
+        BoundExpression rewrittenThenExpression = rewriteExpression(matchCaseExpression.getThenExpression());
+
+        if (rewrittenCaseExpression != matchCaseExpression.getCaseExpression()
+            || rewrittenThenExpression != matchCaseExpression.getThenExpression()) {
+            return new BoundMatchCaseExpression(rewrittenCaseExpression, rewrittenThenExpression);
+        }
+
+        return matchCaseExpression;
     }
 
     private BoundExpression rewriteReturnCall(BoundReturnExpression returnExpression) {

@@ -31,8 +31,8 @@ mut(x)
 print(x)
 
 //Two arg method
-Int sum(Int l, Int r) {
-    return l + r
+Int sum(Int a, Int b) {
+    return a + b
 }
 
 print(sum(3, 9))
