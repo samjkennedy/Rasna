@@ -3,13 +3,13 @@ package com.skennedy.lazuli.typebinding;
 public class VariableSymbol extends Symbol {
 
     private final TypeSymbol type;
-    private final BoundExpression range;
+    private final BoundExpression guard;
     private final boolean readOnly;
 
-    public VariableSymbol(String name, TypeSymbol type, BoundExpression range, boolean readOnly) {
+    public VariableSymbol(String name, TypeSymbol type, BoundExpression guard, boolean readOnly) {
         super(name);
         this.type = type;
-        this.range = range;
+        this.guard = guard;
         this.readOnly = readOnly;
     }
 
@@ -22,8 +22,8 @@ public class VariableSymbol extends Symbol {
         return type;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 
     public boolean isReadOnly() {

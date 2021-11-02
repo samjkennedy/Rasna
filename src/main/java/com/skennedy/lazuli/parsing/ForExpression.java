@@ -19,7 +19,7 @@ public class ForExpression extends Expression {
     private final Expression terminator;
     private final IdentifierExpression byKeyword;
     private final Expression step;
-    private Expression range;
+    private Expression guard;
     private final IdentifierExpression closeParen;
     private final BlockExpression body;
 
@@ -33,7 +33,7 @@ public class ForExpression extends Expression {
                          Expression terminator,
                          IdentifierExpression byKeyword,
                          Expression step,
-                         Expression range,
+                         Expression guard,
                          IdentifierExpression closeParen,
                          BlockExpression body) {
 
@@ -47,7 +47,7 @@ public class ForExpression extends Expression {
         this.terminator = terminator;
         this.byKeyword = byKeyword;
         this.step = step;
-        this.range = range;
+        this.guard = guard;
         this.closeParen = closeParen;
         this.body = body;
     }
@@ -59,7 +59,7 @@ public class ForExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeKeyword, identifier, equals, initialiser, toKeyword, terminator, step, range, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeKeyword, identifier, equals, initialiser, toKeyword, terminator, step, guard, closeParen, body).iterator();
     }
 
     public IdentifierExpression getForKeyword() {
@@ -102,8 +102,8 @@ public class ForExpression extends Expression {
         return step;
     }
 
-    public Expression getRange() {
-        return range;
+    public Expression getGuard() {
+        return guard;
     }
 
     public IdentifierExpression getCloseParen() {

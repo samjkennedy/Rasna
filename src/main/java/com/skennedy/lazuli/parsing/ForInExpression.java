@@ -15,11 +15,11 @@ public class ForInExpression extends Expression {
     private final IdentifierExpression identifier;
     private final IdentifierExpression inKeyword;
     private final Expression iterable;
-    private final Expression range;
+    private final Expression guard;
     private final IdentifierExpression closeParen;
     private final BlockExpression body;
 
-    public ForInExpression(IdentifierExpression forKeyword, IdentifierExpression openParen, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression inKeyword, Expression iterable, Expression range, IdentifierExpression closeParen, BlockExpression body) {
+    public ForInExpression(IdentifierExpression forKeyword, IdentifierExpression openParen, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression inKeyword, Expression iterable, Expression guard, IdentifierExpression closeParen, BlockExpression body) {
 
         this.forKeyword = forKeyword;
         this.openParen = openParen;
@@ -27,7 +27,7 @@ public class ForInExpression extends Expression {
         this.identifier = identifier;
         this.inKeyword = inKeyword;
         this.iterable = iterable;
-        this.range = range;
+        this.guard = guard;
         this.closeParen = closeParen;
         this.body = body;
     }
@@ -40,7 +40,7 @@ public class ForInExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)forKeyword,  openParen, typeKeyword, identifier, inKeyword, iterable, range, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode)forKeyword,  openParen, typeKeyword, identifier, inKeyword, iterable, guard, closeParen, body).iterator();
     }
 
     public IdentifierExpression getForKeyword() {
@@ -67,8 +67,8 @@ public class ForInExpression extends Expression {
         return iterable;
     }
 
-    public Expression getRange() {
-        return range;
+    public Expression getGuard() {
+        return guard;
     }
 
     public IdentifierExpression getCloseParen() {

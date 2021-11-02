@@ -7,13 +7,13 @@ public class BoundForInExpression implements BoundExpression {
 
     private final VariableSymbol variable;
     private final BoundExpression iterable;
-    private final BoundExpression range;
+    private final BoundExpression guard;
     private final BoundExpression body;
 
-    public BoundForInExpression(VariableSymbol variable, BoundExpression iterable, BoundExpression range, BoundExpression body) {
+    public BoundForInExpression(VariableSymbol variable, BoundExpression iterable, BoundExpression guard, BoundExpression body) {
         this.variable = variable;
         this.iterable = iterable;
-        this.range = range;
+        this.guard = guard;
         this.body = body;
     }
 
@@ -29,7 +29,7 @@ public class BoundForInExpression implements BoundExpression {
 
     @Override
     public Iterator<BoundExpression> getChildren() {
-        return Arrays.asList(iterable, range, body).iterator();
+        return Arrays.asList(iterable, guard, body).iterator();
     }
 
     public VariableSymbol getVariable() {
@@ -40,8 +40,8 @@ public class BoundForInExpression implements BoundExpression {
         return iterable;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 
     public BoundExpression getBody() {

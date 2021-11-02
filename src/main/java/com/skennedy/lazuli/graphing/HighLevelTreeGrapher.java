@@ -139,12 +139,12 @@ public class HighLevelTreeGrapher {
 
         root.addLink(identifier);
 
-        if (variableDeclarationExpression.getRange() != null) {
-            MutableNode rangeRoot = mutNode(nextId()).add(Label.of("RANGE")).add(Shape.BOX);
-            MutableNode range = graphExpression(variableDeclarationExpression.getRange());
+        if (variableDeclarationExpression.getGuard() != null) {
+            MutableNode guardRoot = mutNode(nextId()).add(Label.of("GUARD")).add(Shape.BOX);
+            MutableNode guard = graphExpression(variableDeclarationExpression.getGuard());
 
-            rangeRoot.addLink(range);
-            root.addLink(rangeRoot);
+            guardRoot.addLink(guard);
+            root.addLink(guardRoot);
         }
         root.addLink(initialiser);
 
@@ -206,11 +206,11 @@ public class HighLevelTreeGrapher {
             root.addLink(by);
         }
 
-        if (forExpression.getRange() != null) {
-            MutableNode rangeRoot = mutNode(nextId()).add(Label.of("RANGE")).add(Shape.BOX);
-            MutableNode range = graphExpression(forExpression.getRange());
-            rangeRoot.addLink(range);
-            root.addLink(rangeRoot);
+        if (forExpression.getGuard() != null) {
+            MutableNode guardRoot = mutNode(nextId()).add(Label.of("GUARD")).add(Shape.BOX);
+            MutableNode guard = graphExpression(forExpression.getGuard());
+            guardRoot.addLink(guard);
+            root.addLink(guardRoot);
         }
 
         MutableNode body = graphExpression(forExpression.getBody());

@@ -191,15 +191,15 @@ public class Parser {
                 step = parseExpression();
             }
 
-            Expression range = null;
-            if (current().getTokenType() == TokenType.IF_KEYWORD) {
-                range = parseRangeExpression();
+            Expression guard = null;
+            if (current().getTokenType() == TokenType.BAR) {
+                guard = parseGuardExpression();
             }
 
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             BlockExpression body = parseBlockExpression();
 
-            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, initialiser, toKeyword, terminator, byKeyword, step, range, closeParen, body);
+            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, initialiser, toKeyword, terminator, byKeyword, step, guard, closeParen, body);
         } else if (current().getTokenType() == TokenType.IN_KEYWORD) {
             IdentifierExpression inKeyword = matchToken(TokenType.IN_KEYWORD);
 
@@ -209,22 +209,21 @@ public class Parser {
             } else {
                 iterable = parseExpression();
             }
-            Expression range = null;
-            if (current().getTokenType() == TokenType.IF_KEYWORD) {
-                matchToken(TokenType.IF_KEYWORD);
-                range = parseExpression();
+            Expression guard = null;
+            if (current().getTokenType() == TokenType.BAR) {
+                guard = parseGuardExpression();
             }
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             BlockExpression body = parseBlockExpression();
 
-            return new ForInExpression(forKeyword, openParen, declarationKeyword, identifier, inKeyword, iterable, range, closeParen, body);
+            return new ForInExpression(forKeyword, openParen, declarationKeyword, identifier, inKeyword, iterable, guard, closeParen, body);
         } else {
             throw new IllegalStateException("Unexpected token in iterator expression: " + current().getTokenType());
         }
     }
 
-    private Expression parseRangeExpression() {
-        matchToken(TokenType.IF_KEYWORD);
+    private Expression parseGuardExpression() {
+        matchToken(TokenType.BAR);
         return parseExpression();
     }
 
@@ -315,13 +314,12 @@ public class Parser {
         }
 
         IdentifierExpression bar = null;
-        Expression range = null;
+        Expression guard = null;
         if (current().getTokenType() == TokenType.BAR) {
-            bar = matchToken(TokenType.BAR);
-            range = parseExpression();
+            guard = parseGuardExpression();
         }
 
-        return new VariableDeclarationExpression(constKeyword, typeKeyword, isArray, identifier, bar, range, equals, initialiser);
+        return new VariableDeclarationExpression(constKeyword, typeKeyword, isArray, identifier, bar, guard, equals, initialiser);
     }
 
     private FunctionArgumentExpression parseFunctionArgumentExpression() {
@@ -352,13 +350,12 @@ public class Parser {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
         IdentifierExpression bar = null;
-        Expression range = null;
+        Expression guard = null;
         if (current().getTokenType() == TokenType.BAR) {
-            bar = matchToken(TokenType.BAR);
-            range = parseExpression();
+            guard = parseGuardExpression();
         }
 
-        return new FunctionArgumentExpression(constKeyword, typeKeyword, identifier, bar, range);
+        return new FunctionArgumentExpression(constKeyword, typeKeyword, identifier, bar, guard);
     }
 
     private Expression parseWhileExpression() {

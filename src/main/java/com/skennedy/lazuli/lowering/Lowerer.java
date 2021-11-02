@@ -9,8 +9,6 @@ import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
 import com.skennedy.lazuli.typebinding.BoundForExpression;
 import com.skennedy.lazuli.typebinding.BoundForInExpression;
-import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
-import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
@@ -102,11 +100,11 @@ public class Lowerer extends BoundProgramRewriter {
         }
 
         BoundBlockExpression whileBody;
-        if (rewrittenForExpression.getRange() == null) {
+        if (rewrittenForExpression.getGuard() == null) {
             whileBody = new BoundBlockExpression(rewrittenForExpression.getBody(), step);
         } else {
-            BoundExpression rangeCheck = new BoundIfExpression(rewrittenForExpression.getRange(), rewrittenForExpression.getBody(), null);
-            whileBody = new BoundBlockExpression(rangeCheck, step);
+            BoundExpression guardClause = new BoundIfExpression(rewrittenForExpression.getGuard(), rewrittenForExpression.getBody(), null);
+            whileBody = new BoundBlockExpression(guardClause, step);
         }
 
         BoundBinaryExpression condition = new BoundBinaryExpression(variableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), boundForExpression.getTerminator());
@@ -148,12 +146,12 @@ public class Lowerer extends BoundProgramRewriter {
         );
 
         BoundBlockExpression whileBody;
-        if (rewrittenForInExpression.getRange() == null) {
+        if (rewrittenForInExpression.getGuard() == null) {
             whileBody = new BoundBlockExpression(iteratorIncrementExpression, rewrittenForInExpression.getBody(), step);
         } else {
             BoundBlockExpression body = new BoundBlockExpression(rewrittenForInExpression.getBody());
-            BoundExpression rangeCheck = new BoundIfExpression(rewrittenForInExpression.getRange(), body, null);
-            whileBody = new BoundBlockExpression(iteratorIncrementExpression, rangeCheck, step);
+            BoundExpression guardClause = new BoundIfExpression(rewrittenForInExpression.getGuard(), body, null);
+            whileBody = new BoundBlockExpression(iteratorIncrementExpression, guardClause, step);
         }
         BoundBinaryExpression condition = new BoundBinaryExpression(indexVariableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), new BoundArrayLengthExpression(rewrittenForInExpression.getIterable()));
 

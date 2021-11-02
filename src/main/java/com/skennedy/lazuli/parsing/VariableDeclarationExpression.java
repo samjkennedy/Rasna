@@ -14,17 +14,17 @@ public class VariableDeclarationExpression extends Expression {
     private boolean isArray;
     private final IdentifierExpression identifier;
     private final IdentifierExpression bar;
-    private final Expression range;
+    private final Expression guard;
     private final IdentifierExpression equals;
     private final Expression initialiser;
 
-    public VariableDeclarationExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, boolean isArray, IdentifierExpression identifier, IdentifierExpression colon, Expression range, IdentifierExpression equals, Expression initialiser) {
+    public VariableDeclarationExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, boolean isArray, IdentifierExpression identifier, IdentifierExpression colon, Expression guard, IdentifierExpression equals, Expression initialiser) {
         this.constKeyword = constKeyword;
         this.typeKeyword = typeKeyword;
         this.isArray = isArray;
         this.identifier = identifier;
         this.bar = colon;
-        this.range = range;
+        this.guard = guard;
         this.equals = equals;
         this.initialiser = initialiser;
     }
@@ -59,8 +59,8 @@ public class VariableDeclarationExpression extends Expression {
         return bar;
     }
 
-    public Expression getRange() {
-        return range;
+    public Expression getGuard() {
+        return guard;
     }
 
     public IdentifierExpression getEquals() {

@@ -158,15 +158,15 @@ public class Binder {
         if (forExpression.getStep() != null) {
             step = bind(forExpression.getStep());
         }
-        BoundExpression range = null;
-        if (forExpression.getRange() != null) {
-            range = bind(forExpression.getRange());
+        BoundExpression guard = null;
+        if (forExpression.getGuard() != null) {
+            guard = bind(forExpression.getGuard());
         }
         BoundExpression body = bind(forExpression.getBody());
 
         currentScope = currentScope.getParentScope();
 
-        return new BoundForExpression(variable, initialiser, terminator, step, range, body);
+        return new BoundForExpression(variable, initialiser, terminator, step, guard, body);
     }
 
     private BoundExpression bindForInExpression(ForInExpression forInExpression) {
@@ -191,16 +191,16 @@ public class Binder {
             errors.add(Error.raiseVariableAlreadyDeclared((String) forInExpression.getIdentifier().getValue()));
         }
 
-        BoundExpression range = null;
-        if (forInExpression.getRange() != null) {
-            range = bind(forInExpression.getRange());
+        BoundExpression guard = null;
+        if (forInExpression.getGuard() != null) {
+            guard = bind(forInExpression.getGuard());
         }
 
         BoundExpression body = bind(forInExpression.getBody());
 
         currentScope = currentScope.getParentScope();
 
-        return new BoundForInExpression(variable, iterable, range, body);
+        return new BoundForInExpression(variable, iterable, guard, body);
     }
 
     private TypeSymbol parseType(IdentifierExpression keyword) {
@@ -222,8 +222,8 @@ public class Binder {
         }
     }
 
-    private VariableSymbol getVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression range, boolean readOnly) {
-        return new VariableSymbol((String) identifier.getValue(), type, range, readOnly);
+    private VariableSymbol getVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression guard, boolean readOnly) {
+        return new VariableSymbol((String) identifier.getValue(), type, guard, readOnly);
     }
 
     private BoundExpression bindIfExpression(IfExpression ifExpression) {
@@ -299,7 +299,7 @@ public class Binder {
             throw new TypeMismatchException(variable.getType(), initialiser.getType());
         }
 
-        return new BoundAssignmentExpression(variable, variable.getRange(), initialiser);
+        return new BoundAssignmentExpression(variable, variable.getGuard(), initialiser);
     }
 
     private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {
@@ -343,16 +343,16 @@ public class Binder {
             errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
         }
 
-        BoundExpression range = null;
-        if (argumentExpression.getRange() != null) {
-            range = bind(argumentExpression.getRange());
+        BoundExpression guard = null;
+        if (argumentExpression.getGuard() != null) {
+            guard = bind(argumentExpression.getGuard());
         }
 
-        VariableSymbol argument = getVariableSymbol(type, identifier, range, argumentExpression.getConstKeyword() != null);
+        VariableSymbol argument = getVariableSymbol(type, identifier, guard, argumentExpression.getConstKeyword() != null);
 
         currentScope.reassignVariable((String) identifier.getValue(), argument);
 
-        return new BoundFunctionArgumentExpression(argument, range);
+        return new BoundFunctionArgumentExpression(argument, guard);
     }
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
@@ -395,10 +395,10 @@ public class Binder {
             errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
         }
 
-        BoundExpression range = null;
-        if (variableDeclarationExpression.getRange() != null) {
-            range = bind(variableDeclarationExpression.getRange());
-            assert range.getType().isAssignableFrom(TypeSymbol.BOOL);
+        BoundExpression guard = null;
+        if (variableDeclarationExpression.getGuard() != null) {
+            guard = bind(variableDeclarationExpression.getGuard());
+            assert guard.getType().isAssignableFrom(TypeSymbol.BOOL);
         }
 
         //TODO: Array of what?
@@ -407,10 +407,10 @@ public class Binder {
         if (initialiser != null && !type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
         }
-        VariableSymbol variable = getVariableSymbol(type, identifier, range, variableDeclarationExpression.getConstKeyword() != null);
+        VariableSymbol variable = getVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null);
 
         currentScope.reassignVariable((String) identifier.getValue(), variable);
-        return new BoundVariableDeclarationExpression(variable, range, initialiser, variableDeclarationExpression.getConstKeyword() != null);
+        return new BoundVariableDeclarationExpression(variable, guard, initialiser, variableDeclarationExpression.getConstKeyword() != null);
     }
 
     private BoundExpression bindWhileExpression(WhileExpression whileExpression) {

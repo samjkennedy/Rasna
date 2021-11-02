@@ -6,13 +6,13 @@ import java.util.Iterator;
 public class BoundVariableDeclarationExpression implements BoundExpression {
 
     private final VariableSymbol variable;
-    private final BoundExpression range;
+    private final BoundExpression guard;
     private final BoundExpression initialiser;
     private final boolean readOnly;
 
-    public BoundVariableDeclarationExpression(VariableSymbol variable, BoundExpression range, BoundExpression initialiser, boolean readOnly) {
+    public BoundVariableDeclarationExpression(VariableSymbol variable, BoundExpression guard, BoundExpression initialiser, boolean readOnly) {
         this.variable = variable;
-        this.range = range;
+        this.guard = guard;
         this.initialiser = initialiser;
         this.readOnly = readOnly;
     }
@@ -29,15 +29,15 @@ public class BoundVariableDeclarationExpression implements BoundExpression {
 
     @Override
     public Iterator<BoundExpression> getChildren() {
-        return Arrays.asList(range, initialiser).iterator();
+        return Arrays.asList(guard, initialiser).iterator();
     }
 
     public VariableSymbol getVariable() {
         return variable;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 
     public BoundExpression getInitialiser() {

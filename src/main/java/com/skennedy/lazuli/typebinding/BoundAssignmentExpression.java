@@ -6,12 +6,12 @@ import java.util.Iterator;
 public class BoundAssignmentExpression implements BoundExpression {
 
     private final VariableSymbol variable;
-    private BoundExpression range;
+    private BoundExpression guard;
     private final BoundExpression expression;
 
-    public BoundAssignmentExpression(VariableSymbol variable, BoundExpression range, BoundExpression expression) {
+    public BoundAssignmentExpression(VariableSymbol variable, BoundExpression guard, BoundExpression expression) {
         this.variable = variable;
-        this.range = range;
+        this.guard = guard;
         this.expression = expression;
     }
 
@@ -34,8 +34,8 @@ public class BoundAssignmentExpression implements BoundExpression {
         return variable;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 
     public BoundExpression getExpression() {
