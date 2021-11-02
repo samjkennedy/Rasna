@@ -9,19 +9,26 @@ import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
 import com.skennedy.lazuli.typebinding.BoundForExpression;
 import com.skennedy.lazuli.typebinding.BoundForInExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
 import com.skennedy.lazuli.typebinding.BoundWhileExpression;
+import com.skennedy.lazuli.typebinding.FunctionSymbol;
 import com.skennedy.lazuli.typebinding.TypeSymbol;
 import com.skennedy.lazuli.typebinding.VariableSymbol;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class Lowerer extends BoundProgramRewriter {
 
     private static int labelCount = 0;
+
+    private static Map<FunctionSymbol, BoundLabel> functionDeclarationLocations = new HashMap<>();
 
     @Override
     protected BoundExpression rewriteWhileExpression(BoundWhileExpression boundWhileExpression) {

@@ -1,5 +1,7 @@
 package com.skennedy.lazuli.simulation;
 
+import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
+import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.VariableOutsideRangeException;
@@ -8,6 +10,7 @@ import com.skennedy.lazuli.lowering.BoundConditionalGotoExpression;
 import com.skennedy.lazuli.lowering.BoundGotoExpression;
 import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
+import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
@@ -15,12 +18,18 @@ import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
 import com.skennedy.lazuli.typebinding.BoundConstDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
+import com.skennedy.lazuli.typebinding.BoundReturnExpression;
 import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
+import com.skennedy.lazuli.typebinding.FunctionSymbol;
+import com.skennedy.lazuli.typebinding.TypeSymbol;
 import com.skennedy.lazuli.typebinding.VariableSymbol;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,8 +37,10 @@ import org.apache.logging.log4j.Logger;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 public class Simulator {
@@ -39,6 +50,9 @@ public class Simulator {
     private Scope scope;
     private int ip;
     private Map<BoundLabel, Integer> labelToIp;
+
+    private Stack<Integer> returnStack;
+    private Stack<Object> localsStack;
 
     private BoundProgram program;
     private PrintStream out;
@@ -50,6 +64,8 @@ public class Simulator {
     public Simulator(PrintStream out) {
 
         scope = new Scope(null);
+        returnStack = new Stack<>();
+        localsStack = new Stack<>();
         this.out = out;
     }
 
@@ -58,6 +74,34 @@ public class Simulator {
 
         labelToIp = new HashMap<>();
 
+
+        //Forward declare all methods
+        List<BoundExpression> expressions = program.getExpressions();
+
+        for (int i = 0; i < expressions.size(); ) {
+            BoundExpression expression = expressions.get(i);
+            if (expression instanceof BoundFunctionDeclarationExpression) {
+                BoundFunctionDeclarationExpression functionDeclarationExpression = (BoundFunctionDeclarationExpression) expression;
+
+                scope.declareFunction(functionDeclarationExpression.getFunctionSymbol(), i);
+
+                program.getExpressions().remove(i);
+                if (functionDeclarationExpression.getFunctionSymbol().getType() == TypeSymbol.VOID) {
+                    program.getExpressions().add(i, new BoundReturnExpression(new BoundNoOpExpression()));
+                }
+                program.getExpressions().addAll(i, functionDeclarationExpression.getBody().getExpressions());
+                if (functionDeclarationExpression.getFunctionSymbol().getType() == TypeSymbol.VOID) {
+                    i += 1;
+                }
+
+                i += ((BoundFunctionDeclarationExpression) expression).getBody().getExpressions().size();
+                ip = i;
+            } else {
+                i++;
+            }
+        }
+        int instructionStart = ip;
+
         ip = 0;
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundLabelExpression) {
@@ -65,93 +109,163 @@ public class Simulator {
             }
             ip++;
         }
-        ip = 0;
+        int programEnd = ip;
+        ip = instructionStart;
 
-        while (ip < program.getExpressions().size()) {
+        while (ip < programEnd) {
             BoundExpression expression = program.getExpressions().get(ip);
             log.debug(ip + " - " + expression.getBoundExpressionType());
             evaluate(expression);
+            ip++;
         }
     }
 
-    private Object evaluate(BoundExpression expression) {
+    private void evaluate(BoundExpression expression) {
 
-        Object res = null;
         switch (expression.getBoundExpressionType()) {
             case ARRAY_LITERAL_EXPRESSION:
-                return evaluateArrayLiteralExpression((BoundArrayLiteralExpression) expression);
+                evaluateArrayLiteralExpression((BoundArrayLiteralExpression) expression);
+                break;
             case ARRAY_ACCESS_EXPRESSION:
-                return evaluateArrayAccessExpression((BoundArrayAccessExpression) expression);
+                evaluateArrayAccessExpression((BoundArrayAccessExpression) expression);
+                break;
             case ARRAY_LENGTH_EXPRESSION:
-                return evaluateArrayLengthExpression((BoundArrayLengthExpression) expression);
+                evaluateArrayLengthExpression((BoundArrayLengthExpression) expression);
+                break;
             case LITERAL:
-                return  ((BoundLiteralExpression) expression).getValue();
+                localsStack.push(((BoundLiteralExpression) expression).getValue());
+                break;
             case VARIABLE_EXPRESSION:
-                return evaluateVariableExpression((BoundVariableExpression) expression);
+                evaluateVariableExpression((BoundVariableExpression) expression);
+                break;
             case VARIABLE_DECLARATION:
                 if (expression instanceof BoundConstDeclarationExpression) {
-                    return evaluate((BoundConstDeclarationExpression) expression);
+                    evaluate((BoundConstDeclarationExpression) expression);
+                } else {
+                    evaluate((BoundVariableDeclarationExpression) expression);
                 }
-                return evaluate((BoundVariableDeclarationExpression) expression);
+                break;
             case BINARY_EXPRESSION:
-                return evaluateBinaryExpression((BoundBinaryExpression) expression);
+                evaluateBinaryExpression((BoundBinaryExpression) expression);
+                break;
             case PRINT_INTRINSIC:
-                ip++;
                 evaluatePrintExpression((BoundPrintExpression) expression);
-                return null;
+                break;
             case TYPEOF_INTRINSIC:
-                return evaluateTypeofExpression((BoundTypeofExpression) expression);
+                evaluateTypeofExpression((BoundTypeofExpression) expression);
+                break;
             case CONDITIONAL_GOTO:
                 BoundConditionalGotoExpression conditionalGotoExpression = (BoundConditionalGotoExpression) expression;
-                boolean condition = (boolean) evaluate(conditionalGotoExpression.getCondition());
+                evaluate(conditionalGotoExpression.getCondition());
+
+                boolean condition = (boolean) localsStack.pop();
+
                 if ((condition && !conditionalGotoExpression.jumpIfFalse()) || (!condition && conditionalGotoExpression.jumpIfFalse())) {
                     ip = labelToIp.get(conditionalGotoExpression.getLabel());
-                } else {
-                    ip++;
                 }
                 if (ip >= program.getExpressions().size()) {
-                    return res;
+                    return;
                 }
-                return evaluate(program.getExpressions().get(ip));
+                break;
             case GOTO:
                 ip = labelToIp.get(((BoundGotoExpression) expression).getLabel());
-                return res;
+                break;
             case ASSIGNMENT_EXPRESSION:
-                return evaluate((BoundAssignmentExpression) expression);
+                evaluate((BoundAssignmentExpression) expression);
+                break;
             case NOOP:
             case LABEL:
-                ip++;
-                return res;
+                break;
+            case FUNCTION_CALL:
+                evaluateFunctionCall((BoundFunctionCallExpression) expression);
+                break;
+            case RETURN:
+                evaluateReturn((BoundReturnExpression) expression);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
     }
 
-    private Object evaluateArrayLiteralExpression(BoundArrayLiteralExpression arrayLiteralExpression) {
+    private void evaluateReturn(BoundReturnExpression returnExpression) {
+        evaluate(returnExpression.getReturnValue());
+        ip = returnStack.pop();
+    }
+
+    private void evaluateFunctionCall(BoundFunctionCallExpression functionCallExpression) {
+
+        Optional<Integer> methodIp = scope.tryLookupFunction(functionCallExpression.getFunction());
+        if (methodIp.isEmpty()) {
+            throw new UndefinedFunctionException(functionCallExpression.getFunction().getName());
+        }
+
+        Scope returnScope = scope;
+        scope = new Scope(null);
+        scope.functionsIps = returnScope.functionsIps;
+
+        List<BoundExpression> argumentInitialisers = functionCallExpression.getBoundArguments();
+        List<BoundFunctionArgumentExpression> arguments = functionCallExpression.getFunction().getArguments();
+        for (int arg = 0; arg < argumentInitialisers.size(); arg++) {
+            BoundFunctionArgumentExpression argument = arguments.get(arg);
+            BoundExpression initialiser = argumentInitialisers.get(arg);
+            BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(
+                    argument.getArgument(),
+                    argument.getRange(),
+                    initialiser,
+                    argument.getArgument().isReadOnly()
+            );
+            evaluate(variableDeclarationExpression);
+        }
+        returnStack.push(ip);
+
+        ip = methodIp.get();
+
+        BoundExpression expression;
+        do {
+            expression = program.getExpressions().get(ip);
+            evaluate(expression);
+            ip++;
+            //This happens if the method call was the last instruction
+            if (ip >= program.getExpressions().size()) {
+                return;
+            }
+        } while (!(expression instanceof BoundReturnExpression));
+        ip--;
+
+        scope = returnScope;
+    }
+
+    private void evaluateArrayLiteralExpression(BoundArrayLiteralExpression arrayLiteralExpression) {
         Object[] array = new Object[arrayLiteralExpression.getElements().size()];
 
+
         for (int i = 0; i < arrayLiteralExpression.getElements().size(); i++) {
-            array[i] = evaluate(arrayLiteralExpression.getElements().get(i));
+            evaluate(arrayLiteralExpression.getElements().get(i));
+            array[i] = localsStack.pop();
         }
-        return new LazuliArray(array);
+        //TODO: To really mimic the JVM push a reference
+        localsStack.push(new LazuliArray<>(array));
     }
 
-    private Object evaluateArrayAccessExpression(BoundArrayAccessExpression arrayAccessExpression) {
-        LazuliArray lazuliArray = (LazuliArray)evaluate(arrayAccessExpression.getArray());
-        int index = (int) evaluate(arrayAccessExpression.getIndex());
-        return lazuliArray.get(index);
+    private void evaluateArrayAccessExpression(BoundArrayAccessExpression arrayAccessExpression) {
+        evaluate(arrayAccessExpression.getArray());
+        evaluate(arrayAccessExpression.getIndex());
+        int index = (int) localsStack.pop();
+        LazuliArray<Object> array = (LazuliArray<Object>) localsStack.pop();
+        localsStack.push(array.get(index));
     }
 
-    private Object evaluateArrayLengthExpression(BoundArrayLengthExpression arrayLengthExpression) {
-        LazuliArray lazuliArray = (LazuliArray)evaluate(arrayLengthExpression.getIterable());
-        return lazuliArray.array.length;
+    private void evaluateArrayLengthExpression(BoundArrayLengthExpression arrayLengthExpression) {
+        evaluate(arrayLengthExpression.getIterable());
+        LazuliArray lazuliArray = (LazuliArray) localsStack.pop();
+        localsStack.push(lazuliArray.array.length);
     }
 
     private class LazuliArray<T> {
 
         private T[] array;
 
-        public LazuliArray(T[] array) {
+        LazuliArray(T[] array) {
             this.array = array;
         }
 
@@ -178,56 +292,55 @@ public class Simulator {
         }
     }
 
-    private Object evaluate(BoundAssignmentExpression assignmentExpression) {
+    private void evaluate(BoundAssignmentExpression assignmentExpression) {
 
         VariableSymbol variable = assignmentExpression.getVariable();
-        if (scope.tryLookup(variable.getName()).isEmpty()) {
+        if (scope.tryLookupVariable(variable.getName()).isEmpty()) {
             throw new UndefinedVariableException(variable.getName());
         }
-        Object value = evaluate(assignmentExpression.getExpression());
+        evaluate(assignmentExpression.getExpression());
+        Object value = localsStack.pop();
 
         scope.reassignVariable(variable.getName(), value);
 
         if (assignmentExpression.getRange() != null) {
-            boolean withinRange = (boolean) evaluate(assignmentExpression.getRange());
+            evaluate(assignmentExpression.getRange());
+            boolean withinRange = (boolean) localsStack.pop();
             if (!withinRange) {
                 throw new VariableOutsideRangeException(variable.getName());
             }
         }
-
-        ip++;
-        return value;
+        localsStack.push(value);
     }
 
-    private Object evaluate(BoundVariableDeclarationExpression variableDeclarationExpression) {
+    private void evaluate(BoundVariableDeclarationExpression variableDeclarationExpression) {
 
         VariableSymbol variable = variableDeclarationExpression.getVariable();
-        if (scope.tryLookup(variable.getName()).isPresent()) {
+        if (scope.tryLookupVariable(variable.getName()).isPresent()) {
             throw new VariableAlreadyDeclaredException(variable.getName());
         }
 
         Object value = 0; //TODO: default primitive values
         if (variableDeclarationExpression.getInitialiser() != null) {
-            value = evaluate(variableDeclarationExpression.getInitialiser());
+            evaluate(variableDeclarationExpression.getInitialiser());
+            value = localsStack.pop();
         }
-
         scope.declareVariable(variable.getName(), value);
 
         if (variableDeclarationExpression.getRange() != null) {
-            boolean withinRange = (boolean) evaluate(variableDeclarationExpression.getRange());
+            evaluate(variableDeclarationExpression.getRange());
+            boolean withinRange = (boolean) localsStack.pop();
             if (!withinRange) {
                 throw new VariableOutsideRangeException(variable.getName());
             }
         }
-
-        ip++;
-        return value;
+        localsStack.push(value);
     }
 
-    private Object evaluate(BoundConstDeclarationExpression constDeclarationExpression) {
+    private void evaluate(BoundConstDeclarationExpression constDeclarationExpression) {
 
         VariableSymbol variable = constDeclarationExpression.getVariable();
-        if (scope.tryLookup(variable.getName()).isPresent()) {
+        if (scope.tryLookupVariable(variable.getName()).isPresent()) {
             throw new VariableAlreadyDeclaredException(variable.getName());
         }
 
@@ -236,87 +349,114 @@ public class Simulator {
             value = ((BoundLiteralExpression) value).getValue();
         }
         scope.declareVariable(variable.getName(), value);
-
-        ip++;
-        return value;
+        localsStack.push(value);
     }
 
     private void evaluatePrintExpression(BoundPrintExpression printExpression) {
 
-        Object value = evaluate(printExpression.getExpression());
-        out.println(value);
+        evaluate(printExpression.getExpression());
+        out.println(localsStack.pop());
     }
 
-    private String evaluateTypeofExpression(BoundTypeofExpression typeofExpression) {
-
-        ip++;
-        return typeofExpression.getExpression().getType().getName();
+    private void evaluateTypeofExpression(BoundTypeofExpression typeofExpression) {
+        //TODO: push a String reference
+        localsStack.push(typeofExpression.getExpression().getType().getName());
     }
 
-    private Object evaluateVariableExpression(BoundVariableExpression boundVariableExpression) {
-        return scope.tryLookup(boundVariableExpression.getVariable().getName()).orElse(null);
-    }
-
-    private Object evaluateBinaryExpression(BoundBinaryExpression expression) {
-        if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
-            return (int) evaluate(expression.getLeft()) + (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.SUBTRACTION) {
-            return (int) evaluate(expression.getLeft()) - (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.MULTIPLICATION) {
-            return (int) evaluate(expression.getLeft()) * (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.DIVISION) {
-            return (int) evaluate(expression.getLeft()) / (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.REMAINDER) {
-            return (int) evaluate(expression.getLeft()) % (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
-            return (int) evaluate(expression.getLeft()) == (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.NOT_EQUALS) {
-            return (int) evaluate(expression.getLeft()) != (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN) {
-            return (int) evaluate(expression.getLeft()) > (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN) {
-            return (int) evaluate(expression.getLeft()) < (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN_OR_EQUAL) {
-            return (int) evaluate(expression.getLeft()) >= (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN_OR_EQUAL) {
-            return (int) evaluate(expression.getLeft()) <= (int) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_AND) {
-            return (boolean) evaluate(expression.getLeft()) && (boolean) evaluate(expression.getRight());
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_OR) {
-            return (boolean) evaluate(expression.getLeft()) || (boolean) evaluate(expression.getRight());
+    private void evaluateVariableExpression(BoundVariableExpression boundVariableExpression) {
+        Optional<Object> value = scope.tryLookupVariable(boundVariableExpression.getVariable().getName());
+        if (value.isEmpty()) {
+            throw new UndefinedVariableException(boundVariableExpression.getVariable().getName());
         }
-        throw new IllegalStateException("Unexpected value: " + expression.getOperator().getBoundOpType());
+        localsStack.push(value.get());
+    }
+
+    private void evaluateBinaryExpression(BoundBinaryExpression expression) {
+        evaluate(expression.getLeft());
+        Object left = localsStack.pop();
+        evaluate(expression.getRight());
+        Object right = localsStack.pop();
+        if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
+            localsStack.push((int) left + (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.SUBTRACTION) {
+            localsStack.push((int) left - (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.MULTIPLICATION) {
+            localsStack.push((int) left * (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.DIVISION) {
+            localsStack.push((int) left / (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.REMAINDER) {
+            localsStack.push((int) left % (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
+            localsStack.push((int) left == (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.NOT_EQUALS) {
+            localsStack.push((int) left != (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN) {
+            localsStack.push((int) left > (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN) {
+            localsStack.push((int) left < (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN_OR_EQUAL) {
+            localsStack.push((int) left >= (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN_OR_EQUAL) {
+            localsStack.push((int) left <= (int) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_AND) {
+            localsStack.push((boolean) left && (boolean) right);
+        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_OR) {
+            localsStack.push((boolean) left || (boolean) right);
+        } else {
+            throw new IllegalStateException("Unexpected value: " + expression.getOperator().getBoundOpType());
+        }
     }
 
     private static class Scope {
 
         private Scope parentScope;
         private Map<String, Object> variables;
+        private Map<FunctionSymbol, Integer> functionsIps;
 
-        public Scope(Scope parentScope) {
+        Scope(Scope parentScope) {
             this.parentScope = parentScope;
             this.variables = new HashMap<>();
+            this.functionsIps = new HashMap<>();
         }
 
-        public Optional<Object> tryLookup(String name) {
+        Optional<Object> tryLookupVariable(String name) {
 
             if (variables.containsKey(name)) {
                 return Optional.ofNullable(variables.get(name));
             }
             if (parentScope != null) {
-                return parentScope.tryLookup(name);
+                return parentScope.tryLookupVariable(name);
             }
             return Optional.empty();
         }
 
-        public void declareVariable(String name, Object variable) {
-            if (tryLookup(name).isPresent()) {
+        Optional<Integer> tryLookupFunction(FunctionSymbol function) {
+
+            if (functionsIps.containsKey(function)) {
+                return Optional.ofNullable(functionsIps.get(function));
+            }
+            if (parentScope != null) {
+                return parentScope.tryLookupFunction(function);
+            }
+            return Optional.empty();
+        }
+
+        void declareVariable(String name, Object variable) {
+            if (tryLookupVariable(name).isPresent()) {
                 throw new VariableAlreadyDeclaredException(name);
             }
             variables.put(name, variable);
         }
 
-        public void reassignVariable(String name, Object variable) {
+        void declareFunction(FunctionSymbol function, Integer ip) {
+            if (tryLookupFunction(function).isPresent()) {
+                //TODO: Get args
+                throw new FunctionAlreadyDeclaredException(function.getName());
+            }
+            functionsIps.put(function, ip);
+        }
+
+        void reassignVariable(String name, Object variable) {
             if (!variables.containsKey(name)) {
                 if (parentScope == null) {
                     throw new UndefinedVariableException(name);

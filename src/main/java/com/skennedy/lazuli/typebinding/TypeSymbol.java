@@ -8,6 +8,7 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol INT = new TypeSymbol("Int");
     public static final TypeSymbol NUM = new TypeSymbol("Num");
     public static final TypeSymbol BOOL = new TypeSymbol("Bool");
+    public static final TypeSymbol FUNCTION = new TypeSymbol("Function");
     public static final TypeSymbol ARRAY = new TypeSymbol("Array"); //TODO: TEMP
 
     public TypeSymbol(String name) {
