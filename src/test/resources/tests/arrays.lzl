@@ -2,12 +2,12 @@ IntArray ints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 for (Int int in ints) {
     print(int)
 }
-for (Int i in ints if i mod 2 == 0) {
+for (Int i in ints | i mod 2 == 0) {
      print(i)
  }
 for (Int j = 0 to 10) {
     print(ints[j])
 }
-for (Int k = 0 to 10 if ints[k] mod 2 == 0) {
+for (Int k = 0 to 10 | ints[k] mod 2 == 0) {
      print(ints[k])
 }

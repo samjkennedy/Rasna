@@ -6,13 +6,13 @@ import java.util.List;
 public class FunctionSymbol extends Symbol {
     private final TypeSymbol type;
     private final List<BoundFunctionArgumentExpression> arguments;
-    private final BoundExpression range;
+    private final BoundExpression guard;
 
-    public FunctionSymbol(String name, TypeSymbol type, List<BoundFunctionArgumentExpression> arguments, BoundExpression range) {
+    public FunctionSymbol(String name, TypeSymbol type, List<BoundFunctionArgumentExpression> arguments, BoundExpression guard) {
         super(name);
         this.type = type;
         this.arguments = arguments;
-        this.range = range;
+        this.guard = guard;
     }
 
     @Override
@@ -28,8 +28,8 @@ public class FunctionSymbol extends Symbol {
         return arguments;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 
 

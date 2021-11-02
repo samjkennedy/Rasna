@@ -9,15 +9,15 @@ public class BoundForExpression implements BoundExpression {
     private final BoundExpression initialiser;
     private final BoundExpression terminator;
     private final BoundExpression step;
-    private final BoundExpression range;
+    private final BoundExpression guard;
     private final BoundExpression body;
 
-    public BoundForExpression(VariableSymbol iterator, BoundExpression initialiser, BoundExpression terminator, BoundExpression step, BoundExpression range, BoundExpression body) {
+    public BoundForExpression(VariableSymbol iterator, BoundExpression initialiser, BoundExpression terminator, BoundExpression step, BoundExpression guard, BoundExpression body) {
         this.iterator = iterator;
         this.initialiser = initialiser;
         this.terminator = terminator;
         this.step = step;
-        this.range = range;
+        this.guard = guard;
         this.body = body;
     }
 
@@ -33,7 +33,7 @@ public class BoundForExpression implements BoundExpression {
 
     @Override
     public Iterator<BoundExpression> getChildren() {
-        return Arrays.asList(initialiser, terminator, step, range, body).iterator();
+        return Arrays.asList(initialiser, terminator, step, guard, body).iterator();
     }
 
     public VariableSymbol getIterator() {
@@ -52,8 +52,8 @@ public class BoundForExpression implements BoundExpression {
         return step;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 
     public BoundExpression getBody() {

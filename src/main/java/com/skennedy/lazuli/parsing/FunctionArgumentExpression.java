@@ -13,14 +13,14 @@ public class FunctionArgumentExpression extends Expression {
     private final IdentifierExpression typeKeyword;
     private final IdentifierExpression identifier;
     private final IdentifierExpression bar;
-    private final Expression range;
+    private final Expression guard;
 
-    public FunctionArgumentExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression bar, Expression range) {
+    public FunctionArgumentExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
         this.constKeyword = constKeyword;
         this.typeKeyword = typeKeyword;
         this.identifier = identifier;
         this.bar = bar;
-        this.range = range;
+        this.guard = guard;
     }
 
     @Override
@@ -30,7 +30,7 @@ public class FunctionArgumentExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)typeKeyword, identifier, bar, range).iterator();
+        return Arrays.asList((SyntaxNode)typeKeyword, identifier, bar, guard).iterator();
     }
 
     public IdentifierExpression getConstKeyword() {
@@ -49,7 +49,7 @@ public class FunctionArgumentExpression extends Expression {
         return bar;
     }
 
-    public Expression getRange() {
-        return range;
+    public Expression getGuard() {
+        return guard;
     }
 }

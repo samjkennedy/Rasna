@@ -178,12 +178,12 @@ public class LowLevelTreeGrapher {
 
         root.addLink(identifier);
 
-        if (variableDeclarationExpression.getRange() != null) {
-            MutableNode rangeRoot = mutNode("range_" + ip).add(Label.of("RANGE")).add(Shape.BOX);
-            MutableNode range = graphExpression(variableDeclarationExpression.getRange(), ip);
+        if (variableDeclarationExpression.getGuard() != null) {
+            MutableNode guardRoot = mutNode("guard_" + ip).add(Label.of("GUARD")).add(Shape.BOX);
+            MutableNode guard = graphExpression(variableDeclarationExpression.getGuard(), ip);
 
-            rangeRoot.addLink(range);
-            root.addLink(rangeRoot);
+            guardRoot.addLink(guard);
+            root.addLink(guardRoot);
         }
         root.addLink(initialiser);
 

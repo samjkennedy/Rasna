@@ -210,7 +210,7 @@ public class Simulator {
             BoundExpression initialiser = argumentInitialisers.get(arg);
             BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(
                     argument.getArgument(),
-                    argument.getRange(),
+                    argument.getGuard(),
                     initialiser,
                     argument.getArgument().isReadOnly()
             );
@@ -303,10 +303,10 @@ public class Simulator {
 
         scope.reassignVariable(variable.getName(), value);
 
-        if (assignmentExpression.getRange() != null) {
-            evaluate(assignmentExpression.getRange());
-            boolean withinRange = (boolean) localsStack.pop();
-            if (!withinRange) {
+        if (assignmentExpression.getGuard() != null) {
+            evaluate(assignmentExpression.getGuard());
+            boolean passedGuard = (boolean) localsStack.pop();
+            if (!passedGuard) {
                 throw new VariableOutsideRangeException(variable.getName());
             }
         }
@@ -327,10 +327,10 @@ public class Simulator {
         }
         scope.declareVariable(variable.getName(), value);
 
-        if (variableDeclarationExpression.getRange() != null) {
-            evaluate(variableDeclarationExpression.getRange());
-            boolean withinRange = (boolean) localsStack.pop();
-            if (!withinRange) {
+        if (variableDeclarationExpression.getGuard() != null) {
+            evaluate(variableDeclarationExpression.getGuard());
+            boolean passedGuard = (boolean) localsStack.pop();
+            if (!passedGuard) {
                 throw new VariableOutsideRangeException(variable.getName());
             }
         }

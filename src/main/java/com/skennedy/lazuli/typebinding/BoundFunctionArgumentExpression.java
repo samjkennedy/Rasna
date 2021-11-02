@@ -6,12 +6,12 @@ import java.util.Iterator;
 public class BoundFunctionArgumentExpression implements BoundExpression {
 
     private final VariableSymbol argument;
-    private final BoundExpression range;
+    private final BoundExpression guard;
 
-    public BoundFunctionArgumentExpression(VariableSymbol argument, BoundExpression range) {
+    public BoundFunctionArgumentExpression(VariableSymbol argument, BoundExpression guard) {
 
         this.argument = argument;
-        this.range = range;
+        this.guard = guard;
     }
 
     @Override
@@ -26,14 +26,14 @@ public class BoundFunctionArgumentExpression implements BoundExpression {
 
     @Override
     public Iterator<BoundExpression> getChildren() {
-        return Collections.singleton(range).iterator();
+        return Collections.singleton(guard).iterator();
     }
 
     public VariableSymbol getArgument() {
         return argument;
     }
 
-    public BoundExpression getRange() {
-        return range;
+    public BoundExpression getGuard() {
+        return guard;
     }
 }

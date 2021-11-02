@@ -64,7 +64,12 @@ public class Lexer {
                             next();
                             break;
                         case '-':
-                            tokens.add(new Token(TokenType.MINUS, new Location(lineNumber, cursor)));
+                            if (lookAhead(line) == '>') {
+                                tokens.add(new Token(TokenType.ARROW, new Location(lineNumber, cursor)));
+                                next();
+                            } else {
+                                tokens.add(new Token(TokenType.MINUS, new Location(lineNumber, cursor)));
+                            }
                             next();
                             break;
                         case '*':

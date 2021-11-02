@@ -9,26 +9,23 @@ import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
 import com.skennedy.lazuli.typebinding.BoundForExpression;
 import com.skennedy.lazuli.typebinding.BoundForInExpression;
-import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
-import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
+import com.skennedy.lazuli.typebinding.BoundMatchCaseExpression;
+import com.skennedy.lazuli.typebinding.BoundMatchExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
 import com.skennedy.lazuli.typebinding.BoundWhileExpression;
-import com.skennedy.lazuli.typebinding.FunctionSymbol;
 import com.skennedy.lazuli.typebinding.TypeSymbol;
 import com.skennedy.lazuli.typebinding.VariableSymbol;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class Lowerer extends BoundProgramRewriter {
 
     private static int labelCount = 0;
-
-    private static Map<FunctionSymbol, BoundLabel> functionDeclarationLocations = new HashMap<>();
 
     @Override
     protected BoundExpression rewriteWhileExpression(BoundWhileExpression boundWhileExpression) {
@@ -102,11 +99,11 @@ public class Lowerer extends BoundProgramRewriter {
         }
 
         BoundBlockExpression whileBody;
-        if (rewrittenForExpression.getRange() == null) {
+        if (rewrittenForExpression.getGuard() == null) {
             whileBody = new BoundBlockExpression(rewrittenForExpression.getBody(), step);
         } else {
-            BoundExpression rangeCheck = new BoundIfExpression(rewrittenForExpression.getRange(), rewrittenForExpression.getBody(), null);
-            whileBody = new BoundBlockExpression(rangeCheck, step);
+            BoundExpression guardClause = new BoundIfExpression(rewrittenForExpression.getGuard(), rewrittenForExpression.getBody(), null);
+            whileBody = new BoundBlockExpression(guardClause, step);
         }
 
         BoundBinaryExpression condition = new BoundBinaryExpression(variableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), boundForExpression.getTerminator());
@@ -148,12 +145,12 @@ public class Lowerer extends BoundProgramRewriter {
         );
 
         BoundBlockExpression whileBody;
-        if (rewrittenForInExpression.getRange() == null) {
+        if (rewrittenForInExpression.getGuard() == null) {
             whileBody = new BoundBlockExpression(iteratorIncrementExpression, rewrittenForInExpression.getBody(), step);
         } else {
             BoundBlockExpression body = new BoundBlockExpression(rewrittenForInExpression.getBody());
-            BoundExpression rangeCheck = new BoundIfExpression(rewrittenForInExpression.getRange(), body, null);
-            whileBody = new BoundBlockExpression(iteratorIncrementExpression, rangeCheck, step);
+            BoundExpression guardClause = new BoundIfExpression(rewrittenForInExpression.getGuard(), body, null);
+            whileBody = new BoundBlockExpression(iteratorIncrementExpression, guardClause, step);
         }
         BoundBinaryExpression condition = new BoundBinaryExpression(indexVariableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), new BoundArrayLengthExpression(rewrittenForInExpression.getIterable()));
 
@@ -171,32 +168,87 @@ public class Lowerer extends BoundProgramRewriter {
             return expression;
         }
 
-        BoundLabel endLabel = generateLabel();
-        if (boundIfExpression.getElseBody() == null) {
+        BoundIfExpression rewrittenBoundIfExpression = (BoundIfExpression) expression;
 
-            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(endLabel, boundIfExpression.getCondition(), true);
+        BoundLabel endLabel = generateLabel();
+        if (rewrittenBoundIfExpression.getElseBody() == null) {
+
+            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(endLabel, rewrittenBoundIfExpression.getCondition(), true);
             BoundLabelExpression endLabelStatement = new BoundLabelExpression(endLabel);
-            BoundBlockExpression result = new BoundBlockExpression(gotoFalse, boundIfExpression.getBody(), endLabelStatement);
+            BoundBlockExpression result = new BoundBlockExpression(gotoFalse, rewrittenBoundIfExpression.getBody(), endLabelStatement);
             return rewriteBlockExpression(result);
         } else {
 
             BoundLabel elseLabel = generateLabel();
 
-            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(elseLabel, boundIfExpression.getCondition(), true);
+            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(elseLabel, rewrittenBoundIfExpression.getCondition(), true);
             BoundGotoExpression gotoEndStatement = new BoundGotoExpression(endLabel);
             BoundLabelExpression endLabelStatement = new BoundLabelExpression(endLabel);
             BoundLabelExpression elseLabelStatement = new BoundLabelExpression(elseLabel);
 
             BoundBlockExpression result = new BoundBlockExpression(
                     gotoFalse,
-                    boundIfExpression.getBody(),
+                    rewrittenBoundIfExpression.getBody(),
                     gotoEndStatement,
                     elseLabelStatement,
-                    boundIfExpression.getElseBody(),
+                    rewrittenBoundIfExpression.getElseBody(),
                     endLabelStatement
             );
             return flatten(rewriteBlockExpression(result));
         }
+    }
+
+    @Override
+    protected BoundExpression rewriteMatchExpression(BoundMatchExpression matchExpression) {
+
+        BoundExpression expression = super.rewriteMatchExpression(matchExpression);
+
+        if (expression instanceof BoundNoOpExpression) {
+            return expression;
+        }
+        BoundMatchExpression rewrittenMatchExpression = (BoundMatchExpression) expression;
+
+
+        BoundLabel endLabel = generateLabel();
+        BoundLabelExpression endLabelExpression = new BoundLabelExpression(endLabel);
+        BoundGotoExpression gotoEnd = new BoundGotoExpression(endLabel);
+
+        List<BoundExpression> expressions = new ArrayList<>();
+        for (BoundMatchCaseExpression matchCaseExpression : rewrittenMatchExpression.getMatchCaseExpressions()) {
+
+            if (matchCaseExpression.getCaseExpression() == null) { //base case
+                expressions.add(matchCaseExpression.getThenExpression());
+                continue;
+            }
+
+            BoundLabel elseLabel = generateLabel();
+            BoundLabelExpression elseLabelStatement = new BoundLabelExpression(elseLabel);
+
+            BoundExpression condition;
+            if (matchCaseExpression.getCaseExpression().getType() == TypeSymbol.BOOL) {
+                condition = matchCaseExpression.getCaseExpression();
+            } else {
+                condition = new BoundBinaryExpression(
+                        matchExpression.getOperand(),
+                        BoundBinaryOperator.bind(OpType.EQ, TypeSymbol.INT, TypeSymbol.INT),
+                        matchCaseExpression.getCaseExpression());
+            }
+
+            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(elseLabel, condition, true);
+
+            BoundBlockExpression caseExpression = new BoundBlockExpression(
+                    gotoFalse,
+                    matchCaseExpression.getThenExpression(),
+                    gotoEnd,
+                    elseLabelStatement
+            );
+            expressions.add(caseExpression);
+        }
+
+        expressions.add(endLabelExpression);
+        BoundBlockExpression result = new BoundBlockExpression(expressions);
+
+        return flatten(rewriteBlockExpression(result));
     }
 
     private static BoundLabel generateLabel() {

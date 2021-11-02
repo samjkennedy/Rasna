@@ -31,7 +31,10 @@ public enum TokenType {
     CLOSE_CURLY_BRACE("}"),
     OPEN_SQUARE_BRACE("["),
     CLOSE_SQUARE_BRACE("]"),
+
+    //Syntax
     COMMA(","),
+    ARROW("->"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -47,6 +50,7 @@ public enum TokenType {
     TRUE_KEYWORD("true"),
     FALSE_KEYWORD("false"),
     RETURN_KEYWORD("return"),
+    MATCH_KEYWORD("match"),
 
     //Types
     VOID_KEYWORD("Void"),

@@ -15,6 +15,8 @@ public enum BoundExpressionType {
     FUNCTION_CALL,
     FUNCTION_ARGUMENT,
     FUNCTION_DECLARATION,
+    MATCH_EXPRESSION,
+    MATCH_CASE_EXPRESSION,
     GOTO,
     IF,
     LABEL,

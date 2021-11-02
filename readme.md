@@ -47,7 +47,7 @@ Int i | (i mod 2 == 0) = 0 //Variable i can only contain the set of even integer
 i = 3 //runtime error
 ```
 
-This can be combined with for expressions to loop over only a **specific subset** of the range:
+This can be combined with for expressions to loop over only a **specific subset** of the guard:
 
 ```javascript
 for (Int N = 0 to 10 if N % 2 == 0) {
