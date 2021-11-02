@@ -112,7 +112,13 @@ public class Parser {
             Expression thenExpression = parseExpression();
             IdentifierExpression comma = matchToken(TokenType.COMMA);
 
-            caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
+            if (caseExpression instanceof BinaryExpression && ((BinaryExpression) caseExpression).getOperation() == OpType.LOR) {
+
+                caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression, comma));
+                caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression, comma));
+            } else {
+                caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
+            }
         }
         IdentifierExpression elseKeyword = matchToken(TokenType.ELSE_KEYWORD);
         IdentifierExpression arrow = matchToken(TokenType.ARROW);

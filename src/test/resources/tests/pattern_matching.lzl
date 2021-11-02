@@ -7,24 +7,19 @@ match x {
     else print(0)
 }
 
-Int y = match x {
-    0 -> 1,
-    1 -> 0,
-    else -> 2
+for (Int z = 0 to 5) {
+    match z {
+        1 or 2 -> print(1),
+        else -> print(0)
+    }
 }
-print(y)
 
 ////Guards
 //match x {
 //
 //}
 //
-//multiple pattern matching
-//match x {
-//    1 or 2 -> print(1),
-//    else print(0)
-//}
-//
+
 ////range matching
 //match x {
 //    0 to 9 -> print(1),

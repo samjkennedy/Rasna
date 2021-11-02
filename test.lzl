@@ -1,10 +1,10 @@
-Int x = 1
-Int y = match x {
-    0 -> 1,
-    1 -> 0,
-    else -> 2
-}
-print(y)
+//Int x = 3
+//Int y = match x {
+//    0 -> 1,
+//    1 -> 0,
+//    else -> 2
+//}
+//print(y)
 
 ////Guards
 //match x {
@@ -12,11 +12,13 @@ print(y)
 //    else   -> print(5)
 //}
 
-////multiple pattern matching
-//match x {
-//    1 or 2 -> print(1),
-//    else -> print(0)
-//}
+//multiple pattern matching
+for (Int x = 0 to 5) {
+    match x {
+        1 or 2 -> print(1),
+        else -> print(0)
+    }
+}
 
 ////range matching
 //match x {
