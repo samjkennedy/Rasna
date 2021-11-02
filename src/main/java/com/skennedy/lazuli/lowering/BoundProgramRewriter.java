@@ -1,9 +1,6 @@
 package com.skennedy.lazuli.lowering;
 
 import com.skennedy.lazuli.exceptions.InfiniteLoopException;
-import com.skennedy.lazuli.parsing.ArrayAccessExpression;
-import com.skennedy.lazuli.parsing.FunctionCallExpression;
-import com.skennedy.lazuli.parsing.FunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
@@ -155,7 +152,7 @@ public abstract class BoundProgramRewriter {
         BoundBlockExpression rewrittenBody = flatten(rewriteBlockExpression(new BoundBlockExpression(rewrittenInstructions)));
 
         if (rewrittenBody != functionDeclarationExpression.getBody()) {
-            return new BoundFunctionDeclarationExpression(functionDeclarationExpression.getFunctionSymbol(), rewrittenBody);
+            return new BoundFunctionDeclarationExpression(functionDeclarationExpression.getFunctionSymbol(), functionDeclarationExpression.getArguments(), rewrittenBody);
         }
         return functionDeclarationExpression;
     }

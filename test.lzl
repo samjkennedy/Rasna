@@ -1,13 +1,16 @@
-//Int foo() {
-//    return 3
-//}
-
-Int bar() {
-    if (3 > 1) {
+Int choice(Bool check) {
+    if (check) {
         return 1
     } else {
-        return 0
+        return 2
     }
 }
 
-print(bar())
+print(choice(true))
+
+//Bool check = false
+//if (check) {
+//    print(1)
+//} else {
+//    print(2)
+//}

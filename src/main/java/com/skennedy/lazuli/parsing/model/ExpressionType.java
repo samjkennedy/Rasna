@@ -9,6 +9,7 @@ public enum ExpressionType {
     BLOCK_EXPR,
     FOR_EXPR,
     FOR_IN_EXPR,
+    FUNC_ARG_EXPR,
     FUNC_CALL_EXPR,
     FUNC_DECLARATION_EXPR,
     IDENTIFIER_EXPR,

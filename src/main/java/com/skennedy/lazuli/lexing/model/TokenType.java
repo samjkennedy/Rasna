@@ -49,6 +49,7 @@ public enum TokenType {
     RETURN_KEYWORD("return"),
 
     //Types
+    VOID_KEYWORD("Void"),
     INT_KEYWORD("Int"),
     INT_ARRAY_KEYWORD("IntArray"), //Temporary until Array can have a type
     NUM_KEYWORD("Num"),

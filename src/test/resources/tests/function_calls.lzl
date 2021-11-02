@@ -1,16 +1,48 @@
-Int foo() {
+//Basic Void noargs method
+Int foo()  {
     return 1
 }
 
-//Int choice(Bool condition) {
-//    return if (condition) 1 else 2
-//}
-//
-//Int sum(Int a, Int b) {
-//    return a + b
-//}
+//Method with range
+Void printFromTo(Int fromVal, Int toVal) {
+    print(fromVal)
+    print(toVal)
+    for (Int i = fromVal to toVal) {
+        print(i)
+    }
+}
+
+//Bool arg method with control flow - BFS to check all branches return a value
+Int choice(Bool check) {
+    if (check) {
+        return 1
+    } else {
+        return 2
+    }
+}
+
+//Seems that args are passed by value not by reference, TODO: Provide a way to pass by reference?
+Void mut(Int a) {
+    a = a + 1
+}
+
+Int x = 1
+mut(x)
+print(x)
+
+//Two arg method
+Int sum(Int l, Int r) {
+    return l + r
+}
+
+print(sum(3, 9))
+
+print(sum(foo(), foo()))
+print(sum(sum(1, 2), sum(10, 11)))
 
 print(foo())
-print(foo() + foo())
-//print(choice(true))
-//print(choice(false))
+print(choice(true))
+print(choice(false))
+print(sum(choice(true), 5))
+
+print(printFromTo(0, 5))

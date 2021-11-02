@@ -16,6 +16,7 @@ import com.skennedy.lazuli.parsing.BlockExpression;
 import com.skennedy.lazuli.parsing.Expression;
 import com.skennedy.lazuli.parsing.ForExpression;
 import com.skennedy.lazuli.parsing.ForInExpression;
+import com.skennedy.lazuli.parsing.FunctionArgumentExpression;
 import com.skennedy.lazuli.parsing.FunctionCallExpression;
 import com.skennedy.lazuli.parsing.FunctionDeclarationExpression;
 import com.skennedy.lazuli.parsing.IfExpression;
@@ -94,7 +95,7 @@ public class Binder {
             case FUNC_CALL_EXPR:
                 return bindFunctionCallExpression((FunctionCallExpression) expression);
             case RETURN_EXPR:
-                return bindReturnExpression((ReturnExpression)expression);
+                return bindReturnExpression((ReturnExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
@@ -204,6 +205,8 @@ public class Binder {
 
     private TypeSymbol parseType(IdentifierExpression keyword) {
         switch (keyword.getTokenType()) {
+            case VOID_KEYWORD:
+                return TypeSymbol.VOID;
             case INT_KEYWORD:
                 return TypeSymbol.INT;
             case INT_ARRAY_KEYWORD:
@@ -304,30 +307,72 @@ public class Binder {
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
         TypeSymbol type = parseType(functionDeclarationExpression.getTypeKeyword());
-        FunctionSymbol functionSymbol = new FunctionSymbol((String) identifier.getValue(), type, null);
+
+        currentScope = new BoundScope(currentScope);
+
+        //Declare the arguments within the function's scope
+        List<BoundFunctionArgumentExpression> arguments = new ArrayList<>();
+        for (FunctionArgumentExpression argumentExpression : functionDeclarationExpression.getArguments()) {
+            arguments.add(bindFunctionArgumentExpression(argumentExpression));
+        }
+
+        FunctionSymbol functionSymbol = new FunctionSymbol((String) identifier.getValue(), type, arguments, null);
         try {
-            currentScope.declareFunction((String) identifier.getValue(), functionSymbol);
+            //Declare the function in the parent scope
+            currentScope.getParentScope().declareFunction((String) identifier.getValue(), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
             errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
         }
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());
 
-        return new BoundFunctionDeclarationExpression(functionSymbol, body);
+        currentScope = currentScope.getParentScope();
+
+        return new BoundFunctionDeclarationExpression(functionSymbol, arguments, body);
+    }
+
+    private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression argumentExpression) {
+
+        IdentifierExpression identifier = argumentExpression.getIdentifier();
+        TypeSymbol type = parseType(argumentExpression.getTypeKeyword());
+
+        //Create placeholder
+        try {
+            currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false));
+        } catch (VariableAlreadyDeclaredException vade) {
+            errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
+        }
+
+        BoundExpression range = null;
+        if (argumentExpression.getRange() != null) {
+            range = bind(argumentExpression.getRange());
+        }
+
+        VariableSymbol argument = getVariableSymbol(type, identifier, range, argumentExpression.getConstKeyword() != null);
+
+        currentScope.reassignVariable((String) identifier.getValue(), argument);
+
+        return new BoundFunctionArgumentExpression(argument, range);
     }
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
 
         IdentifierExpression identifier = functionCallExpression.getIdentifier();
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
-        if (!scopedFunction.isPresent()) {
+        if (scopedFunction.isEmpty()) {
             throw new UndefinedFunctionException((String) identifier.getValue());
         }
         FunctionSymbol function = scopedFunction.get();
 
         List<BoundExpression> boundArguments = new ArrayList<>();
-        for (Expression arg : functionCallExpression.getArguments()) {
-            boundArguments.add(bind(arg));
+        List<BoundFunctionArgumentExpression> arguments = function.getArguments();
+        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+            BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
+            if (!arguments.get(i).getType().isAssignableFrom(boundArgument.getType())) {
+                throw new TypeMismatchException(arguments.get(i).getType(), boundArgument.getType());
+            }
+            boundArguments.add(boundArgument);
         }
 
         return new BoundFunctionCallExpression(function, boundArguments);

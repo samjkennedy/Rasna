@@ -12,6 +12,7 @@ import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
 import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
@@ -38,6 +39,7 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 
 import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
@@ -46,6 +48,7 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
 import static org.objectweb.asm.Opcodes.ALOAD;
 import static org.objectweb.asm.Opcodes.ARRAYLENGTH;
 import static org.objectweb.asm.Opcodes.ASTORE;
+import static org.objectweb.asm.Opcodes.BASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
 import static org.objectweb.asm.Opcodes.F_NEW;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
@@ -66,7 +69,6 @@ import static org.objectweb.asm.Opcodes.IFLT;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
 import static org.objectweb.asm.Opcodes.INTEGER;
-import static org.objectweb.asm.Opcodes.INVOKESPECIAL;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 import static org.objectweb.asm.Opcodes.IOR;
@@ -80,7 +82,7 @@ import static org.objectweb.asm.Opcodes.SIPUSH;
 import static org.objectweb.asm.Opcodes.T_INT;
 import static org.objectweb.asm.Opcodes.V1_8;
 
-public class JavaBytecodeCompiler {
+public class JavaBytecodeCompiler implements Compiler {
 
     private static final Logger log = LogManager.getLogger(JavaBytecodeCompiler.class);
 
@@ -90,8 +92,9 @@ public class JavaBytecodeCompiler {
     private String className;
 
     private int variableIndex;
-    private Map<Integer, Object> stackMapTypes;
+    private Stack<Map<Integer, Object>> stackMapFrames;
     private int localStackSize;
+    private Stack<Map<Integer, Object>> localVariables;
 
     //TODO: Scopes
     private Map<String, Integer> variables;
@@ -105,9 +108,12 @@ public class JavaBytecodeCompiler {
         this.localStackSize = 0;
         variables = new HashMap<>();
         boundLabelToProgramLabel = new HashMap<>();
-        stackMapTypes = new HashMap<>();
+        stackMapFrames = new Stack<>();
+        localVariables = new Stack<>();
+        localVariables.push(new HashMap<>());
     }
 
+    @Override
     public void compile(BoundProgram program, String outputFileName) throws IOException {
 
         className = outputFileName;
@@ -127,9 +133,15 @@ public class JavaBytecodeCompiler {
         //Forward declare all methods
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
+                stackMapFrames.push(new HashMap<>());
                 visit((BoundFunctionDeclarationExpression) expression);
+                stackMapFrames.pop();
             }
         }
+
+        Map<Integer, Object> frame = new HashMap<>();
+        frame.put(0, "[Ljava/lang/String;");
+        stackMapFrames.push(frame);
 
         /** ASM = CODE : public static void main(String args[]). */
         // BEGIN 2: creates a MethodVisitor for the 'main' method
@@ -300,30 +312,33 @@ public class JavaBytecodeCompiler {
         VariableSymbol variable = variableDeclarationExpression.getVariable();
         String identifer = variable.getName();
 
-        //No need to check for reassignment as the type binder already did so
-
         //Evaluate the initialiser
         visit(variableDeclarationExpression.getInitialiser(), methodVisitor);
 
         //Arrays get stored automagically
         if (variableDeclarationExpression.getType() != TypeSymbol.ARRAY) {
             //Store that in memory at the current variable IDX
-            methodVisitor.visitIntInsn(ISTORE, variableIndex);
-            textifierVisitor.visitIntInsn(ISTORE, variableIndex);
+            if (variableDeclarationExpression.getType() == TypeSymbol.INT || variableDeclarationExpression.getType() == TypeSymbol.BOOL) {
+                methodVisitor.visitIntInsn(ISTORE, variableIndex);
+                textifierVisitor.visitIntInsn(ISTORE, variableIndex);
+            } else {
+                throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
+            }
         }
         localStackSize--;
 
         //Keep track of variable for later use
         variables.put(identifer, variableIndex);
+        localVariables.peek().put(variableIndex, getStackTypeCode(variable.getType()));
 
         //Update the stackmap
-        stackMapTypes.put(variableIndex, getStackTypeCode(variableDeclarationExpression.getType()));
+        stackMapFrames.peek().put(variableIndex, getStackTypeCode(variableDeclarationExpression.getType()));
         variableIndex++;
 
     }
 
     private Object getStackTypeCode(TypeSymbol type) {
-        if (type == TypeSymbol.INT) {
+        if (type == TypeSymbol.INT || type == TypeSymbol.BOOL) {
             return INTEGER;
         } else if (type == TypeSymbol.ARRAY) {
             return "[I"; //TODO: only Int Arrays for now
@@ -340,12 +355,14 @@ public class JavaBytecodeCompiler {
             throw new UndefinedVariableException(variable.getName());
         }
         int variableIdx = variables.get(variable.getName());
-        if (boundVariableExpression.getType() == TypeSymbol.INT) {
+        if (boundVariableExpression.getType() == TypeSymbol.INT || boundVariableExpression.getType() == TypeSymbol.BOOL) {
             methodVisitor.visitIntInsn(ILOAD, variableIdx);
             textifierVisitor.visitIntInsn(ILOAD, variableIdx);
         } else if (boundVariableExpression.getType() == TypeSymbol.ARRAY) {
             methodVisitor.visitIntInsn(ALOAD, variableIdx);
             textifierVisitor.visitIntInsn(ALOAD, variableIdx);
+        } else {
+            throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
         }
         localStackSize++;
     }
@@ -398,8 +415,8 @@ public class JavaBytecodeCompiler {
 
     private void visit(BoundArrayAccessExpression arrayAccessExpression, MethodVisitor methodVisitor) {
 
-        visit(arrayAccessExpression.getArray(),methodVisitor);
-        visit(arrayAccessExpression.getIndex(),methodVisitor);
+        visit(arrayAccessExpression.getArray(), methodVisitor);
+        visit(arrayAccessExpression.getIndex(), methodVisitor);
 
         methodVisitor.visitInsn(IALOAD);
         textifierVisitor.visitInsn(IALOAD);
@@ -467,7 +484,7 @@ public class JavaBytecodeCompiler {
 
     private void visit(BoundConditionalGotoExpression conditionalGotoExpression, MethodVisitor methodVisitor) {
 
-        visit(conditionalGotoExpression.getCondition(),methodVisitor);
+        visit(conditionalGotoExpression.getCondition(), methodVisitor);
 
         Label label;
         if (boundLabelToProgramLabel.containsKey(conditionalGotoExpression.getLabel())) {
@@ -478,7 +495,7 @@ public class JavaBytecodeCompiler {
         }
 
         //Assuming only LT right now
-        //TODO other ops
+        //TODO better handle other ops
         methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
         textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
         localStackSize--;
@@ -488,10 +505,12 @@ public class JavaBytecodeCompiler {
         methodVisitor.visitLabel(label);
         textifierVisitor.visitLabel(label);
 
-        Object[] local = new Object[stackMapTypes.size()+1];
-        local[0] = "[Ljava/lang/String;";
-        for (int i = 0; i < stackMapTypes.size(); i++) {
-            local[i + 1] = stackMapTypes.get(i+1);
+        Map<Integer, Object> stackMapFrame = stackMapFrames.peek();
+        Object[] local = new Object[stackMapFrame.size()];
+        int localIdx = 0;
+        for (Object typeCode : stackMapFrame.values()) {
+            local[localIdx] = typeCode;
+            localIdx++;
         }
         Object[] stack = new Object[stackCount];
         for (int i = 0; i < stack.length; i++) {
@@ -522,37 +541,77 @@ public class JavaBytecodeCompiler {
         MethodVisitor methodVisitor = classWriter.visitMethod(
                 ACC_PRIVATE + ACC_STATIC, //TODO: Access levels
                 functionSymbol.getName(),
-                "()I", //TODO: Dynamically set the descriptor
+                getMethodDescriptor(functionDeclarationExpression.getArguments(), functionDeclarationExpression.getFunctionSymbol().getType()),
                 null,
                 null
         );
         textifierVisitor.visitMethod(
                 ACC_PRIVATE + ACC_STATIC,
                 functionSymbol.getName(),
-                "()I", //TODO: Dynamically set the descriptor
+                getMethodDescriptor(functionDeclarationExpression.getArguments(), functionDeclarationExpression.getFunctionSymbol().getType()),
                 null,
                 null
         );
 
+        localVariables.push(new HashMap<>());
+        int globalVariableIndex = variableIndex;
+        variableIndex = 0;
+        for (BoundFunctionArgumentExpression argument : functionDeclarationExpression.getArguments()) {
+            variables.put(argument.getArgument().getName(), variableIndex++);
+            localVariables.peek().put(variableIndex, argument.getArgument());
+        }
+
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
             visit(expression, methodVisitor);
         }
+        methodVisitor.visitInsn(RETURN);
+        textifierVisitor.visitInsn(RETURN);
 
         //TODO: Keep track of method locals
-        methodVisitor.visitMaxs(1024, 1024);
-        textifierVisitor.visitMaxs(1024, 1024);
+        methodVisitor.visitMaxs(1024, variableIndex);
+        textifierVisitor.visitMaxs(1024, variableIndex);
+        localVariables.pop();
+        variableIndex = globalVariableIndex;
 
         methodVisitor.visitEnd();
         textifierVisitor.visitMethodEnd();
+    }
+
+    private String getMethodDescriptor(List<BoundFunctionArgumentExpression> arguments, TypeSymbol returnType) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("(");
+        for (BoundFunctionArgumentExpression argumentExpression : arguments) {
+            sb.append(getType(argumentExpression.getType()));
+        }
+        sb.append(")");
+        sb.append(getType(returnType));
+
+        return sb.toString();
+    }
+
+    private String getType(TypeSymbol type) {
+        if (type == TypeSymbol.VOID) {
+            return Type.VOID_TYPE.getDescriptor();
+        }
+        if (type == TypeSymbol.INT) {
+            return Type.INT_TYPE.getDescriptor();
+        }
+        if (type == TypeSymbol.BOOL) {
+            return Type.BOOLEAN_TYPE.getDescriptor();
+        }
+        throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
     }
 
     private void visit(BoundFunctionCallExpression functionCallExpression, MethodVisitor methodVisitor) {
 
         FunctionSymbol function = functionCallExpression.getFunction();
 
-        //TODO: Dynamically set the descriptor
-        methodVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), "()I", false);
-        textifierVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), "()I", false);
+        for (BoundExpression argumentInitialiser : functionCallExpression.getBoundArguments()) {
+            visit(argumentInitialiser, methodVisitor);
+        }
+
+        methodVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(function.getArguments(), function.getType()), false);
+        textifierVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(function.getArguments(), function.getType()), false);
     }
 
     private void visit(BoundReturnExpression returnExpression, MethodVisitor methodVisitor) {
@@ -560,18 +619,12 @@ public class JavaBytecodeCompiler {
         visit(returnExpression.getReturnValue(), methodVisitor);
         methodVisitor.visitInsn(IRETURN);
         textifierVisitor.visitInsn(IRETURN);
-    }
-
-    private String getType(TypeSymbol type) {
-        if (type == TypeSymbol.INT) {
-            return Type.INT_TYPE.getDescriptor();
-        }
-        throw new UnsupportedOperationException("Methods returning " + type.getName() + " are not yet supported");
+        localStackSize--;
     }
 
     private void visit(BoundPrintExpression printExpression, MethodVisitor methodVisitor) {
 
-        visit(printExpression.getExpression(),methodVisitor);
+        visit(printExpression.getExpression(), methodVisitor);
 
         //Store top of the stack in memory
         methodVisitor.visitIntInsn(ISTORE, variableIndex);

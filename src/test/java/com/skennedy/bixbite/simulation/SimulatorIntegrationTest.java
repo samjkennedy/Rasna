@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SimulatorIntegrationTest {
 
-    private static final boolean RECORD = true;
+    private static final boolean RECORD = false;
 
     @ParameterizedTest
     @MethodSource("getFilesToTest")

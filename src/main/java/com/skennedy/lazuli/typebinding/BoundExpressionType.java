@@ -13,6 +13,7 @@ public enum BoundExpressionType {
     FOR,
     FOR_IN,
     FUNCTION_CALL,
+    FUNCTION_ARGUMENT,
     FUNCTION_DECLARATION,
     GOTO,
     IF,

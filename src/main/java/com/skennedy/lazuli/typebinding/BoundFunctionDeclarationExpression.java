@@ -1,14 +1,17 @@
 package com.skennedy.lazuli.typebinding;
 
 import java.util.Iterator;
+import java.util.List;
 
 public class BoundFunctionDeclarationExpression implements BoundExpression {
 
     private final FunctionSymbol functionSymbol;
+    private List<BoundFunctionArgumentExpression> arguments;
     private final BoundBlockExpression body;
 
-    public BoundFunctionDeclarationExpression(FunctionSymbol functionSymbol, BoundBlockExpression body) {
+    public BoundFunctionDeclarationExpression(FunctionSymbol functionSymbol, List<BoundFunctionArgumentExpression> arguments, BoundBlockExpression body) {
         this.functionSymbol = functionSymbol;
+        this.arguments = arguments;
         this.body = body;
     }
 
@@ -29,6 +32,10 @@ public class BoundFunctionDeclarationExpression implements BoundExpression {
 
     public FunctionSymbol getFunctionSymbol() {
         return functionSymbol;
+    }
+
+    public List<BoundFunctionArgumentExpression> getArguments() {
+        return arguments;
     }
 
     public BoundBlockExpression getBody() {
