@@ -7,16 +7,23 @@ match x {
     else print(0)
 }
 
+Int y = match x {
+    0 -> 1,
+    1 -> 0,
+    else -> 2
+}
+print(y)
+
 ////Guards
 //match x {
 //
 //}
 //
 //multiple pattern matching
-match x {
-    1 or 2 -> print(1),
-    else print(0)
-}
+//match x {
+//    1 or 2 -> print(1),
+//    else print(0)
+//}
 //
 ////range matching
 //match x {
