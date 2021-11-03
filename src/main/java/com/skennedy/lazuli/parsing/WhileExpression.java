@@ -13,9 +13,9 @@ public class WhileExpression extends Expression {
     private final IdentifierExpression openParen;
     private final Expression condition;
     private final IdentifierExpression closeParen;
-    private final BlockExpression body;
+    private final Expression body;
 
-    public WhileExpression(IdentifierExpression whileKeyword, IdentifierExpression openParen, Expression condition, IdentifierExpression closeParen, BlockExpression body) {
+    public WhileExpression(IdentifierExpression whileKeyword, IdentifierExpression openParen, Expression condition, IdentifierExpression closeParen, Expression body) {
         this.whileKeyword = whileKeyword;
         this.openParen = openParen;
         this.condition = condition;
@@ -49,7 +49,7 @@ public class WhileExpression extends Expression {
         return closeParen;
     }
 
-    public BlockExpression getBody() {
+    public Expression getBody() {
         return body;
     }
 }

@@ -230,7 +230,7 @@ public class Parser {
             }
 
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-            BlockExpression body = parseBlockExpression();
+            Expression body = parseExpression();
 
             return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, initialiser, toKeyword, terminator, byKeyword, step, guard, closeParen, body);
         } else if (current().getTokenType() == TokenType.IN_KEYWORD) {
@@ -247,7 +247,7 @@ public class Parser {
                 guard = parseGuardExpression();
             }
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-            BlockExpression body = parseBlockExpression();
+            Expression body = parseExpression();
 
             return new ForInExpression(forKeyword, openParen, declarationKeyword, identifier, inKeyword, iterable, guard, closeParen, body);
         } else {
@@ -397,7 +397,7 @@ public class Parser {
         Expression condition = parseExpression();
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
-        BlockExpression body = parseBlockExpression();
+        Expression body = parseExpression();
 
         return new WhileExpression(whileKeyword, openParen, condition, closeParen, body);
     }

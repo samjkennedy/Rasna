@@ -21,7 +21,7 @@ public class ForExpression extends Expression {
     private final Expression step;
     private Expression guard;
     private final IdentifierExpression closeParen;
-    private final BlockExpression body;
+    private final Expression body;
 
     public ForExpression(IdentifierExpression forKeyword,
                          IdentifierExpression openParen,
@@ -35,7 +35,7 @@ public class ForExpression extends Expression {
                          Expression step,
                          Expression guard,
                          IdentifierExpression closeParen,
-                         BlockExpression body) {
+                         Expression body) {
 
         this.forKeyword = forKeyword;
         this.openParen = openParen;
@@ -110,7 +110,7 @@ public class ForExpression extends Expression {
         return closeParen;
     }
 
-    public BlockExpression getBody() {
+    public Expression getBody() {
         return body;
     }
 }

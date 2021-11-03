@@ -4,3 +4,4 @@ for (Int N = 0 to 10) {
 for (Int M = 0 to 10 by 2) {
     print(M)
 }
+for (Int i = 0 to 10) print(i)

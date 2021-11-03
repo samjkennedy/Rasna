@@ -422,7 +422,7 @@ public abstract class BoundProgramRewriter {
     protected BoundExpression rewriteWhileExpression(BoundWhileExpression boundWhileExpression) {
 
         BoundExpression condition = rewriteExpression(boundWhileExpression.getCondition());
-        BoundExpression body = rewriteBlockExpression(boundWhileExpression.getBody());
+        BoundExpression body = rewriteExpression(boundWhileExpression.getBody());
 
         if (body instanceof BoundNoOpExpression) {
             return new BoundNoOpExpression();
@@ -440,7 +440,7 @@ public abstract class BoundProgramRewriter {
         if (condition == boundWhileExpression.getCondition() && body == boundWhileExpression.getBody()) {
             return boundWhileExpression;
         }
-        return new BoundWhileExpression(condition, (BoundBlockExpression) body);
+        return new BoundWhileExpression(condition, body);
     }
 
     private Object calculateConstant(BoundExpression expression) {

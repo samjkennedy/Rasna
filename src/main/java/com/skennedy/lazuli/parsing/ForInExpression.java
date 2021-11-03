@@ -17,9 +17,9 @@ public class ForInExpression extends Expression {
     private final Expression iterable;
     private final Expression guard;
     private final IdentifierExpression closeParen;
-    private final BlockExpression body;
+    private final Expression body;
 
-    public ForInExpression(IdentifierExpression forKeyword, IdentifierExpression openParen, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression inKeyword, Expression iterable, Expression guard, IdentifierExpression closeParen, BlockExpression body) {
+    public ForInExpression(IdentifierExpression forKeyword, IdentifierExpression openParen, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression inKeyword, Expression iterable, Expression guard, IdentifierExpression closeParen, Expression body) {
 
         this.forKeyword = forKeyword;
         this.openParen = openParen;
@@ -75,7 +75,7 @@ public class ForInExpression extends Expression {
         return closeParen;
     }
 
-    public BlockExpression getBody() {
+    public Expression getBody() {
         return body;
     }
 }

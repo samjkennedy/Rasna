@@ -130,7 +130,7 @@ public class Binder {
 
         BoundExpression caseExpression;
         if (matchCaseExpression.getCaseExpression().getExpressionType() == ExpressionType.IDENTIFIER_EXPR
-            && ((IdentifierExpression)matchCaseExpression.getCaseExpression()).getTokenType() == TokenType.ELSE_KEYWORD) {
+                && ((IdentifierExpression) matchCaseExpression.getCaseExpression()).getTokenType() == TokenType.ELSE_KEYWORD) {
             caseExpression = null; //TODO: Is this the best way to denote a default case?
         } else {
             caseExpression = bind(matchCaseExpression.getCaseExpression());
@@ -483,7 +483,8 @@ public class Binder {
         if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
-        BoundBlockExpression body = bindBlockExpression(whileExpression.getBody());
+
+        BoundExpression body= bind(whileExpression.getBody());
 
         return new BoundWhileExpression(condition, body);
     }
