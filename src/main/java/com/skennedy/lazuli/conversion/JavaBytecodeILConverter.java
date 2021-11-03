@@ -1,4 +1,4 @@
-package com.skennedy.lazuli.compilation;
+package com.skennedy.lazuli.conversion;
 
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
@@ -13,6 +13,7 @@ import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
 import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
+import com.skennedy.lazuli.typebinding.BoundExpressionType;
 import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
@@ -20,7 +21,6 @@ import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
 import com.skennedy.lazuli.typebinding.BoundReturnExpression;
-import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
 import com.skennedy.lazuli.typebinding.FunctionSymbol;
@@ -38,10 +38,14 @@ import org.objectweb.asm.util.Textifier;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
@@ -50,7 +54,6 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
 import static org.objectweb.asm.Opcodes.ALOAD;
 import static org.objectweb.asm.Opcodes.ARRAYLENGTH;
 import static org.objectweb.asm.Opcodes.ASTORE;
-import static org.objectweb.asm.Opcodes.BASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
 import static org.objectweb.asm.Opcodes.F_NEW;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
@@ -72,6 +75,12 @@ import static org.objectweb.asm.Opcodes.IFGT;
 import static org.objectweb.asm.Opcodes.IFLE;
 import static org.objectweb.asm.Opcodes.IFLT;
 import static org.objectweb.asm.Opcodes.IFNE;
+import static org.objectweb.asm.Opcodes.IF_ICMPEQ;
+import static org.objectweb.asm.Opcodes.IF_ICMPGE;
+import static org.objectweb.asm.Opcodes.IF_ICMPGT;
+import static org.objectweb.asm.Opcodes.IF_ICMPLE;
+import static org.objectweb.asm.Opcodes.IF_ICMPLT;
+import static org.objectweb.asm.Opcodes.IF_ICMPNE;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
 import static org.objectweb.asm.Opcodes.INTEGER;
@@ -86,48 +95,56 @@ import static org.objectweb.asm.Opcodes.NEWARRAY;
 import static org.objectweb.asm.Opcodes.RETURN;
 import static org.objectweb.asm.Opcodes.SIPUSH;
 import static org.objectweb.asm.Opcodes.T_INT;
-import static org.objectweb.asm.Opcodes.V1_8;
+import static org.objectweb.asm.Opcodes.V11;
 
-public class JavaBytecodeCompiler implements Compiler {
+public class JavaBytecodeILConverter implements ILConverter {
 
-    private static final Logger log = LogManager.getLogger(JavaBytecodeCompiler.class);
+    private static final Logger log = LogManager.getLogger(JavaBytecodeILConverter.class);
 
     private final ClassWriter classWriter;
     private Textifier textifierVisitor;
 
     private String className;
 
+    private Stack<Frame> stackMap;
+
     private int variableIndex;
-    private Stack<Map<Integer, Object>> stackMapFrames;
-    private int localStackSize;
     private Stack<Map<Integer, Object>> localVariables;
 
     //TODO: Scopes
     private Map<String, Integer> variables;
     private Map<BoundLabel, Label> boundLabelToProgramLabel;
 
-    public JavaBytecodeCompiler() {
+    //Multiple branches can visit the same label, e.g. nested if/else if/else if/else
+    //but we only want to visit them once
+    //This keeps track of each label already visited so we don't revisit them
+    private Set<Label> visitedLabels;
+
+    private static int ip = 0;
+
+    public JavaBytecodeILConverter() {
         this.classWriter = new ClassWriter(0);
 
         // Variable0 is reserved for args[] in :  `main(String[] var0)`
         this.variableIndex = 1;
-        this.localStackSize = 0;
         variables = new HashMap<>();
         boundLabelToProgramLabel = new HashMap<>();
-        stackMapFrames = new Stack<>();
+        stackMap = new Stack<>();
         localVariables = new Stack<>();
         localVariables.push(new HashMap<>());
+
+        visitedLabels = new HashSet<>();
     }
 
     @Override
-    public void compile(BoundProgram program, String outputFileName) throws IOException {
+    public void convert(BoundProgram program, String outputFileName) throws IOException {
 
         className = outputFileName;
 
         textifierVisitor = new Textifier();
 
         classWriter.visit(
-                V1_8, // Java 1.8
+                V11, // Java 1.8
                 ACC_PUBLIC + ACC_SUPER, // public static
                 outputFileName, // Class Name
                 null, // Generics <T>
@@ -139,15 +156,15 @@ public class JavaBytecodeCompiler implements Compiler {
         //Forward declare all methods
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
-                stackMapFrames.push(new HashMap<>());
+                stackMap.push(new Frame());
                 visit((BoundFunctionDeclarationExpression) expression);
-                stackMapFrames.pop();
+                stackMap.pop();
             }
         }
 
-        Map<Integer, Object> frame = new HashMap<>();
-        frame.put(0, "[Ljava/lang/String;");
-        stackMapFrames.push(frame);
+        Frame frame = new Frame();
+        frame.pushLocal("[Ljava/lang/String;");
+        stackMap.push(frame);
 
         /** ASM = CODE : public static void main(String args[]). */
         // BEGIN 2: creates a MethodVisitor for the 'main' method
@@ -157,13 +174,15 @@ public class JavaBytecodeCompiler implements Compiler {
         for (BoundExpression expression : program.getExpressions()) {
             //Already declared, skip
             if (expression instanceof BoundFunctionDeclarationExpression) {
+                ip++;
                 continue;
             }
-
             visit(expression, mainMethodVisitor);
+            ip++;
         }
         mainMethodVisitor.visitInsn(RETURN);
         textifierVisitor.visitInsn(RETURN);
+        stackMap.pop();
 
         //TODO: determine how much memory the program requires and set accordingly
         mainMethodVisitor.visitMaxs(1024, 1024);
@@ -250,7 +269,7 @@ public class JavaBytecodeCompiler implements Compiler {
                 }
                 label = boundLabelToProgramLabel.get(labelExpression.getLabel());
 
-                visit(label, localStackSize, methodVisitor);
+                visit(label, methodVisitor);
 
                 break;
             case FUNCTION_DECLARATION:
@@ -309,8 +328,10 @@ public class JavaBytecodeCompiler implements Compiler {
         } else if (value instanceof Boolean) {
             methodVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
             textifierVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
+        } else {
+            throw new UnsupportedOperationException("Literals of type " + boundLiteralExpression.getType() + " are not yet supported");
         }
-        localStackSize++;
+        stackMap.peek().pushStack(boundLiteralExpression.getType());
     }
 
     private void visit(BoundVariableDeclarationExpression variableDeclarationExpression, MethodVisitor methodVisitor) {
@@ -322,23 +343,23 @@ public class JavaBytecodeCompiler implements Compiler {
         visit(variableDeclarationExpression.getInitialiser(), methodVisitor);
 
         //Arrays get stored automagically
-        if (variableDeclarationExpression.getType() != TypeSymbol.ARRAY) {
+        if (variableDeclarationExpression.getType() != TypeSymbol.INT_ARRAY) {
             //Store that in memory at the current variable IDX
             if (variableDeclarationExpression.getType() == TypeSymbol.INT || variableDeclarationExpression.getType() == TypeSymbol.BOOL) {
                 methodVisitor.visitIntInsn(ISTORE, variableIndex);
                 textifierVisitor.visitIntInsn(ISTORE, variableIndex);
+                stackMap.peek().popStack();
             } else {
                 throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
             }
         }
-        localStackSize--;
 
         //Keep track of variable for later use
         variables.put(identifer, variableIndex);
         localVariables.peek().put(variableIndex, getStackTypeCode(variable.getType()));
 
         //Update the stackmap
-        stackMapFrames.peek().put(variableIndex, getStackTypeCode(variableDeclarationExpression.getType()));
+        stackMap.peek().pushLocal(variableDeclarationExpression.getType());
         variableIndex++;
 
     }
@@ -346,8 +367,8 @@ public class JavaBytecodeCompiler implements Compiler {
     private Object getStackTypeCode(TypeSymbol type) {
         if (type == TypeSymbol.INT || type == TypeSymbol.BOOL) {
             return INTEGER;
-        } else if (type == TypeSymbol.ARRAY) {
-            return "[I"; //TODO: only Int Arrays for now
+        } else if (type == TypeSymbol.INT_ARRAY) {
+            return "[I";
         } else {
             throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
         }
@@ -364,13 +385,13 @@ public class JavaBytecodeCompiler implements Compiler {
         if (boundVariableExpression.getType() == TypeSymbol.INT || boundVariableExpression.getType() == TypeSymbol.BOOL) {
             methodVisitor.visitIntInsn(ILOAD, variableIdx);
             textifierVisitor.visitIntInsn(ILOAD, variableIdx);
-        } else if (boundVariableExpression.getType() == TypeSymbol.ARRAY) {
+        } else if (boundVariableExpression.getType() == TypeSymbol.INT_ARRAY) {
             methodVisitor.visitIntInsn(ALOAD, variableIdx);
             textifierVisitor.visitIntInsn(ALOAD, variableIdx);
         } else {
             throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
         }
-        localStackSize++;
+        stackMap.peek().pushStack(variable.getType());
     }
 
     private void visit(BoundAssignmentExpression assignmentExpression, MethodVisitor methodVisitor) {
@@ -385,7 +406,8 @@ public class JavaBytecodeCompiler implements Compiler {
         int variableIdx = variables.get(variable.getName());
         methodVisitor.visitIntInsn(ISTORE, variableIdx);
         textifierVisitor.visitIntInsn(ISTORE, variableIdx);
-        localStackSize--;
+
+        stackMap.peek().popStack();
     }
 
     private void visit(BoundArrayLiteralExpression arrayLiteralExpression, MethodVisitor methodVisitor) {
@@ -397,8 +419,6 @@ public class JavaBytecodeCompiler implements Compiler {
 
         methodVisitor.visitIntInsn(NEWARRAY, T_INT);
         textifierVisitor.visitIntInsn(NEWARRAY, T_INT);
-
-        localStackSize++;
 
         //Store that in memory at the current variable IDX
         methodVisitor.visitIntInsn(ASTORE, variableIndex);
@@ -414,8 +434,9 @@ public class JavaBytecodeCompiler implements Compiler {
             visit(element, methodVisitor);
             methodVisitor.visitInsn(IASTORE);
             textifierVisitor.visitInsn(IASTORE);
+
+            stackMap.peek().popStack();
             index++;
-            localStackSize--;
         }
     }
 
@@ -427,7 +448,7 @@ public class JavaBytecodeCompiler implements Compiler {
         methodVisitor.visitInsn(IALOAD);
         textifierVisitor.visitInsn(IALOAD);
 
-        localStackSize--;
+        stackMap.peek().popStack(); //Array index
     }
 
     private void visit(BoundArrayLengthExpression arrayLengthExpression, MethodVisitor methodVisitor) {
@@ -447,51 +468,97 @@ public class JavaBytecodeCompiler implements Compiler {
             case ADDITION:
                 methodVisitor.visitInsn(IADD);
                 textifierVisitor.visitInsn(IADD);
+
+                stackMap.peek().popStack();
                 break;
             case SUBTRACTION:
                 methodVisitor.visitInsn(ISUB);
                 textifierVisitor.visitInsn(ISUB);
+
+                stackMap.peek().popStack();
                 break;
             case MULTIPLICATION:
                 methodVisitor.visitInsn(IMUL);
                 textifierVisitor.visitInsn(IMUL);
+
+                stackMap.peek().popStack();
                 break;
             case DIVISION:
                 methodVisitor.visitInsn(IDIV);
                 textifierVisitor.visitInsn(IDIV);
+
+                stackMap.peek().popStack();
                 break;
             case REMAINDER:
                 methodVisitor.visitInsn(IREM);
                 textifierVisitor.visitInsn(IREM);
+
+                stackMap.peek().popStack();
                 break;
             case LESS_THAN:
+                visitComparison(methodVisitor, IF_ICMPLT);
+                break;
             case GREATER_THAN:
+                visitComparison(methodVisitor, IF_ICMPGT);
+                break;
             case LESS_THAN_OR_EQUAL:
+                visitComparison(methodVisitor, IF_ICMPLE);
+                break;
             case GREATER_THAN_OR_EQUAL:
+                visitComparison(methodVisitor, IF_ICMPGE);
+                break;
             case EQUALS:
+                visitComparison(methodVisitor, IF_ICMPEQ);
+                break;
             case NOT_EQUALS:
-                //Seems a little odd but it compares to 0
-                methodVisitor.visitInsn(ISUB);
-                textifierVisitor.visitInsn(ISUB);
+                visitComparison(methodVisitor, IF_ICMPNE);
                 break;
             case BOOLEAN_OR:
                 methodVisitor.visitInsn(IOR);
                 textifierVisitor.visitInsn(IOR);
+
+                stackMap.peek().popStack();
                 break;
             case BOOLEAN_AND:
                 methodVisitor.visitInsn(IAND);
                 textifierVisitor.visitInsn(IAND);
+
+                stackMap.peek().popStack();
                 break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
         }
-        localStackSize--;
+    }
+
+    private void visitComparison(MethodVisitor methodVisitor, int instruction) {
+
+        Label ifTrue = new Label();
+        Label end = new Label();
+        methodVisitor.visitJumpInsn(instruction, ifTrue);
+
+        textifierVisitor.visitJumpInsn(instruction, ifTrue);
+        stackMap.peek().popStack();
+        stackMap.peek().popStack();
+
+        methodVisitor.visitInsn(ICONST_0);
+        textifierVisitor.visitInsn(ICONST_0);
+
+        methodVisitor.visitJumpInsn(GOTO, end);
+        textifierVisitor.visitJumpInsn(GOTO, end);
+
+        visit(ifTrue, methodVisitor);
+
+        methodVisitor.visitInsn(ICONST_1);
+        textifierVisitor.visitInsn(ICONST_1);
+
+        stackMap.peek().pushStack(TypeSymbol.BOOL);
+
+        visit(end, methodVisitor);
     }
 
     private void visit(BoundConditionalGotoExpression conditionalGotoExpression, MethodVisitor methodVisitor) {
 
         BoundExpression condition = conditionalGotoExpression.getCondition();
-        visit(condition, methodVisitor);
 
         Label label;
         if (boundLabelToProgramLabel.containsKey(conditionalGotoExpression.getLabel())) {
@@ -501,67 +568,67 @@ public class JavaBytecodeCompiler implements Compiler {
             boundLabelToProgramLabel.put(conditionalGotoExpression.getLabel(), label);
         }
 
-        //Assuming only LT right now
-        //TODO better handle other ops
         if (condition instanceof BoundBinaryExpression) {
-            BoundBinaryExpression binaryCondition = (BoundBinaryExpression)condition;
+            BoundBinaryExpression binaryCondition = (BoundBinaryExpression) condition;
             BoundBinaryOperator operator = binaryCondition.getOperator();
+            visit(binaryCondition.getLeft(), methodVisitor);
+            visit(binaryCondition.getRight(), methodVisitor);
             switch (operator.getBoundOpType()) {
                 case GREATER_THAN:
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
                     break;
                 case LESS_THAN:
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGE : IFLT, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGE : IFLT, label);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
                     break;
                 case GREATER_THAN_OR_EQUAL:
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLT : IFGE, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLT : IFGE, label);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
                     break;
                 case LESS_THAN_OR_EQUAL:
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLE, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLE, label);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
                     break;
                 case EQUALS:
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFNE : IFEQ, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFNE : IFEQ, label);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
                     break;
                 case NOT_EQUALS:
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     break;
                 case BOOLEAN_OR:
-                    break;
                 case BOOLEAN_AND:
-                    break;
                 default:
                     throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
             }
+            stackMap.peek().popStack(); //Pop right
+            stackMap.peek().popStack(); //Pop left
         } else {
-            methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
-            textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLT, label);
+            //Compare true/false to 0
+            visit(condition, methodVisitor);
+            methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+            textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+            stackMap.peek().popStack(); //Pop condition
         }
-        localStackSize--;
     }
 
-    private void visit(Label label, int stackCount, MethodVisitor methodVisitor) {
+    private void visit(Label label, MethodVisitor methodVisitor) {
+
+        if (visitedLabels.contains(label)) {
+            return;
+        }
+
+        Object[] local = stackMap.peek().getLocals().toArray(new Object[0]);
+        Object[] stack = stackMap.peek().getStack().toArray(new Object[0]);
+        methodVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
+        textifierVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
+
         methodVisitor.visitLabel(label);
         textifierVisitor.visitLabel(label);
 
-        Map<Integer, Object> stackMapFrame = stackMapFrames.peek();
-        Object[] local = new Object[stackMapFrame.size()];
-        int localIdx = 0;
-        for (Object typeCode : stackMapFrame.values()) {
-            local[localIdx] = typeCode;
-            localIdx++;
-        }
-        Object[] stack = new Object[stackCount];
-        for (int i = 0; i < stack.length; i++) {
-            stack[i] = INTEGER; //TODO we only have integers now
-        }
-        methodVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
-        textifierVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
+        visitedLabels.add(label);
     }
 
     private void visit(BoundGotoExpression gotoExpression, MethodVisitor methodVisitor) {
@@ -582,17 +649,22 @@ public class JavaBytecodeCompiler implements Compiler {
     private void visit(BoundFunctionDeclarationExpression functionDeclarationExpression) {
 
         FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
+
+        List<TypeSymbol> argumentTypes = functionDeclarationExpression.getArguments().stream()
+                .map(BoundFunctionArgumentExpression::getType)
+                .collect(Collectors.toList());
+
         MethodVisitor methodVisitor = classWriter.visitMethod(
                 ACC_PRIVATE + ACC_STATIC, //TODO: Access levels
                 functionSymbol.getName(),
-                getMethodDescriptor(functionDeclarationExpression.getArguments(), functionDeclarationExpression.getFunctionSymbol().getType()),
+                getMethodDescriptor(argumentTypes, functionDeclarationExpression.getFunctionSymbol().getType()),
                 null,
                 null
         );
         textifierVisitor.visitMethod(
                 ACC_PRIVATE + ACC_STATIC,
                 functionSymbol.getName(),
-                getMethodDescriptor(functionDeclarationExpression.getArguments(), functionDeclarationExpression.getFunctionSymbol().getType()),
+                getMethodDescriptor(argumentTypes, functionDeclarationExpression.getFunctionSymbol().getType()),
                 null,
                 null
         );
@@ -601,19 +673,34 @@ public class JavaBytecodeCompiler implements Compiler {
         int globalVariableIndex = variableIndex;
         variableIndex = 0;
         for (BoundFunctionArgumentExpression argument : functionDeclarationExpression.getArguments()) {
-            variables.put(argument.getArgument().getName(), variableIndex++);
+            variables.put(argument.getArgument().getName(), variableIndex);
             localVariables.peek().put(variableIndex, argument.getArgument());
+            stackMap.peek().pushLocal(argument.getArgument().getType());
+            variableIndex++;
         }
 
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
             visit(expression, methodVisitor);
         }
-        methodVisitor.visitInsn(RETURN);
-        textifierVisitor.visitInsn(RETURN);
+        variableIndex = 0;
+        //Bigge just in case - e.g.:
+        /*
+        Int choice(Bool check) {
+            if (check) {
+                return 1
+            } else {
+                return 2
+            }
+        }
+         */
+        if (functionDeclarationExpression.getBody().getExpressions().get(functionDeclarationExpression.getBody().getExpressions().size() - 1).getBoundExpressionType() != BoundExpressionType.RETURN) {
+            methodVisitor.visitInsn(RETURN);
+            textifierVisitor.visitInsn(RETURN);
+        }
 
         //TODO: Keep track of method locals
-        methodVisitor.visitMaxs(1024, variableIndex);
-        textifierVisitor.visitMaxs(1024, variableIndex);
+        methodVisitor.visitMaxs(1024, 1024);
+        textifierVisitor.visitMaxs(1024, 1024);
         localVariables.pop();
         variableIndex = globalVariableIndex;
 
@@ -621,11 +708,11 @@ public class JavaBytecodeCompiler implements Compiler {
         textifierVisitor.visitMethodEnd();
     }
 
-    private String getMethodDescriptor(List<BoundFunctionArgumentExpression> arguments, TypeSymbol returnType) {
+    private String getMethodDescriptor(List<TypeSymbol> argumentTypes, TypeSymbol returnType) {
         StringBuilder sb = new StringBuilder();
         sb.append("(");
-        for (BoundFunctionArgumentExpression argumentExpression : arguments) {
-            sb.append(getType(argumentExpression.getType()));
+        for (TypeSymbol type : argumentTypes) {
+            sb.append(getType(type));
         }
         sb.append(")");
         sb.append(getType(returnType));
@@ -650,20 +737,33 @@ public class JavaBytecodeCompiler implements Compiler {
 
         FunctionSymbol function = functionCallExpression.getFunction();
 
+        stackMap.push(new Frame());
         for (BoundExpression argumentInitialiser : functionCallExpression.getBoundArguments()) {
             visit(argumentInitialiser, methodVisitor);
         }
 
-        methodVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(function.getArguments(), function.getType()), false);
-        textifierVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(function.getArguments(), function.getType()), false);
+        List<TypeSymbol> argumentTypes = functionCallExpression.getBoundArguments().stream()
+                .map(BoundExpression::getType)
+                .collect(Collectors.toList());
+
+        methodVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(argumentTypes, function.getType()), false);
+        textifierVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(argumentTypes, function.getType()), false);
+
+        stackMap.pop();
+        //Push return type onto stack
+        if (functionCallExpression.getType() != TypeSymbol.VOID) {
+            stackMap.peek().pushStack(functionCallExpression.getType());
+        }
     }
 
     private void visit(BoundReturnExpression returnExpression, MethodVisitor methodVisitor) {
 
         visit(returnExpression.getReturnValue(), methodVisitor);
+
         methodVisitor.visitInsn(IRETURN);
         textifierVisitor.visitInsn(IRETURN);
-        localStackSize--;
+
+        stackMap.peek().popStack();
     }
 
     private void visit(BoundPrintExpression printExpression, MethodVisitor methodVisitor) {
@@ -673,6 +773,7 @@ public class JavaBytecodeCompiler implements Compiler {
         //Store top of the stack in memory
         methodVisitor.visitIntInsn(ISTORE, variableIndex);
         textifierVisitor.visitIntInsn(ISTORE, variableIndex);
+        stackMap.peek().popStack();
 
         //CODE : System.out
         methodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
@@ -682,8 +783,54 @@ public class JavaBytecodeCompiler implements Compiler {
         methodVisitor.visitVarInsn(ILOAD, variableIndex);
         textifierVisitor.visitVarInsn(ILOAD, variableIndex);
         //INVOKE: print(int) with variable on top of the stack. /
-        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(I)V", false);
-        textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(I)V", false);
-        localStackSize--;
+
+        String descriptor = getMethodDescriptor(Collections.singletonList(printExpression.getExpression().getType()), TypeSymbol.VOID);
+
+        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", descriptor, false);
+        textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", descriptor, false);
+    }
+
+    private class Frame {
+
+        private Stack<Object> locals;
+        private Stack<Object> stack;
+
+        public Frame() {
+            locals = new Stack<>();
+            stack = new Stack<>();
+        }
+
+        public Stack<Object> getLocals() {
+            return locals;
+        }
+
+        public Stack<Object> getStack() {
+            return stack;
+        }
+
+        public void pushLocal(TypeSymbol type) {
+            locals.push(getStackTypeCode(type));
+        }
+
+        public void pushLocal(String type) {
+            locals.push(type);
+        }
+
+        public Object popLocals() {
+            return locals.pop();
+        }
+
+        public void pushStack(TypeSymbol type) {
+            stack.push(getStackTypeCode(type));
+        }
+
+        public void pushStack(String type) {
+            stack.push(type);
+        }
+
+        public Object popStack() {
+            return stack.pop();
+        }
+
     }
 }

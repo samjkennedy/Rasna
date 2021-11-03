@@ -35,4 +35,9 @@ public class BoundLiteralExpression implements BoundExpression {
     public Object getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return value != null ? value.toString() : "Null";
+    }
 }

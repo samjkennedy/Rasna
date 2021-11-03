@@ -29,4 +29,9 @@ public class VariableSymbol extends Symbol {
     public boolean isReadOnly() {
         return readOnly;
     }
+
+    @Override
+    public String toString() {
+        return getName();
+    }
 }

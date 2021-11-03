@@ -27,7 +27,7 @@ public class BoundIfExpression implements BoundExpression {
 
     @Override
     public Iterator<BoundExpression> getChildren() {
-        return Arrays.asList(condition, body, elseBody).iterator();
+        return Arrays.asList(body, elseBody).iterator();
     }
 
     public BoundExpression getCondition() {

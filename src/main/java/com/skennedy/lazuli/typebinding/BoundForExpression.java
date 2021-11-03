@@ -28,7 +28,7 @@ public class BoundForExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.ARRAY;
+        return TypeSymbol.INT_ARRAY;
     }
 
     @Override

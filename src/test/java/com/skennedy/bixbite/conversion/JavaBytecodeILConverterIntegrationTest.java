@@ -1,6 +1,6 @@
-package com.skennedy.bixbite.compilation;
+package com.skennedy.bixbite.conversion;
 
-import com.skennedy.lazuli.compilation.JavaBytecodeCompiler;
+import com.skennedy.lazuli.conversion.JavaBytecodeILConverter;
 import com.skennedy.lazuli.lowering.Lowerer;
 import com.skennedy.lazuli.parsing.Parser;
 import com.skennedy.lazuli.parsing.Program;
@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class JavaBytecodeCompilerIntegrationTest {
+class JavaBytecodeILConverterIntegrationTest {
 
 
     @ParameterizedTest
@@ -30,7 +30,7 @@ class JavaBytecodeCompilerIntegrationTest {
         PrintStream console = System.out;
         //Set up output stream
         //TODO: figure out how to delete this
-        File outputFile = new File("src/test/resources/results/compilation/" + filename.split("\\.")[0] + "_result.txt");
+        File outputFile = new File("src/test/resources/results/conversion/" + filename.split("\\.")[0] + "_result.txt");
         outputFile.createNewFile();
         PrintStream out = new PrintStream(outputFile);
         // Store current System.out before assigning a new value
@@ -48,8 +48,8 @@ class JavaBytecodeCompilerIntegrationTest {
         Lowerer lowerer = new Lowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
-        JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
-        compiler.compile(boundProgram, filename.split("\\.")[0]);
+        JavaBytecodeILConverter compiler = new JavaBytecodeILConverter();
+        compiler.convert(boundProgram, filename.split("\\.")[0]);
 
         Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
         InputStream inputStream = process.getInputStream();
@@ -68,7 +68,7 @@ class JavaBytecodeCompilerIntegrationTest {
         System.setOut(console);
 
         String expectedResult = read("results/simulation", filename.split("\\.")[0] + "_result.txt");
-        String actualResult = read("results/compilation", filename.split("\\.")[0] + "_result.txt");
+        String actualResult = read("results/conversion", filename.split("\\.")[0] + "_result.txt");
 
         assertEquals(expectedResult, actualResult);
     }
