@@ -91,6 +91,7 @@ import static org.objectweb.asm.Opcodes.IREM;
 import static org.objectweb.asm.Opcodes.IRETURN;
 import static org.objectweb.asm.Opcodes.ISTORE;
 import static org.objectweb.asm.Opcodes.ISUB;
+import static org.objectweb.asm.Opcodes.LDC;
 import static org.objectweb.asm.Opcodes.NEWARRAY;
 import static org.objectweb.asm.Opcodes.RETURN;
 import static org.objectweb.asm.Opcodes.SIPUSH;
@@ -121,6 +122,8 @@ public class JavaBytecodeILConverter implements ILConverter {
     private Set<Label> visitedLabels;
 
     private static int ip = 0;
+    private int constantIdx;
+    private Map<Object, Integer> constantPool;
 
     public JavaBytecodeILConverter() {
         this.classWriter = new ClassWriter(0);
@@ -134,6 +137,8 @@ public class JavaBytecodeILConverter implements ILConverter {
         localVariables.push(new HashMap<>());
 
         visitedLabels = new HashSet<>();
+        constantIdx = 2;
+        constantPool = new HashMap<>();
     }
 
     @Override
@@ -318,12 +323,25 @@ public class JavaBytecodeILConverter implements ILConverter {
                     textifierVisitor.visitInsn(ICONST_5);
                     break;
                 default:
-                    //TODO: This is pushing a short - maximum value is 32767
-                    if (Integer.parseInt(value.toString()) > Short.MAX_VALUE) {
-                        throw new UnsupportedOperationException("Currently only shorts can be stored");
+                    int operand = Integer.parseInt(value.toString());
+                    if (operand < Byte.MAX_VALUE) {
+                        methodVisitor.visitIntInsn(BIPUSH, operand);
+                        textifierVisitor.visitIntInsn(BIPUSH, operand);
+                    } else if (operand < Short.MAX_VALUE) {
+                        methodVisitor.visitIntInsn(SIPUSH, operand);
+                        textifierVisitor.visitIntInsn(SIPUSH, operand);
+                    } else if (operand <Integer.MAX_VALUE) {
+                        int constIndex;
+                        if (constantPool.containsKey(operand)) {
+                            constIndex = constantPool.get(operand);
+                        } else {
+                            constIndex = classWriter.newConst(operand);
+                            constantPool.put(operand, constantIdx);
+                            constantIdx++;
+                        }
+                        methodVisitor.visitIntInsn(LDC, constIndex);
+                        textifierVisitor.visitIntInsn(LDC, constIndex);
                     }
-                    methodVisitor.visitIntInsn(SIPUSH, Integer.parseInt(value.toString()));
-                    textifierVisitor.visitIntInsn(SIPUSH, Integer.parseInt(value.toString()));
             }
         } else if (value instanceof Boolean) {
             methodVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
