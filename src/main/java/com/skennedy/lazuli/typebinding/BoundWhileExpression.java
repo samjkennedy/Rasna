@@ -6,9 +6,9 @@ import java.util.Iterator;
 public class BoundWhileExpression implements BoundExpression {
 
     private final BoundExpression condition;
-    private final BoundBlockExpression body;
+    private final BoundExpression body;
 
-    public BoundWhileExpression(BoundExpression condition, BoundBlockExpression body) {
+    public BoundWhileExpression(BoundExpression condition, BoundExpression body) {
         this.condition = condition;
         this.body = body;
     }
@@ -32,7 +32,7 @@ public class BoundWhileExpression implements BoundExpression {
         return condition;
     }
 
-    public BoundBlockExpression getBody() {
+    public BoundExpression getBody() {
         return body;
     }
 }
