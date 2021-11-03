@@ -35,9 +35,9 @@ Implemented:
    - [x] simulation
    - [x] compilation
 
-### Subset Notation
+### Guards
 
-Lazuli features **Subset Notation** where an expression can be defined for a specific **Subset** of its full domain. 
+Lazuli features **Guards** where an expression can be defined for a specific **Subset** of its full domain. 
 
 For example with Variables:
 
@@ -50,7 +50,7 @@ i = 3 //runtime error
 This can be combined with for expressions to loop over only a **specific subset** of the guard:
 
 ```javascript
-for (Int N = 0 to 10 if N % 2 == 0) {
+for (Int N = 0 to 10 | N % 2 == 0) {
     print(N) //prints 0, 2, 4, 6, 8
 }
 ```
@@ -81,7 +81,7 @@ This will assign i to either 1 or 2 with the side effect of incrementing either 
 
 Implemented:
    - [x] simulation
-   - [ ] compilation
+   - [x] compilation
    
 This extends to loops as well, whose return type is an `Array`:
 
@@ -106,7 +106,38 @@ Implemented:
    - [ ] simulation
    - [ ] compilation
    
-For more see the examples directory.
+ ## Functions
+ 
+ Functions so far are pretty much like any other C-like language:
+ 
+ ```javascript
+ Int sum(Int a, Int b) {
+     return a + b
+ }
+ 
+ print(sum(2, 3)) //prints 5
+ ```
+ 
+ Functions can also take guards on their parameters:
+ 
+ ```javascript
+ Int isqrt(Int x | x >= 0) { //Attempting to call isqrt with a negative number will throw an error
+
+     Int i = 1
+     Int result = 1
+     while (result <= x) {
+         i = i + 1
+         result = i * i
+     }
+     return i - 1
+ }
+ ```
+ 
+Implemented:
+   - [x] simulation
+   - [x] compilation
+   
+For more see the examples and tests directory.
    
 ## Planned Features
 
@@ -119,7 +150,6 @@ For more see the examples directory.
     
 - Custom Type system
 - Type subset system
-- Function declarations and calls
 
 ## Acknowledgements
 
