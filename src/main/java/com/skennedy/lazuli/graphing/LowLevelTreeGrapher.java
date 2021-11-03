@@ -52,6 +52,7 @@ public class LowLevelTreeGrapher {
     private void graphProgram(BoundProgram program) {
 
         labelToIp = new HashMap<>();
+        MutableNode root = mutNode("PROGRAM_ROOT").add(Label.of("PROGRAM")).add(Shape.BOX);
 
         int ip = 0;
         for (BoundExpression expression : program.getExpressions()) {
@@ -67,10 +68,10 @@ public class LowLevelTreeGrapher {
         MutableNode last = null;
         for (BoundExpression expression : expressions) {
             MutableNode curr = graphExpression(expression, ip);
-            if (last != null) {
-                last.addLink(mutNode("next_instruction_" + ip).add(Label.of("NEXT")).addLink(curr));
+            if (curr != null) {
+                root.addLink(curr);
+                last = curr;
             }
-            last = curr;
             ip++;
         }
         MutableNode halt = mutNode("END").add(Label.of("HALT")).add(Shape.BOX);
@@ -103,7 +104,7 @@ public class LowLevelTreeGrapher {
             case GOTO:
                 return graphGoto((BoundGotoExpression) expression, ip);
             case CONDITIONAL_GOTO:
-                return graphConditionalGoto((BoundConditionalGotoExpression)expression, ip);
+                return graphConditionalGoto((BoundConditionalGotoExpression) expression, ip);
             case LABEL:
                 return graphLabel((BoundLabelExpression) expression, ip);
             default:
@@ -112,13 +113,13 @@ public class LowLevelTreeGrapher {
     }
 
     private MutableNode graphConditionalGoto(BoundConditionalGotoExpression conditionalGotoExpression, int ip) {
-        MutableNode gotoNode = mutNode(String.valueOf(ip)).add(Label.of("CONDITIONAL GOTO")).add(Shape.DIAMOND);
+        MutableNode gotoNode = mutNode(String.valueOf(ip)).add(Label.of("GOTO")).add(Shape.DIAMOND);
         MutableNode labelNode = mutNode("label_" + labelToIp.get(conditionalGotoExpression.getLabel())).add(Label.of(conditionalGotoExpression.getLabel().getName())).add(Shape.OVAL);
         MutableNode condition = graphExpression(conditionalGotoExpression.getCondition(), ip);
 
         gotoNode.addLink(condition);
         gotoNode.addLink(mutNode("to_label_" + ip).add(Label.of(conditionalGotoExpression.jumpIfFalse() ? "false" : "true")).addLink(labelNode));
-        gotoNode.addLink(mutNode("to_next_instr_" + ip).add(Label.of(conditionalGotoExpression.jumpIfFalse() ? "true" : "false")).addLink(mutNode(String.valueOf(ip+1))));
+        gotoNode.addLink(mutNode("to_next_instr_" + ip).add(Label.of(conditionalGotoExpression.jumpIfFalse() ? "true" : "false")).addLink(mutNode(String.valueOf(ip + 1))));
 
         return gotoNode;
     }

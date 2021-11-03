@@ -7,6 +7,7 @@ import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
 import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
+import com.skennedy.lazuli.typebinding.BoundExpressionType;
 import com.skennedy.lazuli.typebinding.BoundForExpression;
 import com.skennedy.lazuli.typebinding.BoundForInExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
@@ -36,22 +37,19 @@ public class Lowerer extends BoundProgramRewriter {
             return expression;
         }
 
-        BoundLabel continueLabel = generateLabel();
         BoundLabel checkLabel = generateLabel();
         BoundLabel endLabel = generateLabel();
 
         BoundGotoExpression gotoCheck = new BoundGotoExpression(checkLabel);
-        BoundLabelExpression continueLabelExpression = new BoundLabelExpression(continueLabel);
         BoundLabelExpression checkLabelExpression = new BoundLabelExpression(checkLabel);
         BoundLabelExpression endLabelExpression = new BoundLabelExpression(endLabel);
-        BoundConditionalGotoExpression gotoTrue = new BoundConditionalGotoExpression(continueLabel, boundWhileExpression.getCondition(), false);
+        BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(endLabel, boundWhileExpression.getCondition(), true);
 
         return rewriteBlockExpression(new BoundBlockExpression(
-                gotoCheck,
-                continueLabelExpression,
-                boundWhileExpression.getBody(),
                 checkLabelExpression,
-                gotoTrue,
+                gotoFalse,
+                boundWhileExpression.getBody(),
+                gotoCheck,
                 endLabelExpression
         ));
     }
@@ -79,6 +77,7 @@ public class Lowerer extends BoundProgramRewriter {
         BoundVariableExpression variableExpression = new BoundVariableExpression(rewrittenForExpression.getIterator());
 
         BoundExpression step;
+        //TODO: Make a BoundIncrementExpression that converts to the instruction iinc
         if (rewrittenForExpression.getStep() == null) {
             step = new BoundAssignmentExpression(rewrittenForExpression.getIterator(),
                     null,
@@ -170,20 +169,26 @@ public class Lowerer extends BoundProgramRewriter {
 
         BoundIfExpression rewrittenBoundIfExpression = (BoundIfExpression) expression;
 
-        BoundLabel endLabel = generateLabel();
+        BoundLabel endLabel = blockEndLabel == null ? generateLabel() : blockEndLabel;
+        blockEndLabel = endLabel;
+        BoundLabelExpression endLabelExpression = new BoundLabelExpression(endLabel);
+
         if (rewrittenBoundIfExpression.getElseBody() == null) {
 
             BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(endLabel, rewrittenBoundIfExpression.getCondition(), true);
-            BoundLabelExpression endLabelStatement = new BoundLabelExpression(endLabel);
-            BoundBlockExpression result = new BoundBlockExpression(gotoFalse, rewrittenBoundIfExpression.getBody(), endLabelStatement);
+            BoundBlockExpression result = new BoundBlockExpression(
+                    gotoFalse,
+                    rewrittenBoundIfExpression.getBody(),
+                    endLabelExpression
+            );
             return rewriteBlockExpression(result);
+
         } else {
 
             BoundLabel elseLabel = generateLabel();
 
             BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(elseLabel, rewrittenBoundIfExpression.getCondition(), true);
             BoundGotoExpression gotoEndStatement = new BoundGotoExpression(endLabel);
-            BoundLabelExpression endLabelStatement = new BoundLabelExpression(endLabel);
             BoundLabelExpression elseLabelStatement = new BoundLabelExpression(elseLabel);
 
             BoundBlockExpression result = new BoundBlockExpression(
@@ -192,7 +197,7 @@ public class Lowerer extends BoundProgramRewriter {
                     gotoEndStatement,
                     elseLabelStatement,
                     rewrittenBoundIfExpression.getElseBody(),
-                    endLabelStatement
+                    endLabelExpression
             );
             return flatten(rewriteBlockExpression(result));
         }

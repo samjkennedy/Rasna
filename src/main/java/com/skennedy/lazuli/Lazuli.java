@@ -3,7 +3,7 @@ package com.skennedy.lazuli;
 import com.skennedy.assertclauses.Assert;
 import com.skennedy.lazuli.graphing.LowLevelTreeGrapher;
 import com.skennedy.lazuli.simulation.Simulator;
-import com.skennedy.lazuli.compilation.JavaBytecodeCompiler;
+import com.skennedy.lazuli.conversion.JavaBytecodeILConverter;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.graphing.HighLevelTreeGrapher;
 import com.skennedy.lazuli.lowering.BoundProgramRewriter;
@@ -39,7 +39,7 @@ public class Lazuli {
                 .build();
         Flag<String> fileFlag = Flags.stringFlag()
                 .withName("f")
-                .withDescription("The file to compile")
+                .withDescription("The file to convert")
                 .build();
         Flags.parse(args);
 
@@ -48,7 +48,7 @@ public class Lazuli {
             log.info("Lazuli is in simulation mode");
             mode = Mode.SIMULATION;
         } else if ("com".equals(modeFlag.getValue())) {
-            log.info("Lazuli is in compilation mode");
+            log.info("Lazuli is in conversion mode");
             mode = Mode.COMPILATION;
         } else {
             Flags.usage();
@@ -92,7 +92,7 @@ public class Lazuli {
 
             //TODO: make this a flag
             boolean graphProgram = false;
-            //Write first in case of errors in compilation or simulation
+            //Write first in case of errors in conversion or simulation
             if (graphProgram) {
                 log.info("Writing high level AST graph");
                 HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
@@ -119,8 +119,8 @@ public class Lazuli {
                     break;
                 case COMPILATION:
                     log.info("Compiling program {}", fileNameWithExt);
-                    JavaBytecodeCompiler javaBytecodeCompiler = new JavaBytecodeCompiler();
-                    javaBytecodeCompiler.compile(boundProgram, fileName);
+                    JavaBytecodeILConverter javaBytecodeCompiler = new JavaBytecodeILConverter();
+                    javaBytecodeCompiler.convert(boundProgram, fileName);
                     Instant end = Instant.now();
                     log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 

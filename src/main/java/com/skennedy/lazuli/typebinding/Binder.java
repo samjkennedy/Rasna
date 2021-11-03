@@ -33,6 +33,7 @@ import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -161,8 +162,8 @@ public class Binder {
         if (variable.isEmpty()) {
             throw new UndefinedVariableException((String) identifier.getValue());
         }
-        if (!variable.get().getType().isAssignableFrom(TypeSymbol.ARRAY)) {
-            errors.add(Error.raiseTypeMismatch(TypeSymbol.ARRAY, variable.get().getType()));
+        if (!variable.get().getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, variable.get().getType()));
         }
         BoundExpression index = bind(arrayAccessExpression.getIndex());
 
@@ -211,7 +212,7 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
 
         BoundExpression iterable = bind(forInExpression.getIterable());
-        if (!iterable.getType().isAssignableFrom(TypeSymbol.ARRAY)) {
+        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
             throw new IllegalStateException("For-in expression only applicable to Array type");
         }
 
@@ -248,7 +249,7 @@ public class Binder {
             case INT_KEYWORD:
                 return TypeSymbol.INT;
             case INT_ARRAY_KEYWORD:
-                return TypeSymbol.ARRAY;
+                return TypeSymbol.INT_ARRAY;
             case BOOL_KEYWORD:
                 return TypeSymbol.BOOL;
             case NUM_KEYWORD:
@@ -364,9 +365,34 @@ public class Binder {
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());
 
+        if (functionSymbol.getType() != TypeSymbol.VOID) {
+            analyzeBody(functionSymbol, body.getExpressions().iterator());
+        }
+
         currentScope = currentScope.getParentScope();
 
         return new BoundFunctionDeclarationExpression(functionSymbol, arguments, body);
+    }
+
+    private void analyzeBody(FunctionSymbol function, Iterator<BoundExpression> expressions) {
+
+        //BFS the body to ensure all paths return a value of the right type
+        for (Iterator<BoundExpression> it = expressions; it.hasNext(); ) {
+            BoundExpression expression = it.next();
+            if (expression == null) {
+                return;
+            }
+            if (expression.getBoundExpressionType() == BoundExpressionType.RETURN) {
+                if (expression.getType() != function.getType()) {
+                    throw new TypeMismatchException(function.getType(), expression.getType());
+                }
+                return;
+            }
+            if (!expression.getChildren().hasNext()) {
+                throw new IllegalStateException("Method " + function.getName() + " is missing a return value");
+            }
+            analyzeBody(function, expression.getChildren());
+        }
     }
 
     private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression argumentExpression) {
@@ -440,7 +466,7 @@ public class Binder {
         }
 
         //TODO: Array of what?
-        TypeSymbol type = variableDeclarationExpression.isArray() ? TypeSymbol.ARRAY : parseType(variableDeclarationExpression.getTypeKeyword());
+        TypeSymbol type = variableDeclarationExpression.isArray() ? TypeSymbol.INT_ARRAY : parseType(variableDeclarationExpression.getTypeKeyword());
 
         if (initialiser != null && !type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));

@@ -34,6 +34,9 @@ import java.util.function.Function;
 
 public abstract class BoundProgramRewriter {
 
+    //So that all branches of a block can point to the same end label
+    protected static BoundLabel blockEndLabel;
+
     public BoundProgram rewrite(BoundProgram program) {
 
         List<BoundExpression> rewrittenExpressions = new ArrayList<>();
@@ -44,6 +47,7 @@ public abstract class BoundProgramRewriter {
             } else {
                 rewrittenExpressions.add(rewrittenExpression);
             }
+            blockEndLabel = null;
         }
 
         BoundBlockExpression nestedProgram = new BoundBlockExpression(rewrittenExpressions);
@@ -254,12 +258,15 @@ public abstract class BoundProgramRewriter {
 
         if (expression instanceof BoundBlockExpression) {
 
-            return rewriteBlockInitialiser(assignmentExpression.getExpression(), (BoundBlockExpression) expression, expr -> new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getGuard(), expr));
+            return rewriteBlockInitialiser(
+                    assignmentExpression.getExpression(),
+                    (BoundBlockExpression) expression,
+                    expr -> new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getGuard(), expr));
         }
         return new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getGuard(), assignmentExpression.getExpression());
     }
 
-    private BoundExpression rewriteBinaryExpression(BoundBinaryExpression boundBinaryExpression) {
+    protected BoundExpression rewriteBinaryExpression(BoundBinaryExpression boundBinaryExpression) {
 
         BoundExpression left = rewriteExpression(boundBinaryExpression.getLeft());
         BoundExpression right = rewriteExpression(boundBinaryExpression.getRight());
@@ -395,11 +402,19 @@ public abstract class BoundProgramRewriter {
         //TODO: The following three are more of the conditional's problem, not the assignments, since this should be the default behaviour
 
         if (initialiser instanceof BoundBlockExpression) {
-            return rewriteBlockInitialiser(
+            BoundExpression blockInitialiser = rewriteBlockInitialiser(
                     boundVariableDeclarationExpression.getInitialiser(),
                     (BoundBlockExpression) initialiser,
-                    expr -> new BoundVariableDeclarationExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), expr, boundVariableDeclarationExpression.isReadOnly())
+                    expr -> new BoundAssignmentExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), expr)
             );
+
+            BoundVariableDeclarationExpression tempInit = new BoundVariableDeclarationExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), new BoundLiteralExpression(0), false);
+
+            return new BoundBlockExpression(
+                    tempInit,
+                    blockInitialiser
+            );
+
         }
         return boundVariableDeclarationExpression;
     }

@@ -18,7 +18,7 @@ public class BoundArrayLiteralExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.ARRAY; //TODO Array type
+        return TypeSymbol.INT_ARRAY; //TODO Array type
     }
 
     @Override

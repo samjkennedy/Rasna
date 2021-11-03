@@ -1,13 +1,11 @@
 //Basic Void noargs method
-Int foo()  {
+Int foo() {
     return 1
 }
 
 //Method with range
 Void printFromTo(Int fromVal, Int toVal) {
-    print(fromVal)
-    print(toVal)
-    for (Int i = fromVal to toVal) {
+    for (Int i = 0 to 5) {
         print(i)
     }
 }
@@ -16,8 +14,15 @@ Void printFromTo(Int fromVal, Int toVal) {
 Int choice(Bool check) {
     if (check) {
         return 1
+    }
+    return 2
+ }
+
+Void echo2or0(Bool x) {
+    if (x) {
+        print(2)
     } else {
-        return 2
+        print(0)
     }
 }
 
@@ -26,14 +31,13 @@ Void mut(Int a) {
     a = a + 1
 }
 
-Int x = 1
-mut(x)
-print(x)
-
 //Two arg method
 Int sum(Int a, Int b) {
     return a + b
 }
+
+echo2or0(true)
+echo2or0(false)
 
 print(sum(3, 9))
 
@@ -45,4 +49,4 @@ print(choice(true))
 print(choice(false))
 print(sum(choice(true), 5))
 
-print(printFromTo(0, 5))
+printFromTo(0, 5)
