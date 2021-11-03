@@ -3,6 +3,7 @@ package com.skennedy.lazuli.typebinding;
 public enum BoundExpressionType {
 
     ARRAY_ACCESS_EXPRESSION,
+    ARRAY_ASSIGNMENT_EXPRESSION,
     ARRAY_LENGTH_EXPRESSION,
     ARRAY_LITERAL_EXPRESSION,
     ASSIGNMENT_EXPRESSION,

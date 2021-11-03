@@ -8,7 +8,10 @@ import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
+import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
 import com.skennedy.lazuli.parsing.ArrayAccessExpression;
+import com.skennedy.lazuli.parsing.ArrayAssignmentExpression;
+import com.skennedy.lazuli.parsing.ArrayLengthExpression;
 import com.skennedy.lazuli.parsing.ArrayLiteralExpression;
 import com.skennedy.lazuli.parsing.AssignmentExpression;
 import com.skennedy.lazuli.parsing.BinaryExpression;
@@ -102,6 +105,10 @@ public class Binder {
                 return bindReturnExpression((ReturnExpression) expression);
             case MATCH_EXPRESSION:
                 return bindMatchExpression((MatchExpression) expression);
+            case ARRAY_LEN_EXPR:
+                return bindArrayLengthExpression((ArrayLengthExpression) expression);
+            case ARRAY_ASSIGNMENT_EXPR:
+                return bindArrayAssignmentExpression((ArrayAssignmentExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
@@ -156,7 +163,7 @@ public class Binder {
         return new BoundArrayLiteralExpression(boundElements);
     }
 
-    private BoundExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
+    private BoundArrayAccessExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
         IdentifierExpression identifier = arrayAccessExpression.getIdentifier();
         Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifier.getValue());
         if (variable.isEmpty()) {
@@ -171,6 +178,24 @@ public class Binder {
             errors.add(Error.raiseTypeMismatch(TypeSymbol.INT, index.getType()));
         }
         return new BoundArrayAccessExpression(new BoundVariableExpression(variable.get()), index);
+    }
+
+    private BoundExpression bindArrayLengthExpression(ArrayLengthExpression arrayLengthExpression) {
+
+        BoundExpression boundExpression = bind(arrayLengthExpression.getExpression());
+        if (!boundExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, boundExpression.getType()));
+        }
+
+        return new BoundArrayLengthExpression(boundExpression);
+    }
+
+    private BoundExpression bindArrayAssignmentExpression(ArrayAssignmentExpression expression) {
+
+        BoundArrayAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(expression.getArrayAccessExpression());
+        BoundExpression assignment = bind(expression.getAssignment());
+
+        return new BoundArrayAssignmentExpression(boundArrayAccessExpression, assignment);
     }
 
     private BoundExpression bindForExpression(ForExpression forExpression) {
@@ -484,7 +509,7 @@ public class Binder {
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
 
-        BoundExpression body= bind(whileExpression.getBody());
+        BoundExpression body = bind(whileExpression.getBody());
 
         return new BoundWhileExpression(condition, body);
     }

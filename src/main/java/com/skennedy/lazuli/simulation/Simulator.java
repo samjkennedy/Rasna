@@ -12,6 +12,7 @@ import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
 import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
+import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
@@ -131,6 +132,9 @@ public class Simulator {
                 break;
             case ARRAY_LENGTH_EXPRESSION:
                 evaluateArrayLengthExpression((BoundArrayLengthExpression) expression);
+                break;
+            case ARRAY_ASSIGNMENT_EXPRESSION:
+                evaluateArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
                 break;
             case LITERAL:
                 localsStack.push(((BoundLiteralExpression) expression).getValue());
@@ -259,6 +263,16 @@ public class Simulator {
         evaluate(arrayLengthExpression.getIterable());
         LazuliArray lazuliArray = (LazuliArray) localsStack.pop();
         localsStack.push(lazuliArray.array.length);
+    }
+
+    private void evaluateArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
+        evaluate(arrayAssignmentExpression.getArrayAccessExpression().getIndex());
+        int index = (int) localsStack.pop();
+        evaluate(arrayAssignmentExpression.getArrayAccessExpression().getArray());
+        LazuliArray<Object> array = (LazuliArray<Object>) localsStack.pop();
+        evaluate(arrayAssignmentExpression.getAssignment());
+        Object value = localsStack.pop();
+        array.set(index, value);
     }
 
     private class LazuliArray<T> {

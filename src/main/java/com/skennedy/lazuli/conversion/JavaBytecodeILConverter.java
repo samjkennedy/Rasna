@@ -7,6 +7,7 @@ import com.skennedy.lazuli.lowering.BoundGotoExpression;
 import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
+import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
@@ -229,6 +230,9 @@ public class JavaBytecodeILConverter implements ILConverter {
 
                 visit((BoundArrayAccessExpression) expression, methodVisitor);
                 break;
+            case ARRAY_ASSIGNMENT_EXPRESSION:
+                visit((BoundArrayAssignmentExpression) expression, methodVisitor);
+                break;
             case ARRAY_LENGTH_EXPRESSION:
 
                 visit((BoundArrayLengthExpression) expression, methodVisitor);
@@ -433,6 +437,16 @@ public class JavaBytecodeILConverter implements ILConverter {
         textifierVisitor.visitIntInsn(ISTORE, variableIdx);
 
         stackMap.peek().popStack();
+    }
+
+    private void visit(BoundArrayAssignmentExpression arrayAssignmentExpression, MethodVisitor methodVisitor) {
+
+        visit(arrayAssignmentExpression.getArrayAccessExpression().getArray(), methodVisitor);
+        visit(arrayAssignmentExpression.getArrayAccessExpression().getIndex(), methodVisitor);
+        visit(arrayAssignmentExpression.getAssignment(), methodVisitor);
+
+        methodVisitor.visitInsn(IASTORE);
+        textifierVisitor.visitInsn(IASTORE);
     }
 
     private void visit(BoundArrayLiteralExpression arrayLiteralExpression, MethodVisitor methodVisitor) {
@@ -754,6 +768,8 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
         if (type == TypeSymbol.BOOL) {
             return Type.BOOLEAN_TYPE.getDescriptor();
+        } if (type == TypeSymbol.INT_ARRAY) {
+            return "[I";
         }
         throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
     }

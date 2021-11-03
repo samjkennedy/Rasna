@@ -2,6 +2,7 @@ package com.skennedy.lazuli.lowering;
 
 import com.skennedy.lazuli.exceptions.InfiniteLoopException;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
+import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
@@ -84,6 +85,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteArrayLiteralExpression((BoundArrayLiteralExpression) expression);
             case ARRAY_ACCESS_EXPRESSION:
                 return rewriteArrayAccessExpression((BoundArrayAccessExpression) expression);
+            case ARRAY_ASSIGNMENT_EXPRESSION:
+                return rewriteArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
             case ARRAY_LENGTH_EXPRESSION:
             case LITERAL:
             case VARIABLE_EXPRESSION:
@@ -242,6 +245,18 @@ public abstract class BoundProgramRewriter {
             return arrayAccessExpression;
         }
         return new BoundArrayAccessExpression(arrayAccessExpression.getArray(), index);
+    }
+
+    private BoundExpression rewriteArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
+
+        BoundExpression arrayAccessExpression = rewriteArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
+        BoundExpression assignment = rewriteExpression(arrayAssignmentExpression.getAssignment());
+
+        if (arrayAccessExpression == arrayAssignmentExpression.getArrayAccessExpression()
+                && assignment == arrayAssignmentExpression.getAssignment()) {
+            return arrayAssignmentExpression;
+        }
+        return new BoundArrayAssignmentExpression(arrayAssignmentExpression.getArrayAccessExpression(), arrayAssignmentExpression.getAssignment());
     }
 
     private BoundExpression rewriteAssignmentExpression(BoundAssignmentExpression assignmentExpression) {
