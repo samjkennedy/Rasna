@@ -323,14 +323,21 @@ public class JavaBytecodeILConverter implements ILConverter {
                     textifierVisitor.visitInsn(ICONST_5);
                     break;
                 default:
+
                     int operand = Integer.parseInt(value.toString());
+
                     if (operand < Byte.MAX_VALUE) {
+
                         methodVisitor.visitIntInsn(BIPUSH, operand);
                         textifierVisitor.visitIntInsn(BIPUSH, operand);
+
                     } else if (operand < Short.MAX_VALUE) {
+
                         methodVisitor.visitIntInsn(SIPUSH, operand);
                         textifierVisitor.visitIntInsn(SIPUSH, operand);
+
                     } else if (operand <Integer.MAX_VALUE) {
+
                         int constIndex;
                         if (constantPool.containsKey(operand)) {
                             constIndex = constantPool.get(operand);
