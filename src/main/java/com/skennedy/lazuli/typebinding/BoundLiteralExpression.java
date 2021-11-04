@@ -22,6 +22,8 @@ public class BoundLiteralExpression implements BoundExpression {
             return TypeSymbol.INT;
         } else if (value instanceof Boolean) {
             return TypeSymbol.BOOL;
+        } else if (value instanceof Double) {
+            return TypeSymbol.REAL;
         } else {
             throw new IllegalStateException("Unsupported type of literal: " + value.getClass());
         }

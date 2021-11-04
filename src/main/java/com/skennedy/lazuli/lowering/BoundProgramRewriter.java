@@ -27,6 +27,7 @@ import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
 import com.skennedy.lazuli.typebinding.BoundWhileExpression;
+import com.skennedy.lazuli.typebinding.TypeSymbol;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -279,7 +280,7 @@ public abstract class BoundProgramRewriter {
                 BoundVariableExpression variableExpression = (BoundVariableExpression) binaryExpression.getLeft();
                 BoundLiteralExpression literalExpression = (BoundLiteralExpression) binaryExpression.getRight();
 
-                if ((int) literalExpression.getValue() <= Byte.MAX_VALUE && (int)literalExpression.getValue() >= Byte.MIN_VALUE) {
+                if (variableExpression.getType() == TypeSymbol.INT && (int) literalExpression.getValue() <= Byte.MAX_VALUE && (int)literalExpression.getValue() >= Byte.MIN_VALUE) {
 
                     if (binaryExpression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
                         return new BoundIncrementExpression(variableExpression.getVariable(), new BoundLiteralExpression(literalExpression.getValue()));
@@ -319,7 +320,8 @@ public abstract class BoundProgramRewriter {
         //Both sides are constant, can do constant folding
         if (left instanceof BoundLiteralExpression && right instanceof BoundLiteralExpression) {
 
-            return calculateConstant(((BoundLiteralExpression) left).getValue(), ((BoundLiteralExpression) right).getValue(), boundBinaryExpression.getOperator());
+            //TODO: Constant folding
+            return boundBinaryExpression;//calculateConstant(((BoundLiteralExpression) left).getValue(), ((BoundLiteralExpression) right).getValue(), boundBinaryExpression.getOperator());
         }
 
         if (left == boundBinaryExpression.getLeft() && right == boundBinaryExpression.getRight()) {
@@ -498,7 +500,8 @@ public abstract class BoundProgramRewriter {
                 return expression;
             case BINARY_EXPRESSION:
                 BoundBinaryExpression boundBinaryExpression = (BoundBinaryExpression) expression;
-                return calculateConstant(calculateConstant(boundBinaryExpression.getLeft()), calculateConstant(boundBinaryExpression.getRight()), boundBinaryExpression.getOperator());
+                return expression; //TODO: Constant folding
+                //return calculateConstant(calculateConstant(boundBinaryExpression.getLeft()), calculateConstant(boundBinaryExpression.getRight()), boundBinaryExpression.getOperator());
             default:
                 throw new IllegalStateException("Unexpected expression type for constant folding: " + expression.getBoundExpressionType());
         }
@@ -512,39 +515,39 @@ public abstract class BoundProgramRewriter {
         return new BoundConditionalGotoExpression(conditionalGotoExpression.getLabel(), condition, conditionalGotoExpression.jumpIfFalse());
     }
 
-    private BoundExpression calculateConstant(Object left, Object right, BoundBinaryOperator operator) {
-        switch (operator.getBoundOpType()) {
-
-            case ADDITION:
-                return new BoundLiteralExpression((int) left + (int) right);
-            case SUBTRACTION:
-                return new BoundLiteralExpression((int) left - (int) right);
-            case MULTIPLICATION:
-                return new BoundLiteralExpression((int) left * (int) right);
-            case DIVISION:
-                return new BoundLiteralExpression((int) left / (int) right);
-            case REMAINDER:
-                return new BoundLiteralExpression((int) left % (int) right);
-            case GREATER_THAN:
-                return new BoundLiteralExpression((int) left > (int) right);
-            case LESS_THAN:
-                return new BoundLiteralExpression((int) left < (int) right);
-            case GREATER_THAN_OR_EQUAL:
-                return new BoundLiteralExpression((int) left >= (int) right);
-            case LESS_THAN_OR_EQUAL:
-                return new BoundLiteralExpression((int) left <= (int) right);
-            case EQUALS:
-                return new BoundLiteralExpression((int) left == (int) right);
-            case NOT_EQUALS:
-                return new BoundLiteralExpression((int) left != (int) right);
-            case BOOLEAN_OR:
-                return new BoundLiteralExpression((boolean) left || (boolean) right);
-            case BOOLEAN_AND:
-                return new BoundLiteralExpression((boolean) left && (boolean) right);
-            default:
-                throw new IllegalStateException("Unhandled bound binary operator for constant folding: " + operator.getBoundOpType());
-        }
-    }
+//    private BoundExpression calculateConstant(Object left, Object right, BoundBinaryOperator operator) {
+//        switch (operator.getBoundOpType()) {
+//
+//            case ADDITION:
+//                return new BoundLiteralExpression((int) left + (int) right);
+//            case SUBTRACTION:
+//                return new BoundLiteralExpression((int) left - (int) right);
+//            case MULTIPLICATION:
+//                return new BoundLiteralExpression((int) left * (int) right);
+//            case DIVISION:
+//                return new BoundLiteralExpression((int) left / (int) right);
+//            case REMAINDER:
+//                return new BoundLiteralExpression((int) left % (int) right);
+//            case GREATER_THAN:
+//                return new BoundLiteralExpression((int) left > (int) right);
+//            case LESS_THAN:
+//                return new BoundLiteralExpression((int) left < (int) right);
+//            case GREATER_THAN_OR_EQUAL:
+//                return new BoundLiteralExpression((int) left >= (int) right);
+//            case LESS_THAN_OR_EQUAL:
+//                return new BoundLiteralExpression((int) left <= (int) right);
+//            case EQUALS:
+//                return new BoundLiteralExpression((int) left == (int) right);
+//            case NOT_EQUALS:
+//                return new BoundLiteralExpression((int) left != (int) right);
+//            case BOOLEAN_OR:
+//                return new BoundLiteralExpression((boolean) left || (boolean) right);
+//            case BOOLEAN_AND:
+//                return new BoundLiteralExpression((boolean) left && (boolean) right);
+//            default:
+//                throw new IllegalStateException("Unhandled bound binary operator for constant folding: " + operator.getBoundOpType());
+//        }
+//    }
 
 
     private BoundExpression rewriteTypeofIntrinsic(BoundTypeofExpression typeofExpression) {

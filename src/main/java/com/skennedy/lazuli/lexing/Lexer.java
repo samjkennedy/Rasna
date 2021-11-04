@@ -76,8 +76,12 @@ public class Lexer {
                             } else if (lookAhead(line) == '>') {
                                 tokens.add(new Token(TokenType.ARROW, new Location(lineNumber, cursor)));
                                 next();
+                            } else if (Character.isDigit(lookAhead(line))) {
+                                tokens.add(new Token(TokenType.INT_LITERAL, new Location(lineNumber, cursor), parseNum(line)));
+                                break;
                             } else {
                                 tokens.add(new Token(TokenType.MINUS, new Location(lineNumber, cursor)));
+                                next();
                             }
                             next();
                             break;
@@ -179,22 +183,27 @@ public class Lexer {
         return tokens;
     }
 
-    private int parseNum(String line) {
+    private Number parseNum(String line) {
 
         int start = cursor;
 
         next();
-        while (cursor < line.length() && Character.isDigit(line.charAt(cursor))) {
+        while (cursor < line.length() && (Character.isDigit(line.charAt(cursor)) || line.charAt(cursor) == '.')) {
             next();
         }
 
         String tokenText = line.substring(start, cursor);
 
+        if (tokenText.contains(".")) {
+            try {
+                return Double.parseDouble(tokenText);
+            } catch (NumberFormatException nfe) {
+                throw new IllegalStateException("Tried to parse Double but got " + tokenText + " at " + start);
+            }
+        }
         try {
             return Integer.parseInt(tokenText);
-
         } catch (NumberFormatException nfe) {
-
             throw new IllegalStateException("Tried to parse Int but got " + tokenText + " at " + start);
         }
     }

@@ -404,37 +404,55 @@ public class Simulator {
 
     private void evaluateBinaryExpression(BoundBinaryExpression expression) {
         evaluate(expression.getLeft());
-        Object left = localsStack.pop();
         evaluate(expression.getRight());
-        Object right = localsStack.pop();
-        if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
-            localsStack.push((int) left + (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.SUBTRACTION) {
-            localsStack.push((int) left - (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.MULTIPLICATION) {
-            localsStack.push((int) left * (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.DIVISION) {
-            localsStack.push((int) left / (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.REMAINDER) {
-            localsStack.push((int) left % (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
-            localsStack.push((int) left == (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.NOT_EQUALS) {
-            localsStack.push((int) left != (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN) {
-            localsStack.push((int) left > (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN) {
-            localsStack.push((int) left < (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN_OR_EQUAL) {
-            localsStack.push((int) left >= (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN_OR_EQUAL) {
-            localsStack.push((int) left <= (int) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_AND) {
-            localsStack.push((boolean) left && (boolean) right);
-        } else if (expression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_OR) {
-            localsStack.push((boolean) left || (boolean) right);
+        if (expression.getLeft().getType() == TypeSymbol.INT || expression.getRight().getType() == TypeSymbol.INT) {
+            long left = (long) localsStack.pop();
+            long right = (long) localsStack.pop();
+            handleIntsExpression(expression.getOperator().getBoundOpType(), left, right);
+        } else if (expression.getLeft().getType() == TypeSymbol.BOOL) {
+            boolean left = (boolean) localsStack.pop();
+            boolean right = (boolean) localsStack.pop();
+            handleBoolsExpression(expression.getOperator().getBoundOpType(), left, right);
         } else {
-            throw new IllegalStateException("Unexpected value: " + expression.getOperator().getBoundOpType());
+            throw new UnsupportedOperationException("Binary operations are not supported for expressions of type " + expression.getLeft().getType());
+        }
+    }
+
+    private void handleIntsExpression(BoundBinaryOperator.BoundBinaryOperation op, long left, long right) {
+        if (op == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
+            localsStack.push(left +  right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.SUBTRACTION) {
+            localsStack.push(left - right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.MULTIPLICATION) {
+            localsStack.push(left * right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.DIVISION) {
+            localsStack.push(left / right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.REMAINDER) {
+            localsStack.push(left % right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
+            localsStack.push(left == right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.NOT_EQUALS) {
+            localsStack.push(left != right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN) {
+            localsStack.push(left > right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN) {
+            localsStack.push(left < right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.GREATER_THAN_OR_EQUAL) {
+            localsStack.push(left >= right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.LESS_THAN_OR_EQUAL) {
+            localsStack.push(left <= right);
+        } else {
+            throw new IllegalStateException("Unexpected value: " + op);
+        }
+    }
+
+    private void handleBoolsExpression(BoundBinaryOperator.BoundBinaryOperation op, boolean left, boolean right) {
+        if (op == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_AND) {
+            localsStack.push(left && right);
+        } else if (op == BoundBinaryOperator.BoundBinaryOperation.BOOLEAN_OR) {
+            localsStack.push(left || right);
+        } else {
+            throw new IllegalStateException("Unexpected value: " + op);
         }
     }
 

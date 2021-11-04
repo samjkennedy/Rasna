@@ -1,0 +1,16 @@
+Real sqrt(Real S | S >= 0.0) {
+    Int iterations = 10
+    Real x0 = S / 10.0
+    Real x1 = (x0 + (S / x0)) / 2.0
+    for (Int i = 1 to iterations) {
+        Real tmp = x0
+        x0 = (x1 + (S / x1)) / 2.0
+        x1 = tmp
+    }
+    return x0
+}
+
+print(sqrt(4.0))
+print(sqrt(5.0))
+print(sqrt(35.0))
+print(sqrt(125348.0))
