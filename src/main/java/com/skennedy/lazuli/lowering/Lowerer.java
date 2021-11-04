@@ -7,10 +7,10 @@ import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
 import com.skennedy.lazuli.typebinding.BoundBlockExpression;
 import com.skennedy.lazuli.typebinding.BoundExpression;
-import com.skennedy.lazuli.typebinding.BoundExpressionType;
 import com.skennedy.lazuli.typebinding.BoundForExpression;
 import com.skennedy.lazuli.typebinding.BoundForInExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
+import com.skennedy.lazuli.typebinding.BoundIncrementExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundMatchCaseExpression;
 import com.skennedy.lazuli.typebinding.BoundMatchExpression;
@@ -79,13 +79,7 @@ public class Lowerer extends BoundProgramRewriter {
         BoundExpression step;
         //TODO: Make a BoundIncrementExpression that converts to the instruction iinc
         if (rewrittenForExpression.getStep() == null) {
-            step = new BoundAssignmentExpression(rewrittenForExpression.getIterator(),
-                    null,
-                    new BoundBinaryExpression(
-                            variableExpression,
-                            BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT),
-                            new BoundLiteralExpression(1)
-                    ));
+            step = new BoundIncrementExpression(rewrittenForExpression.getIterator(), new BoundLiteralExpression(1));
         } else {
             step = new BoundAssignmentExpression(rewrittenForExpression.getIterator(),
                     null,
@@ -128,35 +122,58 @@ public class Lowerer extends BoundProgramRewriter {
         if (rewrittenForInExpression.getBody() instanceof BoundNoOpExpression) {
             return new BoundNoOpExpression();
         }
+        VariableSymbol arrayLength = new VariableSymbol(generateInternalVariableName(), TypeSymbol.INT, null, false);
+        BoundVariableExpression arrayLengthExpression = new BoundVariableExpression(arrayLength);
+        VariableSymbol iterationCounter = new VariableSymbol(generateInternalVariableName(), TypeSymbol.INT, null, false);
+        BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
-        //TODO: This name could conflict with a declared variable in the program, try to think of a better way
-        VariableSymbol indexVariable = new VariableSymbol(generateInternalVariableName(), TypeSymbol.INT, null, false);
-        BoundVariableDeclarationExpression indexVariableDeclaration = new BoundVariableDeclarationExpression(indexVariable, null, new BoundLiteralExpression(0), false);
-        BoundVariableExpression indexVariableExpression = new BoundVariableExpression(indexVariable);
-
-        BoundVariableDeclarationExpression iteratorDeclarationExpression = new BoundVariableDeclarationExpression(rewrittenForInExpression.getVariable(), null, new BoundArrayAccessExpression(rewrittenForInExpression.getIterable(), indexVariableExpression), false);
-        BoundAssignmentExpression iteratorIncrementExpression = new BoundAssignmentExpression(forInExpression.getVariable(), null, new BoundArrayAccessExpression(rewrittenForInExpression.getIterable(), indexVariableExpression));
-
-        BoundExpression step = new BoundBlockExpression(
-                new BoundAssignmentExpression(indexVariable, null,
-                        new BoundBinaryExpression(indexVariableExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), new BoundLiteralExpression(1))
+        BoundBlockExpression preLoop = new BoundBlockExpression(
+                forInExpression.getIterable(), //Load array
+                new BoundVariableDeclarationExpression( //Store array length
+                        arrayLength,
+                        null,
+                        new BoundArrayLengthExpression(forInExpression.getIterable()),
+                        false
+                ),
+                new BoundVariableDeclarationExpression(//Initialise internal counter
+                        iterationCounter,
+                        null,
+                        new BoundLiteralExpression(0),
+                        false
+                ),
+                new BoundVariableDeclarationExpression( //Initialise iterator
+                        ((BoundForInExpression) expression).getVariable(),
+                        ((BoundForInExpression) expression).getGuard(),
+                        new BoundArrayAccessExpression(((BoundForInExpression) expression).getIterable(), new BoundLiteralExpression(0)),
+                        false
                 )
         );
 
+        BoundBlockExpression loopAssign = new BoundBlockExpression(
+                new BoundAssignmentExpression(
+                        ((BoundForInExpression) expression).getVariable(),
+                        ((BoundForInExpression) expression).getGuard(),
+                        new BoundArrayAccessExpression(((BoundForInExpression) expression).getIterable(), iterationCounterExpression)
+                )
+        );
+
+        BoundExpression step = new BoundIncrementExpression(iterationCounter, new BoundLiteralExpression(1));
+
         BoundBlockExpression whileBody;
         if (rewrittenForInExpression.getGuard() == null) {
-            whileBody = new BoundBlockExpression(iteratorIncrementExpression, rewrittenForInExpression.getBody(), step);
+            whileBody = new BoundBlockExpression(loopAssign, rewrittenForInExpression.getBody(), step);
         } else {
             BoundBlockExpression body = new BoundBlockExpression(rewrittenForInExpression.getBody());
             BoundExpression guardClause = new BoundIfExpression(rewrittenForInExpression.getGuard(), body, null);
-            whileBody = new BoundBlockExpression(iteratorIncrementExpression, guardClause, step);
+            whileBody = new BoundBlockExpression(loopAssign, guardClause, step);
         }
-        BoundBinaryExpression condition = new BoundBinaryExpression(indexVariableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), new BoundArrayLengthExpression(rewrittenForInExpression.getIterable()));
 
+        BoundBinaryExpression condition = new BoundBinaryExpression(iterationCounterExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), arrayLengthExpression);
         BoundWhileExpression whileExpression = new BoundWhileExpression(condition, whileBody);
-        BoundBlockExpression boundBlockExpression = new BoundBlockExpression(indexVariableDeclaration, iteratorDeclarationExpression, whileExpression);
 
-        return rewriteBlockExpression(boundBlockExpression);
+        BoundBlockExpression boundBlockExpression = new BoundBlockExpression(preLoop, whileExpression);
+
+        return flatten(rewriteBlockExpression(boundBlockExpression));
     }
 
     @Override
@@ -257,7 +274,7 @@ public class Lowerer extends BoundProgramRewriter {
     }
 
     private static BoundLabel generateLabel() {
-        String name = "label_" + ++labelCount;
+        String name = "label_" + labelCount++;
         return new BoundLabel(name);
     }
 

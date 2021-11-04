@@ -12,6 +12,7 @@ import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
 import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
+import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
@@ -21,6 +22,7 @@ import com.skennedy.lazuli.typebinding.BoundExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
+import com.skennedy.lazuli.typebinding.BoundIncrementExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
@@ -63,7 +65,7 @@ public class Simulator {
 
     public Simulator(PrintStream out) {
 
-        scope = new Scope(null);
+        scope = new Scope(null, null);
         returnStack = new Stack<>();
         localsStack = new Stack<>();
         this.out = out;
@@ -132,6 +134,9 @@ public class Simulator {
             case ARRAY_LENGTH_EXPRESSION:
                 evaluateArrayLengthExpression((BoundArrayLengthExpression) expression);
                 break;
+            case ARRAY_ASSIGNMENT_EXPRESSION:
+                evaluateArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
+                break;
             case LITERAL:
                 localsStack.push(((BoundLiteralExpression) expression).getValue());
                 break;
@@ -156,6 +161,8 @@ public class Simulator {
                 break;
             case CONDITIONAL_GOTO:
                 BoundConditionalGotoExpression conditionalGotoExpression = (BoundConditionalGotoExpression) expression;
+
+                //scope = new Scope(scope, conditionalGotoExpression.getLabel());
                 evaluate(conditionalGotoExpression.getCondition());
 
                 boolean condition = (boolean) localsStack.pop();
@@ -174,7 +181,11 @@ public class Simulator {
                 evaluate((BoundAssignmentExpression) expression);
                 break;
             case NOOP:
+                break;
             case LABEL:
+//                if (scope.parentScope != null) {
+//                    scope = scope.parentScope;
+//                }
                 break;
             case FUNCTION_CALL:
                 evaluateFunctionCall((BoundFunctionCallExpression) expression);
@@ -182,9 +193,24 @@ public class Simulator {
             case RETURN:
                 evaluateReturn((BoundReturnExpression) expression);
                 break;
+            case INCREMENT:
+                evaluateIncrement((BoundIncrementExpression) expression);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private void evaluateIncrement(BoundIncrementExpression incrementExpression) {
+        Optional<Object> value = scope.tryLookupVariable(incrementExpression.getVariableSymbol().getName());
+        if (value.isEmpty()) {
+            throw new UndefinedVariableException(incrementExpression.getVariableSymbol().getName());
+        }
+        int currentValue = (int)value.get();
+
+        evaluate(incrementExpression.getAmount());
+
+        scope.reassignVariable(incrementExpression.getVariableSymbol().getName(), currentValue + (int)localsStack.pop());
     }
 
     private void evaluateReturn(BoundReturnExpression returnExpression) {
@@ -199,9 +225,7 @@ public class Simulator {
             throw new UndefinedFunctionException(functionCallExpression.getFunction().getName());
         }
 
-        Scope returnScope = scope;
-        scope = new Scope(null);
-        scope.functionsIps = returnScope.functionsIps;
+        scope = new Scope(scope, null);
 
         List<BoundExpression> argumentInitialisers = functionCallExpression.getBoundArguments();
         List<BoundFunctionArgumentExpression> arguments = functionCallExpression.getFunction().getArguments();
@@ -232,7 +256,7 @@ public class Simulator {
         } while (!(expression instanceof BoundReturnExpression));
         ip--;
 
-        scope = returnScope;
+        scope = scope.parentScope;
     }
 
     private void evaluateArrayLiteralExpression(BoundArrayLiteralExpression arrayLiteralExpression) {
@@ -259,6 +283,16 @@ public class Simulator {
         evaluate(arrayLengthExpression.getIterable());
         LazuliArray lazuliArray = (LazuliArray) localsStack.pop();
         localsStack.push(lazuliArray.array.length);
+    }
+
+    private void evaluateArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
+        evaluate(arrayAssignmentExpression.getArrayAccessExpression().getIndex());
+        int index = (int) localsStack.pop();
+        evaluate(arrayAssignmentExpression.getArrayAccessExpression().getArray());
+        LazuliArray<Object> array = (LazuliArray<Object>) localsStack.pop();
+        evaluate(arrayAssignmentExpression.getAssignment());
+        Object value = localsStack.pop();
+        array.set(index, value);
     }
 
     private class LazuliArray<T> {
@@ -316,9 +350,6 @@ public class Simulator {
     private void evaluate(BoundVariableDeclarationExpression variableDeclarationExpression) {
 
         VariableSymbol variable = variableDeclarationExpression.getVariable();
-        if (scope.tryLookupVariable(variable.getName()).isPresent()) {
-            throw new VariableAlreadyDeclaredException(variable.getName());
-        }
 
         Object value = 0; //TODO: default primitive values
         if (variableDeclarationExpression.getInitialiser() != null) {
@@ -410,11 +441,13 @@ public class Simulator {
     private static class Scope {
 
         private Scope parentScope;
+        private BoundLabel label;
         private Map<String, Object> variables;
         private Map<FunctionSymbol, Integer> functionsIps;
 
-        Scope(Scope parentScope) {
+        Scope(Scope parentScope, BoundLabel label) {
             this.parentScope = parentScope;
+            this.label = label;
             this.variables = new HashMap<>();
             this.functionsIps = new HashMap<>();
         }
@@ -442,9 +475,6 @@ public class Simulator {
         }
 
         void declareVariable(String name, Object variable) {
-            if (tryLookupVariable(name).isPresent()) {
-                throw new VariableAlreadyDeclaredException(name);
-            }
             variables.put(name, variable);
         }
 

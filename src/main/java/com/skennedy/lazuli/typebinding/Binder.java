@@ -8,7 +8,10 @@ import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
+import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
 import com.skennedy.lazuli.parsing.ArrayAccessExpression;
+import com.skennedy.lazuli.parsing.ArrayAssignmentExpression;
+import com.skennedy.lazuli.parsing.ArrayLengthExpression;
 import com.skennedy.lazuli.parsing.ArrayLiteralExpression;
 import com.skennedy.lazuli.parsing.AssignmentExpression;
 import com.skennedy.lazuli.parsing.BinaryExpression;
@@ -20,6 +23,7 @@ import com.skennedy.lazuli.parsing.FunctionArgumentExpression;
 import com.skennedy.lazuli.parsing.FunctionCallExpression;
 import com.skennedy.lazuli.parsing.FunctionDeclarationExpression;
 import com.skennedy.lazuli.parsing.IfExpression;
+import com.skennedy.lazuli.parsing.IncrementExpression;
 import com.skennedy.lazuli.parsing.MatchCaseExpression;
 import com.skennedy.lazuli.parsing.MatchExpression;
 import com.skennedy.lazuli.parsing.ParenthesisedExpression;
@@ -88,6 +92,8 @@ public class Binder {
                 return bindTypeofIntrinsic((TypeofExpression) expression);
             case IDENTIFIER_EXPR:
                 return bindIdentifierExpression((IdentifierExpression) expression);
+            case INCREMENT_EXPR:
+                return bindIncrementExpression((IncrementExpression) expression);
             case UNARY_EXPR:
                 throw new IllegalStateException("Unhandled expression type: " + expression.getExpressionType());
             case VAR_DECLARATION_EXPR:
@@ -102,6 +108,10 @@ public class Binder {
                 return bindReturnExpression((ReturnExpression) expression);
             case MATCH_EXPRESSION:
                 return bindMatchExpression((MatchExpression) expression);
+            case ARRAY_LEN_EXPR:
+                return bindArrayLengthExpression((ArrayLengthExpression) expression);
+            case ARRAY_ASSIGNMENT_EXPR:
+                return bindArrayAssignmentExpression((ArrayAssignmentExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
@@ -156,7 +166,7 @@ public class Binder {
         return new BoundArrayLiteralExpression(boundElements);
     }
 
-    private BoundExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
+    private BoundArrayAccessExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
         IdentifierExpression identifier = arrayAccessExpression.getIdentifier();
         Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifier.getValue());
         if (variable.isEmpty()) {
@@ -171,6 +181,24 @@ public class Binder {
             errors.add(Error.raiseTypeMismatch(TypeSymbol.INT, index.getType()));
         }
         return new BoundArrayAccessExpression(new BoundVariableExpression(variable.get()), index);
+    }
+
+    private BoundExpression bindArrayLengthExpression(ArrayLengthExpression arrayLengthExpression) {
+
+        BoundExpression boundExpression = bind(arrayLengthExpression.getExpression());
+        if (!boundExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, boundExpression.getType()));
+        }
+
+        return new BoundArrayLengthExpression(boundExpression);
+    }
+
+    private BoundExpression bindArrayAssignmentExpression(ArrayAssignmentExpression expression) {
+
+        BoundArrayAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(expression.getArrayAccessExpression());
+        BoundExpression assignment = bind(expression.getAssignment());
+
+        return new BoundArrayAssignmentExpression(boundArrayAccessExpression, assignment);
     }
 
     private BoundExpression bindForExpression(ForExpression forExpression) {
@@ -308,6 +336,25 @@ public class Binder {
         throw new UndefinedVariableException((String) identifierExpression.getValue());
     }
 
+    private BoundExpression bindIncrementExpression(IncrementExpression incrementExpression) {
+
+        Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) incrementExpression.getIdentifier().getValue());
+        if (variable.isEmpty()) {
+            throw new UndefinedVariableException((String) incrementExpression.getIdentifier().getValue());
+        }
+
+        int increment;
+        if (incrementExpression.getOperator().getTokenType() == TokenType.INCREMENT) {
+            increment = 1;
+        } else if (incrementExpression.getOperator().getTokenType() == TokenType.DECREMENT) {
+            increment = -1;
+        } else {
+            throw new IllegalStateException("Unknown operator in increment expression: " + incrementExpression.getOperator().getTokenType());
+        }
+
+        return new BoundIncrementExpression(variable.get(), new BoundLiteralExpression(increment));
+    }
+
     private BoundExpression bindPrintIntrinsic(PrintExpression printExpression) {
         BoundExpression boundExpression = bind(printExpression.getExpression());
 
@@ -388,10 +435,6 @@ public class Binder {
                 }
                 return;
             }
-            if (!expression.getChildren().hasNext()) {
-                throw new IllegalStateException("Method " + function.getName() + " is missing a return value");
-            }
-            analyzeBody(function, expression.getChildren());
         }
     }
 
@@ -484,7 +527,7 @@ public class Binder {
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
 
-        BoundExpression body= bind(whileExpression.getBody());
+        BoundExpression body = bind(whileExpression.getBody());
 
         return new BoundWhileExpression(condition, body);
     }

@@ -3,6 +3,8 @@ package com.skennedy.lazuli.parsing.model;
 public enum ExpressionType {
 
     ARRAY_ACCESS_EXPR,
+    ARRAY_ASSIGNMENT_EXPR,
+    ARRAY_LEN_EXPR,
     ARRAY_LITERAL_EXPR,
     ASSIGNMENT_EXPR,
     BINARY_EXPR,
@@ -13,10 +15,11 @@ public enum ExpressionType {
     FUNC_CALL_EXPR,
     FUNC_DECLARATION_EXPR,
     IDENTIFIER_EXPR,
+    INCREMENT_EXPR,
     IF_EXPR,
     LITERAL_EXPR,
-    MATCH_EXPRESSION,
     MATCH_CASE_EXPRESSION,
+    MATCH_EXPRESSION,
     PARENTHESISED_EXPR,
     PRINT_EXPR,
     RETURN_EXPR,

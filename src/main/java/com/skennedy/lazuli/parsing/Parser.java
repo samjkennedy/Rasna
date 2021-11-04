@@ -68,6 +68,8 @@ public class Parser {
                 return parseTypeofIntrinsic();
             case PRINT_INTR:
                 return parsePrintIntrinsic();
+            case LEN_INTR:
+                return parseLenIntrinsic();
             case IF_KEYWORD:
                 return parseIfExpression();
             case WHILE_KEYWORD:
@@ -266,11 +268,33 @@ public class Parser {
         Expression index = parseExpression();
         IdentifierExpression closeBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
 
-        return new ArrayAccessExpression(identifier, openBrace, index, closeBrace);
+        ArrayAccessExpression arrayAccessExpression = new ArrayAccessExpression(identifier, openBrace, index, closeBrace);
+        if (current().getTokenType() != TokenType.EQUALS) {
+            return arrayAccessExpression;
+        }
+        IdentifierExpression equals = matchToken(TokenType.EQUALS);
+        Expression assignment = parseExpression();
+
+        return new ArrayAssignmentExpression(arrayAccessExpression, equals, assignment);
     }
 
     private Expression parseAssignmentExpression() {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+
+        if (current().getTokenType() == TokenType.INCREMENT || current().getTokenType() == TokenType.DECREMENT) {
+            IdentifierExpression operator;
+            switch (current().getTokenType()) {
+                case DECREMENT:
+                    operator = matchToken(TokenType.DECREMENT);
+                    break;
+                case INCREMENT:
+                    operator = matchToken(TokenType.INCREMENT);
+                    break;
+                default:
+                    throw new IllegalStateException("How did you get here?");
+            }
+            return new IncrementExpression(identifier, operator);
+        }
 
         if (current().getTokenType() != TokenType.EQUALS) {
             return identifier;
@@ -466,6 +490,16 @@ public class Parser {
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
         return new PrintExpression(printInstr, openParen, expression, closeParen);
+    }
+
+
+    private Expression parseLenIntrinsic() {
+        IdentifierExpression len = matchToken(TokenType.LEN_INTR);
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+        Expression expression = parseExpression();
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+        return new ArrayLengthExpression(len, openParen, expression, closeParen);
     }
 
     private Expression parseTypeofIntrinsic() {

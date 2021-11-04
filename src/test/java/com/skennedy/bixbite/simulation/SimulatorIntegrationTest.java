@@ -21,31 +21,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SimulatorIntegrationTest {
 
-    private static final boolean RECORD = true;
-
     @ParameterizedTest
     @MethodSource("getFilesToTest")
     void runFile_producesCorrectOutput(String filename) throws IOException {
 
         PrintStream console = System.out;
-        if (RECORD) {
-            //Set up output stream
-            File outputFile = new File("src/test/resources/results/simulation/" + filename.split("\\.")[0] + "_result.txt");
-            outputFile.createNewFile();
-            PrintStream out = new PrintStream(outputFile);
-            // Store current System.out before assigning a new value
-            //Set output to write to file
-            System.setOut(out);
-        } else {
-            //Set up output stream
-            //TODO: figure out how to delete this
-            File outputFile = new File("src/test/resources/results/simulation/temporary_result.txt");
-            outputFile.createNewFile();
-            PrintStream out = new PrintStream(outputFile);
-            // Store current System.out before assigning a new value
-            //Set output to write to file
-            System.setOut(out);
-        }
+        //Set up output stream
+        File outputFile = new File("src/test/resources/results/simulation/" + filename.split("\\.")[0] + "_result.txt");
+        outputFile.createNewFile();
+        PrintStream out = new PrintStream(outputFile);
+        // Store current System.out before assigning a new value
+        //Set output to write to file
+        System.setOut(out);
 
         String code = read("tests", filename);
 
@@ -60,16 +47,15 @@ class SimulatorIntegrationTest {
 
         Simulator simulator = new Simulator(System.out);
         simulator.simulate(boundProgram);
-
         //Reset console
         System.setOut(console);
+        //Do it again so I can see the output
+        simulator.simulate(boundProgram);
 
-        if (!RECORD) {
-            String expectedResult = read("results/simulation", filename.split("\\.")[0] + "_result.txt");
-            String actualResult = read("results/simulation", "temporary_result.txt");
+        String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt");
+        String actualResult = read("results/simulation", filename.split("\\.")[0] + "_result.txt");
 
-            assertEquals(expectedResult, actualResult);
-        }
+        assertEquals(expectedResult, actualResult);
     }
 
     private String read(String folder, String filename) throws IOException {

@@ -7,6 +7,7 @@ import com.skennedy.lazuli.lowering.BoundGotoExpression;
 import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
+import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
@@ -17,6 +18,7 @@ import com.skennedy.lazuli.typebinding.BoundExpressionType;
 import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
+import com.skennedy.lazuli.typebinding.BoundIncrementExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
@@ -33,6 +35,8 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.FrameNode;
+import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.Textifier;
 
 import java.io.File;
@@ -41,6 +45,7 @@ import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,9 +57,11 @@ import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 import static org.objectweb.asm.Opcodes.ALOAD;
+import static org.objectweb.asm.Opcodes.ARETURN;
 import static org.objectweb.asm.Opcodes.ARRAYLENGTH;
 import static org.objectweb.asm.Opcodes.ASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
+import static org.objectweb.asm.Opcodes.DUP;
 import static org.objectweb.asm.Opcodes.F_NEW;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
@@ -70,10 +77,6 @@ import static org.objectweb.asm.Opcodes.ICONST_4;
 import static org.objectweb.asm.Opcodes.ICONST_5;
 import static org.objectweb.asm.Opcodes.IDIV;
 import static org.objectweb.asm.Opcodes.IFEQ;
-import static org.objectweb.asm.Opcodes.IFGE;
-import static org.objectweb.asm.Opcodes.IFGT;
-import static org.objectweb.asm.Opcodes.IFLE;
-import static org.objectweb.asm.Opcodes.IFLT;
 import static org.objectweb.asm.Opcodes.IFNE;
 import static org.objectweb.asm.Opcodes.IF_ICMPEQ;
 import static org.objectweb.asm.Opcodes.IF_ICMPGE;
@@ -105,16 +108,16 @@ public class JavaBytecodeILConverter implements ILConverter {
     private final ClassWriter classWriter;
     private Textifier textifierVisitor;
 
+    private BoundProgram program;
+
     private String className;
 
-    private Stack<Frame> stackMap;
-
     private int variableIndex;
-    private Stack<Map<Integer, Object>> localVariables;
 
     //TODO: Scopes
     private Map<String, Integer> variables;
     private Map<BoundLabel, Label> boundLabelToProgramLabel;
+
 
     //Multiple branches can visit the same label, e.g. nested if/else if/else if/else
     //but we only want to visit them once
@@ -125,24 +128,27 @@ public class JavaBytecodeILConverter implements ILConverter {
     private int constantIdx;
     private Map<Object, Integer> constantPool;
 
+    private Scope scope;
+
     public JavaBytecodeILConverter() {
-        this.classWriter = new ClassWriter(0);
+        this.classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 
         // Variable0 is reserved for args[] in :  `main(String[] var0)`
         this.variableIndex = 1;
         variables = new HashMap<>();
         boundLabelToProgramLabel = new HashMap<>();
-        stackMap = new Stack<>();
-        localVariables = new Stack<>();
-        localVariables.push(new HashMap<>());
 
         visitedLabels = new HashSet<>();
         constantIdx = 2;
         constantPool = new HashMap<>();
+
+        scope = new Scope(null, null);
     }
 
     @Override
     public void convert(BoundProgram program, String outputFileName) throws IOException {
+
+        this.program = program;
 
         className = outputFileName;
 
@@ -161,15 +167,13 @@ public class JavaBytecodeILConverter implements ILConverter {
         //Forward declare all methods
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
-                stackMap.push(new Frame());
+                scope = new Scope(null, null);
                 visit((BoundFunctionDeclarationExpression) expression);
-                stackMap.pop();
             }
         }
 
-        Frame frame = new Frame();
-        frame.pushLocal("[Ljava/lang/String;");
-        stackMap.push(frame);
+        scope = new Scope(null, null);
+        scope.pushLocal("[Ljava/lang/String;");
 
         /** ASM = CODE : public static void main(String args[]). */
         // BEGIN 2: creates a MethodVisitor for the 'main' method
@@ -182,12 +186,13 @@ public class JavaBytecodeILConverter implements ILConverter {
                 ip++;
                 continue;
             }
+            printExpression(expression, 0);
             visit(expression, mainMethodVisitor);
             ip++;
         }
         mainMethodVisitor.visitInsn(RETURN);
         textifierVisitor.visitInsn(RETURN);
-        stackMap.pop();
+        scope = scope.parent;
 
         //TODO: determine how much memory the program requires and set accordingly
         mainMethodVisitor.visitMaxs(1024, 1024);
@@ -214,6 +219,23 @@ public class JavaBytecodeILConverter implements ILConverter {
         FileUtils.writeByteArrayToFile(outputFile, code);
     }
 
+    private void printExpression(BoundExpression expression, int depth) {
+        StringBuilder pre;
+        if (depth == 0) {
+            pre = new StringBuilder(ip + ": ");
+        } else {
+            pre = new StringBuilder();
+            pre.append("    ".repeat(Math.max(0, depth - 1)));
+            pre.append("  > ");
+        }
+        log.debug(pre.toString() + expression.getBoundExpressionType());
+        for (Iterator<BoundExpression> it = expression.getChildren(); it.hasNext(); ) {
+            BoundExpression child = it.next();
+            if (child == null) continue;
+            printExpression(child, depth + 1);
+        }
+    }
+
     private void visit(BoundExpression expression, MethodVisitor methodVisitor) {
         switch (expression.getBoundExpressionType()) {
 
@@ -228,6 +250,9 @@ public class JavaBytecodeILConverter implements ILConverter {
             case ARRAY_ACCESS_EXPRESSION:
 
                 visit((BoundArrayAccessExpression) expression, methodVisitor);
+                break;
+            case ARRAY_ASSIGNMENT_EXPRESSION:
+                visit((BoundArrayAssignmentExpression) expression, methodVisitor);
                 break;
             case ARRAY_LENGTH_EXPRESSION:
 
@@ -279,6 +304,9 @@ public class JavaBytecodeILConverter implements ILConverter {
                 break;
             case FUNCTION_DECLARATION:
                 visit((BoundFunctionDeclarationExpression) expression);
+                break;
+            case INCREMENT:
+                visit((BoundIncrementExpression) expression, methodVisitor);
                 break;
             case FUNCTION_CALL:
                 visit((BoundFunctionCallExpression) expression, methodVisitor);
@@ -336,7 +364,7 @@ public class JavaBytecodeILConverter implements ILConverter {
                         methodVisitor.visitIntInsn(SIPUSH, operand);
                         textifierVisitor.visitIntInsn(SIPUSH, operand);
 
-                    } else if (operand <Integer.MAX_VALUE) {
+                    } else if (operand < Integer.MAX_VALUE) {
 
                         int constIndex;
                         if (constantPool.containsKey(operand)) {
@@ -356,7 +384,7 @@ public class JavaBytecodeILConverter implements ILConverter {
         } else {
             throw new UnsupportedOperationException("Literals of type " + boundLiteralExpression.getType() + " are not yet supported");
         }
-        stackMap.peek().pushStack(boundLiteralExpression.getType());
+        scope.pushStack(boundLiteralExpression.getType());
     }
 
     private void visit(BoundVariableDeclarationExpression variableDeclarationExpression, MethodVisitor methodVisitor) {
@@ -367,24 +395,24 @@ public class JavaBytecodeILConverter implements ILConverter {
         //Evaluate the initialiser
         visit(variableDeclarationExpression.getInitialiser(), methodVisitor);
 
-        //Arrays get stored automagically
-        if (variableDeclarationExpression.getType() != TypeSymbol.INT_ARRAY) {
-            //Store that in memory at the current variable IDX
-            if (variableDeclarationExpression.getType() == TypeSymbol.INT || variableDeclarationExpression.getType() == TypeSymbol.BOOL) {
-                methodVisitor.visitIntInsn(ISTORE, variableIndex);
-                textifierVisitor.visitIntInsn(ISTORE, variableIndex);
-                stackMap.peek().popStack();
-            } else {
-                throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
-            }
+        //Store that in memory at the current variable index
+        if (variableDeclarationExpression.getType() == TypeSymbol.INT || variableDeclarationExpression.getType() == TypeSymbol.BOOL) {
+            methodVisitor.visitVarInsn(ISTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ISTORE, variableIndex);
+        } else if (variableDeclarationExpression.getType() == TypeSymbol.INT_ARRAY) {
+            methodVisitor.visitVarInsn(ASTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ASTORE, variableIndex);
+        } else {
+            throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
         }
+        scope.popStack();
 
         //Keep track of variable for later use
         variables.put(identifer, variableIndex);
-        localVariables.peek().put(variableIndex, getStackTypeCode(variable.getType()));
+        scope.declareVariable(variable, variableIndex);
 
         //Update the stackmap
-        stackMap.peek().pushLocal(variableDeclarationExpression.getType());
+        scope.pushLocal(variableDeclarationExpression.getType());
         variableIndex++;
 
     }
@@ -399,6 +427,20 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
     }
 
+    private void visit(BoundIncrementExpression incrementExpression, MethodVisitor methodVisitor) {
+
+        VariableSymbol variable = incrementExpression.getVariableSymbol();
+        if (!variables.containsKey(variable.getName())) {
+            throw new UndefinedVariableException(variable.getName());
+        }
+        int variableIdx = variables.get(variable.getName());
+
+        methodVisitor.visitIincInsn(variableIdx, (int) incrementExpression.getAmount().getValue());
+        textifierVisitor.visitIincInsn(variableIdx, (int) incrementExpression.getAmount().getValue());
+
+        //Gotta return something?
+    }
+
     private void visit(BoundVariableExpression boundVariableExpression, MethodVisitor methodVisitor) {
 
         VariableSymbol variable = boundVariableExpression.getVariable();
@@ -408,15 +450,15 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
         int variableIdx = variables.get(variable.getName());
         if (boundVariableExpression.getType() == TypeSymbol.INT || boundVariableExpression.getType() == TypeSymbol.BOOL) {
-            methodVisitor.visitIntInsn(ILOAD, variableIdx);
-            textifierVisitor.visitIntInsn(ILOAD, variableIdx);
-        } else if (boundVariableExpression.getType() == TypeSymbol.INT_ARRAY) {
-            methodVisitor.visitIntInsn(ALOAD, variableIdx);
-            textifierVisitor.visitIntInsn(ALOAD, variableIdx);
+            methodVisitor.visitVarInsn(ILOAD, variableIdx);
+            textifierVisitor.visitVarInsn(ILOAD, variableIdx);
+        } else if (boundVariableExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            methodVisitor.visitVarInsn(ALOAD, variableIdx);
+            textifierVisitor.visitVarInsn(ALOAD, variableIdx);
         } else {
             throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
         }
-        stackMap.peek().pushStack(variable.getType());
+        scope.pushStack(variable.getType());
     }
 
     private void visit(BoundAssignmentExpression assignmentExpression, MethodVisitor methodVisitor) {
@@ -429,38 +471,56 @@ public class JavaBytecodeILConverter implements ILConverter {
         visit(assignmentExpression.getExpression(), methodVisitor);
 
         int variableIdx = variables.get(variable.getName());
-        methodVisitor.visitIntInsn(ISTORE, variableIdx);
-        textifierVisitor.visitIntInsn(ISTORE, variableIdx);
 
-        stackMap.peek().popStack();
+        if (assignmentExpression.getType() == TypeSymbol.INT || assignmentExpression.getType() == TypeSymbol.BOOL) {
+
+            methodVisitor.visitVarInsn(ISTORE, variableIdx);
+            textifierVisitor.visitVarInsn(ISTORE, variableIdx);
+
+        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            methodVisitor.visitVarInsn(ASTORE, variableIdx);
+            textifierVisitor.visitVarInsn(ASTORE, variableIdx);
+        } else {
+            throw new UnsupportedOperationException("Variables of type " + assignmentExpression.getType().getName() + " are not yet supported");
+        }
+
+        scope.popStack();
+    }
+
+    private void visit(BoundArrayAssignmentExpression arrayAssignmentExpression, MethodVisitor methodVisitor) {
+
+        visit(arrayAssignmentExpression.getArrayAccessExpression().getArray(), methodVisitor);
+        visit(arrayAssignmentExpression.getArrayAccessExpression().getIndex(), methodVisitor);
+        visit(arrayAssignmentExpression.getAssignment(), methodVisitor);
+
+        methodVisitor.visitInsn(IASTORE);
+        textifierVisitor.visitInsn(IASTORE);
+
+        scope.popStack();
+        scope.popStack();
+        scope.popStack();
     }
 
     private void visit(BoundArrayLiteralExpression arrayLiteralExpression, MethodVisitor methodVisitor) {
 
         List<BoundExpression> elements = arrayLiteralExpression.getElements();
 
-        methodVisitor.visitIntInsn(BIPUSH, elements.size());
-        textifierVisitor.visitIntInsn(BIPUSH, elements.size());
+        visit(new BoundLiteralExpression(elements.size()), methodVisitor);
 
         methodVisitor.visitIntInsn(NEWARRAY, T_INT);
         textifierVisitor.visitIntInsn(NEWARRAY, T_INT);
 
-        //Store that in memory at the current variable IDX
-        methodVisitor.visitIntInsn(ASTORE, variableIndex);
-        textifierVisitor.visitIntInsn(ASTORE, variableIndex);
-        int arrayRefIndex = variableIndex;
-
         int index = 0;
         for (BoundExpression element : elements) {
-            methodVisitor.visitIntInsn(ALOAD, arrayRefIndex);
-            textifierVisitor.visitIntInsn(ALOAD, arrayRefIndex);
-            methodVisitor.visitIntInsn(BIPUSH, index);
-            textifierVisitor.visitIntInsn(BIPUSH, index);
+            methodVisitor.visitInsn(DUP);
+            textifierVisitor.visitInsn(DUP);
+            visit(new BoundLiteralExpression(index), methodVisitor);
             visit(element, methodVisitor);
             methodVisitor.visitInsn(IASTORE);
             textifierVisitor.visitInsn(IASTORE);
 
-            stackMap.peek().popStack();
+            scope.popStack();
+            scope.popStack();
             index++;
         }
     }
@@ -473,7 +533,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         methodVisitor.visitInsn(IALOAD);
         textifierVisitor.visitInsn(IALOAD);
 
-        stackMap.peek().popStack(); //Array index
+        scope.popStack(); //Array index
+        scope.popStack(); //Array ref
+        scope.pushStack(TypeSymbol.INT); //Value from array
     }
 
     private void visit(BoundArrayLengthExpression arrayLengthExpression, MethodVisitor methodVisitor) {
@@ -482,6 +544,9 @@ public class JavaBytecodeILConverter implements ILConverter {
 
         methodVisitor.visitInsn(ARRAYLENGTH);
         textifierVisitor.visitInsn(ARRAYLENGTH);
+
+        scope.popStack();
+        scope.pushStack(TypeSymbol.INT);
     }
 
     private void visit(BoundBinaryExpression binaryExpression, MethodVisitor methodVisitor) {
@@ -494,31 +559,31 @@ public class JavaBytecodeILConverter implements ILConverter {
                 methodVisitor.visitInsn(IADD);
                 textifierVisitor.visitInsn(IADD);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             case SUBTRACTION:
                 methodVisitor.visitInsn(ISUB);
                 textifierVisitor.visitInsn(ISUB);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             case MULTIPLICATION:
                 methodVisitor.visitInsn(IMUL);
                 textifierVisitor.visitInsn(IMUL);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             case DIVISION:
                 methodVisitor.visitInsn(IDIV);
                 textifierVisitor.visitInsn(IDIV);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             case REMAINDER:
                 methodVisitor.visitInsn(IREM);
                 textifierVisitor.visitInsn(IREM);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             case LESS_THAN:
                 visitComparison(methodVisitor, IF_ICMPLT);
@@ -542,13 +607,13 @@ public class JavaBytecodeILConverter implements ILConverter {
                 methodVisitor.visitInsn(IOR);
                 textifierVisitor.visitInsn(IOR);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             case BOOLEAN_AND:
                 methodVisitor.visitInsn(IAND);
                 textifierVisitor.visitInsn(IAND);
 
-                stackMap.peek().popStack();
+                scope.popStack();
                 break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
@@ -562,8 +627,8 @@ public class JavaBytecodeILConverter implements ILConverter {
         methodVisitor.visitJumpInsn(instruction, ifTrue);
 
         textifierVisitor.visitJumpInsn(instruction, ifTrue);
-        stackMap.peek().popStack();
-        stackMap.peek().popStack();
+        scope.popStack();
+        scope.popStack();
 
         methodVisitor.visitInsn(ICONST_0);
         textifierVisitor.visitInsn(ICONST_0);
@@ -576,7 +641,7 @@ public class JavaBytecodeILConverter implements ILConverter {
         methodVisitor.visitInsn(ICONST_1);
         textifierVisitor.visitInsn(ICONST_1);
 
-        stackMap.peek().pushStack(TypeSymbol.BOOL);
+        scope.pushStack(TypeSymbol.BOOL);
 
         visit(end, methodVisitor);
     }
@@ -623,20 +688,20 @@ public class JavaBytecodeILConverter implements ILConverter {
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     break;
-                case BOOLEAN_OR:
-                case BOOLEAN_AND:
                 default:
                     throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
             }
-            stackMap.peek().popStack(); //Pop right
-            stackMap.peek().popStack(); //Pop left
+            scope.popStack(); //Pop right
+            scope.popStack(); //Pop left
         } else {
             //Compare true/false to 0
             visit(condition, methodVisitor);
             methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
             textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
-            stackMap.peek().popStack(); //Pop condition
+            scope.popStack(); //Pop condition
         }
+
+        scope = new Scope(scope, label);
     }
 
     private void visit(Label label, MethodVisitor methodVisitor) {
@@ -644,11 +709,15 @@ public class JavaBytecodeILConverter implements ILConverter {
         if (visitedLabels.contains(label)) {
             return;
         }
+//
+//        Object[] local = scope.getLocals().toArray(new Object[0]);
+//        Object[] stack = scope.getStack().toArray(new Object[0]);
+//        methodVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
+//        textifierVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
 
-        Object[] local = stackMap.peek().getLocals().toArray(new Object[0]);
-        Object[] stack = stackMap.peek().getStack().toArray(new Object[0]);
-        methodVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
-        textifierVisitor.visitFrame(F_NEW, local.length, local, stack.length, stack);
+        if (!scope.isGlobalScope()) {
+            scope = scope.parent;
+        }
 
         methodVisitor.visitLabel(label);
         textifierVisitor.visitLabel(label);
@@ -694,13 +763,12 @@ public class JavaBytecodeILConverter implements ILConverter {
                 null
         );
 
-        localVariables.push(new HashMap<>());
         int globalVariableIndex = variableIndex;
         variableIndex = 0;
         for (BoundFunctionArgumentExpression argument : functionDeclarationExpression.getArguments()) {
             variables.put(argument.getArgument().getName(), variableIndex);
-            localVariables.peek().put(variableIndex, argument.getArgument());
-            stackMap.peek().pushLocal(argument.getArgument().getType());
+            scope.declareVariable(argument.getArgument(), variableIndex);
+            scope.pushLocal(argument.getArgument().getType());
             variableIndex++;
         }
 
@@ -708,8 +776,9 @@ public class JavaBytecodeILConverter implements ILConverter {
             visit(expression, methodVisitor);
         }
         variableIndex = 0;
-        //Bigge just in case - e.g.:
-        /*
+
+        //TODO: A bit of a hack to ensure exhaustive branch returns compile, in future do whatever the JVM does
+        /* eg:
         Int choice(Bool check) {
             if (check) {
                 return 1
@@ -726,7 +795,6 @@ public class JavaBytecodeILConverter implements ILConverter {
         //TODO: Keep track of method locals
         methodVisitor.visitMaxs(1024, 1024);
         textifierVisitor.visitMaxs(1024, 1024);
-        localVariables.pop();
         variableIndex = globalVariableIndex;
 
         methodVisitor.visitEnd();
@@ -755,6 +823,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         if (type == TypeSymbol.BOOL) {
             return Type.BOOLEAN_TYPE.getDescriptor();
         }
+        if (type == TypeSymbol.INT_ARRAY) {
+            return "[I";
+        }
         throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
     }
 
@@ -762,7 +833,9 @@ public class JavaBytecodeILConverter implements ILConverter {
 
         FunctionSymbol function = functionCallExpression.getFunction();
 
-        stackMap.push(new Frame());
+        //TODO: push new variables map onto variables stack?
+
+        scope = new Scope(scope, null);
         for (BoundExpression argumentInitialiser : functionCallExpression.getBoundArguments()) {
             visit(argumentInitialiser, methodVisitor);
         }
@@ -774,10 +847,12 @@ public class JavaBytecodeILConverter implements ILConverter {
         methodVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(argumentTypes, function.getType()), false);
         textifierVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(argumentTypes, function.getType()), false);
 
-        stackMap.pop();
+        //TODO: remove new variables declared in the variables map?
+
+        scope = scope.parent;
         //Push return type onto stack
         if (functionCallExpression.getType() != TypeSymbol.VOID) {
-            stackMap.peek().pushStack(functionCallExpression.getType());
+            scope.pushStack(functionCallExpression.getType());
         }
     }
 
@@ -785,77 +860,165 @@ public class JavaBytecodeILConverter implements ILConverter {
 
         visit(returnExpression.getReturnValue(), methodVisitor);
 
-        methodVisitor.visitInsn(IRETURN);
-        textifierVisitor.visitInsn(IRETURN);
-
-        stackMap.peek().popStack();
+        if (returnExpression.getReturnValue().getType().isAssignableFrom(TypeSymbol.INT)) {
+            methodVisitor.visitInsn(IRETURN);
+            textifierVisitor.visitInsn(IRETURN);
+        } else if (returnExpression.getReturnValue().getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            methodVisitor.visitInsn(ARETURN);
+            textifierVisitor.visitInsn(ARETURN);
+        }
     }
 
     private void visit(BoundPrintExpression printExpression, MethodVisitor methodVisitor) {
 
-        visit(printExpression.getExpression(), methodVisitor);
-
-        //Store top of the stack in memory
-        methodVisitor.visitIntInsn(ISTORE, variableIndex);
-        textifierVisitor.visitIntInsn(ISTORE, variableIndex);
-        stackMap.peek().popStack();
-
-        //CODE : System.out
         methodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
         textifierVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
 
-        //Load the stored value back out to put it on top of the System classpath
-        methodVisitor.visitVarInsn(ILOAD, variableIndex);
-        textifierVisitor.visitVarInsn(ILOAD, variableIndex);
-        //INVOKE: print(int) with variable on top of the stack. /
+        visit(printExpression.getExpression(), methodVisitor);
 
         String descriptor = getMethodDescriptor(Collections.singletonList(printExpression.getExpression().getType()), TypeSymbol.VOID);
 
         methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", descriptor, false);
         textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", descriptor, false);
+        scope.popStack();
     }
 
-    private class Frame {
+    private class Scope {
 
-        private Stack<Object> locals;
-        private Stack<Object> stack;
+        //The label that caused the new scope
+        private Label label;
 
-        public Frame() {
-            locals = new Stack<>();
-            stack = new Stack<>();
+        private Scope parent;
+        private Map<VariableSymbol, Integer> variablesToLocalIndex;
+        private Frame stackFrame;
+
+        Scope(Scope parent, Label label) {
+            this.parent = parent;
+            this.label = label;
+
+            this.stackFrame = new Frame();
+            this.variablesToLocalIndex = new HashMap<>();
+        }
+
+        public void popLocals() {
+            stackFrame.popLocals();
         }
 
         public Stack<Object> getLocals() {
+            Scope s = this;
+            Stack<Object> locals = new Stack<>();
+            while(s != null) {
+                Stack<Object> frameLocals = new Stack<>();
+                s.stackFrame.locals.forEach(frameLocals::push);
+                for (Object local : locals) {
+                    frameLocals.push(local);
+                }
+                locals = frameLocals;
+                s = s.parent;
+            }
             return locals;
         }
 
+        void pushLocal(TypeSymbol type) {
+            stackFrame.pushLocal(type);
+        }
+
+        void pushLocal(String type) {
+            stackFrame.pushLocal(type);
+        }
+
+        void popStack() {
+            stackFrame.popStack();
+        }
+
+        void pushStack(TypeSymbol type) {
+            stackFrame.pushStack(type);
+        }
+
         public Stack<Object> getStack() {
+            Scope s = this;
+            Stack<Object> stack = new Stack<>();
+            while(s != null) {
+                Stack<Object> frameStack = new Stack<>();
+                s.stackFrame.stack.forEach(frameStack::push);
+                for (Object st : stack) {
+                    frameStack.push(st);
+                }
+                stack = frameStack;
+                s = s.parent;
+            }
             return stack;
         }
 
-        public void pushLocal(TypeSymbol type) {
-            locals.push(getStackTypeCode(type));
-        }
-
-        public void pushLocal(String type) {
-            locals.push(type);
-        }
-
-        public Object popLocals() {
-            return locals.pop();
-        }
-
-        public void pushStack(TypeSymbol type) {
-            stack.push(getStackTypeCode(type));
-        }
-
         public void pushStack(String type) {
-            stack.push(type);
+            stackFrame.pushStack(type);
         }
 
-        public Object popStack() {
-            return stack.pop();
+        public boolean isGlobalScope() {
+            return parent == null;
         }
 
+        public Label getLabel() {
+            return label;
+        }
+
+        public Integer getVariableIndex(VariableSymbol variable) {
+            if (variablesToLocalIndex.containsKey(variable)) {
+                return variablesToLocalIndex.get(variable);
+            }
+            if (parent != null) {
+                return parent.getVariableIndex(variable);
+            }
+            throw new UndefinedVariableException(variable.getName());
+        }
+
+        public void declareVariable(VariableSymbol variable, int index) {
+            variablesToLocalIndex.put(variable, index);
+        }
+
+        private class Frame {
+
+            private Stack<Object> locals;
+            private Stack<Object> stack;
+
+            Frame() {
+                locals = new Stack<>();
+                stack = new Stack<>();
+            }
+
+            public Stack<Object> getLocals() {
+                return locals;
+            }
+
+            public Stack<Object> getStack() {
+                return stack;
+            }
+
+            void pushLocal(TypeSymbol type) {
+                locals.push(getStackTypeCode(type));
+            }
+
+            void pushLocal(String type) {
+                locals.push(type);
+            }
+
+            Object popLocals() {
+                return locals.pop();
+            }
+
+            void pushStack(TypeSymbol type) {
+                stack.push(getStackTypeCode(type));
+            }
+
+            void pushStack(String type) {
+                stack.push(type);
+            }
+
+            Object popStack() {
+                return stack.pop();
+            }
+
+        }
     }
+
 }

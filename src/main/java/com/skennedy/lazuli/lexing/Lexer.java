@@ -60,11 +60,20 @@ public class Lexer {
                 } else {
                     switch (current(line)) {
                         case '+':
-                            tokens.add(new Token(TokenType.PLUS, new Location(lineNumber, cursor)));
+
+                            if (lookAhead(line) == '+') {
+                                tokens.add(new Token(TokenType.INCREMENT, new Location(lineNumber, cursor)));
+                                next();
+                            } else {
+                                tokens.add(new Token(TokenType.PLUS, new Location(lineNumber, cursor)));
+                            }
                             next();
                             break;
                         case '-':
-                            if (lookAhead(line) == '>') {
+                            if (lookAhead(line) == '-') {
+                                tokens.add(new Token(TokenType.DECREMENT, new Location(lineNumber, cursor)));
+                                next();
+                            } else if (lookAhead(line) == '>') {
                                 tokens.add(new Token(TokenType.ARROW, new Location(lineNumber, cursor)));
                                 next();
                             } else {
