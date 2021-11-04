@@ -19,6 +19,7 @@ public enum BoundExpressionType {
     MATCH_EXPRESSION,
     MATCH_CASE_EXPRESSION,
     GOTO,
+    INCREMENT,
     IF,
     LABEL,
     LITERAL,

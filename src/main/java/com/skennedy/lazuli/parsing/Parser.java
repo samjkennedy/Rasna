@@ -281,6 +281,21 @@ public class Parser {
     private Expression parseAssignmentExpression() {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
+        if (current().getTokenType() == TokenType.INCREMENT || current().getTokenType() == TokenType.DECREMENT) {
+            IdentifierExpression operator;
+            switch (current().getTokenType()) {
+                case DECREMENT:
+                    operator = matchToken(TokenType.DECREMENT);
+                    break;
+                case INCREMENT:
+                    operator = matchToken(TokenType.INCREMENT);
+                    break;
+                default:
+                    throw new IllegalStateException("How did you get here?");
+            }
+            return new IncrementExpression(identifier, operator);
+        }
+
         if (current().getTokenType() != TokenType.EQUALS) {
             return identifier;
         }

@@ -6,6 +6,7 @@ public enum OpType {
     MUL,
     DIV,
     MOD,
+    INC,
     EQ,
     NEQ,
     GT,

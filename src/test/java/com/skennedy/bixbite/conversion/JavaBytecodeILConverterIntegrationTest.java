@@ -67,7 +67,7 @@ class JavaBytecodeILConverterIntegrationTest {
         //Reset console
         System.setOut(console);
 
-        String expectedResult = read("results/simulation", filename.split("\\.")[0] + "_result.txt");
+        String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt");
         String actualResult = read("results/conversion", filename.split("\\.")[0] + "_result.txt");
 
         assertEquals(expectedResult, actualResult);

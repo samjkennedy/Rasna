@@ -16,6 +16,7 @@ import com.skennedy.lazuli.typebinding.BoundForInExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
 import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundIfExpression;
+import com.skennedy.lazuli.typebinding.BoundIncrementExpression;
 import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundMatchCaseExpression;
 import com.skennedy.lazuli.typebinding.BoundMatchExpression;
@@ -93,6 +94,7 @@ public abstract class BoundProgramRewriter {
             case GOTO:
             case LABEL:
             case NOOP:
+            case INCREMENT:
                 return expression;
             case ASSIGNMENT_EXPRESSION:
                 return rewriteAssignmentExpression((BoundAssignmentExpression) expression);
@@ -262,6 +264,34 @@ public abstract class BoundProgramRewriter {
     private BoundExpression rewriteAssignmentExpression(BoundAssignmentExpression assignmentExpression) {
 
         BoundExpression expression = rewriteExpression(assignmentExpression.getExpression());
+
+        if (expression instanceof BoundIncrementExpression) {
+            return expression;
+        }
+
+        //TODO: This can let you sneak past a variable's guard I think
+        if (expression instanceof BoundBinaryExpression) {
+            BoundBinaryExpression binaryExpression = (BoundBinaryExpression) expression;
+
+            if (binaryExpression.getLeft().getBoundExpressionType() == BoundExpressionType.VARIABLE_EXPRESSION
+                    && binaryExpression.getRight().getBoundExpressionType() == BoundExpressionType.LITERAL) {
+
+                BoundVariableExpression variableExpression = (BoundVariableExpression) binaryExpression.getLeft();
+                BoundLiteralExpression literalExpression = (BoundLiteralExpression) binaryExpression.getRight();
+
+                if ((int) literalExpression.getValue() <= Byte.MAX_VALUE && (int)literalExpression.getValue() >= Byte.MIN_VALUE) {
+
+                    if (binaryExpression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
+                        return new BoundIncrementExpression(variableExpression.getVariable(), new BoundLiteralExpression(literalExpression.getValue()));
+
+                    } else if (binaryExpression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.SUBTRACTION) {
+                        return new BoundIncrementExpression(variableExpression.getVariable(), new BoundLiteralExpression(-(int) literalExpression.getValue()));
+                    }
+                }
+            }
+            return assignmentExpression;
+        }
+
         BoundExpression guard = null;
         if (assignmentExpression.getGuard() != null) {
             guard = rewriteExpression(assignmentExpression.getGuard());

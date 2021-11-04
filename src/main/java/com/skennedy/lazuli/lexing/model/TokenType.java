@@ -23,6 +23,8 @@ public enum TokenType {
     GTEQ(">="),
     LT("<"),
     LTEQ("<="),
+    INCREMENT("++"),
+    DECREMENT("--"),
 
     //Blocks
     OPEN_PARENTHESIS("("),
