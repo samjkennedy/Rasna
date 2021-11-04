@@ -58,7 +58,7 @@ public enum TokenType {
     VOID_KEYWORD("Void"),
     INT_KEYWORD("Int"),
     INT_ARRAY_KEYWORD("IntArray"), //Temporary until Array can have a type
-    NUM_KEYWORD("Num"),
+    REAL_KEYWORD("Real"),
     BOOL_KEYWORD("Bool"),
     FUNCTION_TYPE_KEYWORD("Function"),
     CONST_KEYWORD("const"),

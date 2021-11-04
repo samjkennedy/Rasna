@@ -280,8 +280,8 @@ public class Binder {
                 return TypeSymbol.INT_ARRAY;
             case BOOL_KEYWORD:
                 return TypeSymbol.BOOL;
-            case NUM_KEYWORD:
-                return TypeSymbol.NUM;
+            case REAL_KEYWORD:
+                return TypeSymbol.REAL;
             case FUNCTION_TYPE_KEYWORD:
                 return TypeSymbol.FUNCTION;
             default:

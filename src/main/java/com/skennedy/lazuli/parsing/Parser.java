@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -80,7 +81,7 @@ public class Parser {
             case INT_KEYWORD:
             case INT_ARRAY_KEYWORD:
             case BOOL_KEYWORD:
-            case NUM_KEYWORD:
+            case REAL_KEYWORD:
             case FUNCTION_TYPE_KEYWORD:
             case CONST_KEYWORD:
                 return parseVariableOrFunctionDeclarationExpression();
@@ -195,8 +196,8 @@ public class Parser {
             case BOOL_KEYWORD:
                 declarationKeyword = matchToken(TokenType.BOOL_KEYWORD);
                 break;
-            case NUM_KEYWORD:
-                declarationKeyword = matchToken(TokenType.NUM_KEYWORD);
+            case REAL_KEYWORD:
+                declarationKeyword = matchToken(TokenType.REAL_KEYWORD);
                 break;
             default:
                 throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
@@ -328,8 +329,8 @@ public class Parser {
             case BOOL_KEYWORD:
                 typeKeyword = matchToken(TokenType.BOOL_KEYWORD);
                 break;
-            case NUM_KEYWORD:
-                typeKeyword = matchToken(TokenType.NUM_KEYWORD);
+            case REAL_KEYWORD:
+                typeKeyword = matchToken(TokenType.REAL_KEYWORD);
                 break;
             case FUNCTION_TYPE_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_TYPE_KEYWORD);
@@ -395,8 +396,8 @@ public class Parser {
             case BOOL_KEYWORD:
                 typeKeyword = matchToken(TokenType.BOOL_KEYWORD);
                 break;
-            case NUM_KEYWORD:
-                typeKeyword = matchToken(TokenType.NUM_KEYWORD);
+            case REAL_KEYWORD:
+                typeKeyword = matchToken(TokenType.REAL_KEYWORD);
                 break;
             case FUNCTION_TYPE_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_TYPE_KEYWORD);

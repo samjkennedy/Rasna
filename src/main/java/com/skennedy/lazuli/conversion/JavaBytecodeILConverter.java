@@ -35,8 +35,6 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.FrameNode;
-import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.Textifier;
 
 import java.io.File;
@@ -61,8 +59,18 @@ import static org.objectweb.asm.Opcodes.ARETURN;
 import static org.objectweb.asm.Opcodes.ARRAYLENGTH;
 import static org.objectweb.asm.Opcodes.ASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
+import static org.objectweb.asm.Opcodes.DADD;
+import static org.objectweb.asm.Opcodes.DCONST_0;
+import static org.objectweb.asm.Opcodes.DCONST_1;
+import static org.objectweb.asm.Opcodes.DDIV;
+import static org.objectweb.asm.Opcodes.DLOAD;
+import static org.objectweb.asm.Opcodes.DMUL;
+import static org.objectweb.asm.Opcodes.DOUBLE;
+import static org.objectweb.asm.Opcodes.DREM;
+import static org.objectweb.asm.Opcodes.DRETURN;
+import static org.objectweb.asm.Opcodes.DSTORE;
+import static org.objectweb.asm.Opcodes.DSUB;
 import static org.objectweb.asm.Opcodes.DUP;
-import static org.objectweb.asm.Opcodes.F_NEW;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
 import static org.objectweb.asm.Opcodes.IADD;
@@ -94,7 +102,6 @@ import static org.objectweb.asm.Opcodes.IREM;
 import static org.objectweb.asm.Opcodes.IRETURN;
 import static org.objectweb.asm.Opcodes.ISTORE;
 import static org.objectweb.asm.Opcodes.ISUB;
-import static org.objectweb.asm.Opcodes.LDC;
 import static org.objectweb.asm.Opcodes.NEWARRAY;
 import static org.objectweb.asm.Opcodes.RETURN;
 import static org.objectweb.asm.Opcodes.SIPUSH;
@@ -195,8 +202,8 @@ public class JavaBytecodeILConverter implements ILConverter {
         scope = scope.parent;
 
         //TODO: determine how much memory the program requires and set accordingly
-        mainMethodVisitor.visitMaxs(1024, 1024);
-        textifierVisitor.visitMaxs(1024, 1024);
+        mainMethodVisitor.visitMaxs(1000, 1000);
+        textifierVisitor.visitMaxs(1000, 1000);
 
         // END 2: Close main()
         mainMethodVisitor.visitEnd();
@@ -366,23 +373,35 @@ public class JavaBytecodeILConverter implements ILConverter {
 
                     } else if (operand < Integer.MAX_VALUE) {
 
-                        int constIndex;
-                        if (constantPool.containsKey(operand)) {
-                            constIndex = constantPool.get(operand);
-                        } else {
-                            constIndex = classWriter.newConst(operand);
+                        if (!constantPool.containsKey(operand)) {
                             constantPool.put(operand, constantIdx);
                             constantIdx++;
                         }
-                        methodVisitor.visitIntInsn(LDC, constIndex);
-                        textifierVisitor.visitIntInsn(LDC, constIndex);
+                        methodVisitor.visitLdcInsn(operand);
+                        textifierVisitor.visitLdcInsn(operand);
                     }
             }
         } else if (value instanceof Boolean) {
             methodVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
             textifierVisitor.visitInsn((boolean) value ? ICONST_1 : ICONST_0);
+        } else if (value instanceof Double) {
+            double operand = (double) value;
+            if (operand == 0.0d) {
+                methodVisitor.visitInsn(DCONST_0);
+                textifierVisitor.visitInsn(DCONST_0);
+            } else if (operand == 1.0d) {
+                methodVisitor.visitInsn(DCONST_1);
+                textifierVisitor.visitInsn(DCONST_1);
+            } else {
+                if (!constantPool.containsKey(operand)) {
+                    constantPool.put(operand, constantIdx);
+                    constantIdx++;
+                }
+                methodVisitor.visitLdcInsn(operand);
+                textifierVisitor.visitLdcInsn(operand);
+            }
         } else {
-            throw new UnsupportedOperationException("Literals of type " + boundLiteralExpression.getType() + " are not yet supported");
+            throw new UnsupportedOperationException("Literals of type " + boundLiteralExpression.getType().getName() + " are not yet supported");
         }
         scope.pushStack(boundLiteralExpression.getType());
     }
@@ -402,6 +421,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         } else if (variableDeclarationExpression.getType() == TypeSymbol.INT_ARRAY) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
+        } else if (variableDeclarationExpression.getType() == TypeSymbol.REAL) {
+            methodVisitor.visitVarInsn(DSTORE, variableIndex);
+            textifierVisitor.visitVarInsn(DSTORE, variableIndex);
         } else {
             throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
         }
@@ -413,18 +435,24 @@ public class JavaBytecodeILConverter implements ILConverter {
 
         //Update the stackmap
         scope.pushLocal(variableDeclarationExpression.getType());
-        variableIndex++;
-
+        if (variableDeclarationExpression.getType() == TypeSymbol.REAL) {
+            variableIndex += 2;
+        } else {
+            variableIndex++;
+        }
     }
 
     private Object getStackTypeCode(TypeSymbol type) {
+        if (type == TypeSymbol.REAL) {
+            return DOUBLE;
+        }
         if (type == TypeSymbol.INT || type == TypeSymbol.BOOL) {
             return INTEGER;
-        } else if (type == TypeSymbol.INT_ARRAY) {
-            return "[I";
-        } else {
-            throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
         }
+        if (type == TypeSymbol.INT_ARRAY) {
+            return "[I";
+        }
+        throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
     }
 
     private void visit(BoundIncrementExpression incrementExpression, MethodVisitor methodVisitor) {
@@ -455,6 +483,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         } else if (boundVariableExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
+        } else if (boundVariableExpression.getType() == TypeSymbol.REAL) {
+            methodVisitor.visitVarInsn(DLOAD, variableIdx);
+            textifierVisitor.visitVarInsn(DLOAD, variableIdx);
         } else {
             throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
         }
@@ -473,13 +504,14 @@ public class JavaBytecodeILConverter implements ILConverter {
         int variableIdx = variables.get(variable.getName());
 
         if (assignmentExpression.getType() == TypeSymbol.INT || assignmentExpression.getType() == TypeSymbol.BOOL) {
-
             methodVisitor.visitVarInsn(ISTORE, variableIdx);
             textifierVisitor.visitVarInsn(ISTORE, variableIdx);
-
         } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
+        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
+            methodVisitor.visitVarInsn(DSTORE, variableIdx);
+            textifierVisitor.visitVarInsn(DSTORE, variableIdx);
         } else {
             throw new UnsupportedOperationException("Variables of type " + assignmentExpression.getType().getName() + " are not yet supported");
         }
@@ -554,6 +586,14 @@ public class JavaBytecodeILConverter implements ILConverter {
         visit(binaryExpression.getLeft(), methodVisitor);
         visit(binaryExpression.getRight(), methodVisitor);
 
+        if (binaryExpression.getLeft().getType() == TypeSymbol.INT || binaryExpression.getLeft().getType() == TypeSymbol.BOOL) {
+            visitIntBinaryExpression(binaryExpression, methodVisitor);
+        } else if (binaryExpression.getLeft().getType() == TypeSymbol.REAL) {
+            visitRealBinaryExpression(binaryExpression, methodVisitor);
+        }
+    }
+
+    private void visitIntBinaryExpression(BoundBinaryExpression binaryExpression, MethodVisitor methodVisitor) {
         switch (binaryExpression.getOperator().getBoundOpType()) {
             case ADDITION:
                 methodVisitor.visitInsn(IADD);
@@ -612,6 +652,43 @@ public class JavaBytecodeILConverter implements ILConverter {
             case BOOLEAN_AND:
                 methodVisitor.visitInsn(IAND);
                 textifierVisitor.visitInsn(IAND);
+
+                scope.popStack();
+                break;
+            default:
+                throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
+        }
+    }
+
+    private void visitRealBinaryExpression(BoundBinaryExpression binaryExpression, MethodVisitor methodVisitor) {
+        switch (binaryExpression.getOperator().getBoundOpType()) {
+            case ADDITION:
+                methodVisitor.visitInsn(DADD);
+                textifierVisitor.visitInsn(DADD);
+
+                scope.popStack();
+                break;
+            case SUBTRACTION:
+                methodVisitor.visitInsn(DSUB);
+                textifierVisitor.visitInsn(DSUB);
+
+                scope.popStack();
+                break;
+            case MULTIPLICATION:
+                methodVisitor.visitInsn(DMUL);
+                textifierVisitor.visitInsn(DMUL);
+
+                scope.popStack();
+                break;
+            case DIVISION:
+                methodVisitor.visitInsn(DDIV);
+                textifierVisitor.visitInsn(DDIV);
+
+                scope.popStack();
+                break;
+            case REMAINDER:
+                methodVisitor.visitInsn(DREM);
+                textifierVisitor.visitInsn(DREM);
 
                 scope.popStack();
                 break;
@@ -769,7 +846,11 @@ public class JavaBytecodeILConverter implements ILConverter {
             variables.put(argument.getArgument().getName(), variableIndex);
             scope.declareVariable(argument.getArgument(), variableIndex);
             scope.pushLocal(argument.getArgument().getType());
-            variableIndex++;
+            if (argument.getType() == TypeSymbol.REAL) {
+                variableIndex += 2;
+            } else {
+                variableIndex++;
+            }
         }
 
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
@@ -820,6 +901,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         if (type == TypeSymbol.INT) {
             return Type.INT_TYPE.getDescriptor();
         }
+        if (type == TypeSymbol.REAL) {
+            return Type.DOUBLE_TYPE.getDescriptor();
+        }
         if (type == TypeSymbol.BOOL) {
             return Type.BOOLEAN_TYPE.getDescriptor();
         }
@@ -832,8 +916,6 @@ public class JavaBytecodeILConverter implements ILConverter {
     private void visit(BoundFunctionCallExpression functionCallExpression, MethodVisitor methodVisitor) {
 
         FunctionSymbol function = functionCallExpression.getFunction();
-
-        //TODO: push new variables map onto variables stack?
 
         scope = new Scope(scope, null);
         for (BoundExpression argumentInitialiser : functionCallExpression.getBoundArguments()) {
@@ -860,12 +942,17 @@ public class JavaBytecodeILConverter implements ILConverter {
 
         visit(returnExpression.getReturnValue(), methodVisitor);
 
-        if (returnExpression.getReturnValue().getType().isAssignableFrom(TypeSymbol.INT)) {
+        if (returnExpression.getReturnValue().getType() == (TypeSymbol.INT) || returnExpression.getReturnValue().getType() == TypeSymbol.BOOL) {
             methodVisitor.visitInsn(IRETURN);
             textifierVisitor.visitInsn(IRETURN);
         } else if (returnExpression.getReturnValue().getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
             methodVisitor.visitInsn(ARETURN);
             textifierVisitor.visitInsn(ARETURN);
+        } else if (returnExpression.getReturnValue().getType() == TypeSymbol.REAL) {
+            methodVisitor.visitInsn(DRETURN);
+            textifierVisitor.visitInsn(DRETURN);
+        } else {
+            throw new UnsupportedOperationException("Functions that return type " + returnExpression.getReturnValue().getType() + " are not yet supported");
         }
     }
 
@@ -907,7 +994,7 @@ public class JavaBytecodeILConverter implements ILConverter {
         public Stack<Object> getLocals() {
             Scope s = this;
             Stack<Object> locals = new Stack<>();
-            while(s != null) {
+            while (s != null) {
                 Stack<Object> frameLocals = new Stack<>();
                 s.stackFrame.locals.forEach(frameLocals::push);
                 for (Object local : locals) {
@@ -928,17 +1015,23 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
 
         void popStack() {
-            stackFrame.popStack();
+            Object type = stackFrame.popStack();
+            if (type == TypeSymbol.REAL) {
+                stackFrame.popStack();
+            }
         }
 
         void pushStack(TypeSymbol type) {
             stackFrame.pushStack(type);
+            if (type == TypeSymbol.REAL) {
+                stackFrame.pushStack(type);
+            }
         }
 
         public Stack<Object> getStack() {
             Scope s = this;
             Stack<Object> stack = new Stack<>();
-            while(s != null) {
+            while (s != null) {
                 Stack<Object> frameStack = new Stack<>();
                 s.stackFrame.stack.forEach(frameStack::push);
                 for (Object st : stack) {
@@ -948,10 +1041,6 @@ public class JavaBytecodeILConverter implements ILConverter {
                 s = s.parent;
             }
             return stack;
-        }
-
-        public void pushStack(String type) {
-            stackFrame.pushStack(type);
         }
 
         public boolean isGlobalScope() {

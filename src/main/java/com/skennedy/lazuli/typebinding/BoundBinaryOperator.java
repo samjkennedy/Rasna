@@ -24,7 +24,7 @@ public class BoundBinaryOperator implements BoundExpression {
 
     public static BoundBinaryOperator bind(OpType opType, TypeSymbol leftType, TypeSymbol rightType) {
         for (BoundBinaryOperator operator : operators) {
-            if (operator.getOpType().equals(opType) && operator.getLeftType().equals(leftType) && operator.getRightType().equals(rightType)) {
+            if (operator.getOpType().equals(opType) && operator.getLeftType().isAssignableFrom(leftType) && operator.getRightType().isAssignableFrom(rightType)) {
                 return operator;
             }
         }
@@ -64,6 +64,18 @@ public class BoundBinaryOperator implements BoundExpression {
             new BoundBinaryOperator(OpType.EQ, BoundBinaryOperation.EQUALS, TypeSymbol.INT, TypeSymbol.INT, TypeSymbol.BOOL),
             new BoundBinaryOperator(OpType.EQ, BoundBinaryOperation.EQUALS, TypeSymbol.BOOL, TypeSymbol.BOOL, TypeSymbol.BOOL),
             new BoundBinaryOperator(OpType.NEQ, BoundBinaryOperation.NOT_EQUALS, TypeSymbol.INT, TypeSymbol.INT, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.ADD, BoundBinaryOperation.ADDITION, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.REAL),
+            new BoundBinaryOperator(OpType.SUB, BoundBinaryOperation.SUBTRACTION, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.REAL),
+            new BoundBinaryOperator(OpType.MUL, BoundBinaryOperation.MULTIPLICATION, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.REAL),
+            new BoundBinaryOperator(OpType.DIV, BoundBinaryOperation.DIVISION, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.REAL),
+            new BoundBinaryOperator(OpType.MOD, BoundBinaryOperation.REMAINDER, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.REAL),
+            new BoundBinaryOperator(OpType.GT, BoundBinaryOperation.GREATER_THAN, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.LT, BoundBinaryOperation.LESS_THAN, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.GTEQ, BoundBinaryOperation.GREATER_THAN_OR_EQUAL, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.LTEQ, BoundBinaryOperation.LESS_THAN_OR_EQUAL, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.EQ, BoundBinaryOperation.EQUALS, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.EQ, BoundBinaryOperation.EQUALS, TypeSymbol.BOOL, TypeSymbol.BOOL, TypeSymbol.BOOL),
+            new BoundBinaryOperator(OpType.NEQ, BoundBinaryOperation.NOT_EQUALS, TypeSymbol.REAL, TypeSymbol.REAL, TypeSymbol.BOOL),
             new BoundBinaryOperator(OpType.NEQ, BoundBinaryOperation.NOT_EQUALS, TypeSymbol.BOOL, TypeSymbol.BOOL, TypeSymbol.BOOL),
             new BoundBinaryOperator(OpType.LAND, BoundBinaryOperation.BOOLEAN_AND, TypeSymbol.BOOL, TypeSymbol.BOOL, TypeSymbol.BOOL),
             new BoundBinaryOperator(OpType.LOR, BoundBinaryOperation.BOOLEAN_OR, TypeSymbol.BOOL, TypeSymbol.BOOL, TypeSymbol.BOOL),
