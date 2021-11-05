@@ -10,6 +10,7 @@ import java.util.List;
 
 public class Lexer {
 
+    private static final char STRING_ESCAPE_CHAR = '\\';
     private int cursor;
 
     public List<Token> lex(String program) {
@@ -186,17 +187,17 @@ public class Lexer {
         return tokens;
     }
 
+    //TODO: Multi-line Strings
     private String parseString(String line) {
 
         next(); //Skip opening '"'
         int start = cursor;
 
-        //TODO: Escape characters
-        while (cursor < line.length() && line.charAt(cursor) != '"') {
+        while (cursor < line.length() && (line.charAt(cursor) != '"' || line.charAt(cursor - 1) == STRING_ESCAPE_CHAR)) {
             next();
         }
         next();//Skip closing '"'
-        return line.substring(start, cursor - 1);
+        return line.substring(start, cursor - 1).replace(STRING_ESCAPE_CHAR, '\0');
     }
 
     private Number parseNum(String line) {
