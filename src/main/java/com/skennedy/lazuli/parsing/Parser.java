@@ -55,6 +55,8 @@ public class Parser {
         switch (current().getTokenType()) {
             case INT_LITERAL:
                 return matchToken(TokenType.INT_LITERAL);
+            case STRING_LITERAL:
+                return matchToken(TokenType.STRING_LITERAL);
             case TRUE_KEYWORD:
                 return matchToken(TokenType.TRUE_KEYWORD);
             case FALSE_KEYWORD:
@@ -83,6 +85,7 @@ public class Parser {
             case BOOL_KEYWORD:
             case REAL_KEYWORD:
             case FUNCTION_TYPE_KEYWORD:
+            case STRING_KEYWORD:
             case CONST_KEYWORD:
                 return parseVariableOrFunctionDeclarationExpression();
             case IDENTIFIER:
@@ -331,6 +334,9 @@ public class Parser {
                 break;
             case REAL_KEYWORD:
                 typeKeyword = matchToken(TokenType.REAL_KEYWORD);
+                break;
+            case STRING_KEYWORD:
+                typeKeyword = matchToken(TokenType.STRING_KEYWORD);
                 break;
             case FUNCTION_TYPE_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_TYPE_KEYWORD);

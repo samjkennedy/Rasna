@@ -406,12 +406,12 @@ public class Simulator {
         evaluate(expression.getLeft());
         evaluate(expression.getRight());
         if (expression.getLeft().getType() == TypeSymbol.INT || expression.getRight().getType() == TypeSymbol.INT) {
-            long left = (long) localsStack.pop();
-            long right = (long) localsStack.pop();
+            long right = (long)(int)localsStack.pop();
+            long left = (long)(int) localsStack.pop();
             handleIntsExpression(expression.getOperator().getBoundOpType(), left, right);
         } else if (expression.getLeft().getType() == TypeSymbol.BOOL) {
-            boolean left = (boolean) localsStack.pop();
             boolean right = (boolean) localsStack.pop();
+            boolean left = (boolean) localsStack.pop();
             handleBoolsExpression(expression.getOperator().getBoundOpType(), left, right);
         } else {
             throw new UnsupportedOperationException("Binary operations are not supported for expressions of type " + expression.getLeft().getType());

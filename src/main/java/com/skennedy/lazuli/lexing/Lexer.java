@@ -10,6 +10,7 @@ import java.util.List;
 
 public class Lexer {
 
+    private static final char STRING_ESCAPE_CHAR = '\\';
     private int cursor;
 
     public List<Token> lex(String program) {
@@ -170,6 +171,9 @@ public class Lexer {
                             tokens.add(new Token(TokenType.COMMA, new Location(lineNumber, cursor)));
                             next();
                             break;
+                        case '"':
+                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(lineNumber, cursor), parseString(line)));
+                            break;
                         default:
                             tokens.add(new Token(TokenType.BAD_TOKEN, new Location(lineNumber, cursor)));
                             next();
@@ -181,6 +185,19 @@ public class Lexer {
         }
         tokens.add(new Token(TokenType.EOF_TOKEN, new Location(lineNumber + 1, 0)));
         return tokens;
+    }
+
+    //TODO: Multi-line Strings
+    private String parseString(String line) {
+
+        next(); //Skip opening '"'
+        int start = cursor;
+
+        while (cursor < line.length() && (line.charAt(cursor) != '"' || line.charAt(cursor - 1) == STRING_ESCAPE_CHAR)) {
+            next();
+        }
+        next();//Skip closing '"'
+        return StringUtils.remove(line.substring(start, cursor - 1), STRING_ESCAPE_CHAR);
     }
 
     private Number parseNum(String line) {
