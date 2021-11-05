@@ -1,0 +1,4 @@
+String s = "Hello!"
+print(s)
+String escaped = "\"escaped\"!"
+print(escaped)
