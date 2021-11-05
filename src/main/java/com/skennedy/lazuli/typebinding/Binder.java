@@ -280,6 +280,8 @@ public class Binder {
                 return TypeSymbol.INT_ARRAY;
             case BOOL_KEYWORD:
                 return TypeSymbol.BOOL;
+            case STRING_KEYWORD:
+                return TypeSymbol.STRING;
             case REAL_KEYWORD:
                 return TypeSymbol.REAL;
             case FUNCTION_TYPE_KEYWORD:
@@ -320,11 +322,12 @@ public class Binder {
 
     private BoundExpression bindIdentifierExpression(IdentifierExpression identifierExpression) {
 
-        if (identifierExpression.getTokenType() == TokenType.INT_LITERAL) {
-
+        if (identifierExpression.getTokenType() == TokenType.INT_LITERAL || identifierExpression.getTokenType() == TokenType.STRING_LITERAL) {
             return new BoundLiteralExpression(identifierExpression.getValue());
+
         } else if (identifierExpression.getTokenType() == TokenType.TRUE_KEYWORD) {
             return new BoundLiteralExpression(true);
+
         } else if (identifierExpression.getTokenType() == TokenType.FALSE_KEYWORD) {
             return new BoundLiteralExpression(false);
         }

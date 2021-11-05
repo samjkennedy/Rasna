@@ -400,6 +400,14 @@ public class JavaBytecodeILConverter implements ILConverter {
                 methodVisitor.visitLdcInsn(operand);
                 textifierVisitor.visitLdcInsn(operand);
             }
+        } else if (value instanceof String) {
+            String operand = (String) value;
+            if (!constantPool.containsKey(operand)) {
+                constantPool.put(operand, constantIdx);
+                constantIdx++;
+            }
+            methodVisitor.visitLdcInsn(operand);
+            textifierVisitor.visitLdcInsn(operand);
         } else {
             throw new UnsupportedOperationException("Literals of type " + boundLiteralExpression.getType().getName() + " are not yet supported");
         }
@@ -424,6 +432,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         } else if (variableDeclarationExpression.getType() == TypeSymbol.REAL) {
             methodVisitor.visitVarInsn(DSTORE, variableIndex);
             textifierVisitor.visitVarInsn(DSTORE, variableIndex);
+        } else if (variableDeclarationExpression.getType() == TypeSymbol.STRING) {
+            methodVisitor.visitVarInsn(ASTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ASTORE, variableIndex);
         } else {
             throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
         }
@@ -451,6 +462,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
         if (type == TypeSymbol.INT_ARRAY) {
             return "[I";
+        }
+        if (type == TypeSymbol.STRING) {
+            return "Ljava/lang/String;";
         }
         throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
     }
@@ -486,6 +500,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         } else if (boundVariableExpression.getType() == TypeSymbol.REAL) {
             methodVisitor.visitVarInsn(DLOAD, variableIdx);
             textifierVisitor.visitVarInsn(DLOAD, variableIdx);
+        } else if (boundVariableExpression.getType() == TypeSymbol.STRING) {
+            methodVisitor.visitVarInsn(ALOAD, variableIdx);
+            textifierVisitor.visitVarInsn(ALOAD, variableIdx);
         } else {
             throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
         }
@@ -507,6 +524,9 @@ public class JavaBytecodeILConverter implements ILConverter {
             methodVisitor.visitVarInsn(ISTORE, variableIdx);
             textifierVisitor.visitVarInsn(ISTORE, variableIdx);
         } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            methodVisitor.visitVarInsn(ASTORE, variableIdx);
+            textifierVisitor.visitVarInsn(ASTORE, variableIdx);
+        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
         } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
@@ -909,6 +929,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
         if (type == TypeSymbol.INT_ARRAY) {
             return "[I";
+        }
+        if (type == TypeSymbol.STRING) {
+            return "Ljava/lang/String;";
         }
         throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
     }

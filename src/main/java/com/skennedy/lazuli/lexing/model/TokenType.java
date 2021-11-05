@@ -6,6 +6,7 @@ public enum TokenType {
 
     WHITESPACE(null),
     INT_LITERAL(null),
+    STRING_LITERAL(null),
     IDENTIFIER(null),
     COMMENT(null),
 
@@ -53,15 +54,16 @@ public enum TokenType {
     FALSE_KEYWORD("false"),
     RETURN_KEYWORD("return"),
     MATCH_KEYWORD("match"),
+    CONST_KEYWORD("const"),
 
     //Types
     VOID_KEYWORD("Void"),
-    INT_KEYWORD("Int"),
-    INT_ARRAY_KEYWORD("IntArray"), //Temporary until Array can have a type
-    REAL_KEYWORD("Real"),
     BOOL_KEYWORD("Bool"),
+    INT_KEYWORD("Int"),
+    REAL_KEYWORD("Real"),
+    STRING_KEYWORD("String"),
+    INT_ARRAY_KEYWORD("IntArray"), //Temporary until Array can have a type
     FUNCTION_TYPE_KEYWORD("Function"),
-    CONST_KEYWORD("const"),
 
     //Intrinsics
     PRINT_INTR("print"),

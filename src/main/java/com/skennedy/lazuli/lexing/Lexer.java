@@ -170,6 +170,9 @@ public class Lexer {
                             tokens.add(new Token(TokenType.COMMA, new Location(lineNumber, cursor)));
                             next();
                             break;
+                        case '"':
+                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(lineNumber, cursor), parseString(line)));
+                            break;
                         default:
                             tokens.add(new Token(TokenType.BAD_TOKEN, new Location(lineNumber, cursor)));
                             next();
@@ -181,6 +184,19 @@ public class Lexer {
         }
         tokens.add(new Token(TokenType.EOF_TOKEN, new Location(lineNumber + 1, 0)));
         return tokens;
+    }
+
+    private String parseString(String line) {
+
+        next(); //Skip opening '"'
+        int start = cursor;
+
+        //TODO: Escape characters
+        while (cursor < line.length() && line.charAt(cursor) != '"') {
+            next();
+        }
+        next();//Skip closing '"'
+        return line.substring(start, cursor - 1);
     }
 
     private Number parseNum(String line) {
