@@ -27,6 +27,7 @@ import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
 import com.skennedy.lazuli.typebinding.BoundReturnExpression;
+import com.skennedy.lazuli.typebinding.BoundTupleLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
@@ -196,9 +197,24 @@ public class Simulator {
             case INCREMENT:
                 evaluateIncrement((BoundIncrementExpression) expression);
                 break;
+            case TUPLE_LITERAL_EXPRESSION:
+                evaluateTupleLiteral((BoundTupleLiteralExpression) expression);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private void evaluateTupleLiteral(BoundTupleLiteralExpression tupleLiteralExpression) {
+        Object[] array = new Object[tupleLiteralExpression.getElements().size()];
+
+
+        for (int i = 0; i < tupleLiteralExpression.getElements().size(); i++) {
+            evaluate(tupleLiteralExpression.getElements().get(i));
+            array[i] = localsStack.pop();
+        }
+        //TODO: To really mimic the JVM push a reference
+        localsStack.push(new LazuliArray<>(array));
     }
 
     private void evaluateIncrement(BoundIncrementExpression incrementExpression) {

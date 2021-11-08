@@ -3,22 +3,22 @@ package com.skennedy.lazuli.typebinding;
 import java.util.Iterator;
 import java.util.List;
 
-public class BoundArrayLiteralExpression implements BoundExpression {
+public class BoundTupleLiteralExpression implements BoundExpression {
 
     private List<BoundExpression> elements;
 
-    public BoundArrayLiteralExpression(List<BoundExpression> elements) {
+    public BoundTupleLiteralExpression(List<BoundExpression> elements) {
         this.elements = elements;
     }
 
     @Override
     public BoundExpressionType getBoundExpressionType() {
-        return BoundExpressionType.ARRAY_LITERAL_EXPRESSION;
+        return BoundExpressionType.TUPLE_LITERAL_EXPRESSION;
     }
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.INT_ARRAY;
+        return TypeSymbol.TUPLE;
     }
 
     @Override

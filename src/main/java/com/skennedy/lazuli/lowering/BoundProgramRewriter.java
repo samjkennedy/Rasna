@@ -90,6 +90,7 @@ public abstract class BoundProgramRewriter {
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 return rewriteArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
             case ARRAY_LENGTH_EXPRESSION:
+            case TUPLE_LITERAL_EXPRESSION:
             case LITERAL:
             case VARIABLE_EXPRESSION:
             case GOTO:

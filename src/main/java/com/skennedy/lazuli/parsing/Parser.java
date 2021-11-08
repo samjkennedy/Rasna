@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -66,7 +65,7 @@ public class Parser {
             case OPEN_SQUARE_BRACE:
                 return parseArrayLiteralExpression();
             case OPEN_PARENTHESIS:
-                return parseParenthesisedExpression();
+                return parseTupleLiteralExpression();
             case TYPEOF_INTR:
                 return parseTypeofIntrinsic();
             case PRINT_INTR:
@@ -87,6 +86,7 @@ public class Parser {
             case FUNCTION_TYPE_KEYWORD:
             case STRING_KEYWORD:
             case CONST_KEYWORD:
+            case TUPLE_KEYWORD:
                 return parseVariableOrFunctionDeclarationExpression();
             case IDENTIFIER:
                 if (nextToken().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
@@ -164,6 +164,30 @@ public class Parser {
         return new ReturnExpression(returnKeyword, returnValue);
     }
 
+    private Expression parseTupleLiteralExpression() {
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+
+        List<Expression> elements = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN) {
+
+            elements.add(parseExpression());
+
+            if (current().getTokenType() == TokenType.CLOSE_PARENTHESIS) {
+                break;
+            }
+            matchToken(TokenType.COMMA);
+        }
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+        if (elements.size() == 1) {
+            return new ParenthesisedExpression(openParen, elements.get(0), closeParen);
+        }
+
+        return new TupleLiteralExpression(openParen, elements, closeParen);
+    }
+
     private Expression parseArrayLiteralExpression() {
 
         IdentifierExpression openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
@@ -201,6 +225,9 @@ public class Parser {
                 break;
             case REAL_KEYWORD:
                 declarationKeyword = matchToken(TokenType.REAL_KEYWORD);
+                break;
+            case VAR_KEYWORD:
+                declarationKeyword = matchToken(TokenType.VAR_KEYWORD);
                 break;
             default:
                 throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
@@ -338,6 +365,9 @@ public class Parser {
             case STRING_KEYWORD:
                 typeKeyword = matchToken(TokenType.STRING_KEYWORD);
                 break;
+            case TUPLE_KEYWORD:
+                typeKeyword = matchToken(TokenType.TUPLE_KEYWORD);
+                break;
             case FUNCTION_TYPE_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_TYPE_KEYWORD);
                 break;
@@ -374,7 +404,12 @@ public class Parser {
         if (current().getTokenType() == TokenType.EQUALS) {
             //Variable declared but not assigned yet
             equals = matchToken(TokenType.EQUALS);
-            initialiser = parseExpression();
+
+            if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+                initialiser = parseTupleLiteralExpression();
+            } else {
+                initialiser = parseExpression();
+            }
         }
 
         IdentifierExpression bar = null;
@@ -448,14 +483,6 @@ public class Parser {
         }
 
         return new IfExpression(ifKeyword, openParen, condition, closeParen, body);
-    }
-
-    private Expression parseParenthesisedExpression() {
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        Expression expression = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new ParenthesisedExpression(openParen, expression, closeParen);
     }
 
     private Expression parseExpression() {

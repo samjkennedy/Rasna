@@ -3,7 +3,7 @@ package com.skennedy.lazuli;
 import com.skennedy.assertclauses.Assert;
 import com.skennedy.lazuli.graphing.LowLevelTreeGrapher;
 import com.skennedy.lazuli.simulation.Simulator;
-import com.skennedy.lazuli.conversion.JavaBytecodeILConverter;
+import com.skennedy.lazuli.conversion.JavaBytecodeCompiler;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.graphing.HighLevelTreeGrapher;
 import com.skennedy.lazuli.lowering.BoundProgramRewriter;
@@ -119,7 +119,7 @@ public class Lazuli {
                     break;
                 case COMPILATION:
                     log.info("Compiling program {}", fileNameWithExt);
-                    JavaBytecodeILConverter javaBytecodeCompiler = new JavaBytecodeILConverter();
+                    JavaBytecodeCompiler javaBytecodeCompiler = new JavaBytecodeCompiler();
                     javaBytecodeCompiler.convert(boundProgram, fileName);
                     Instant end = Instant.now();
                     log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
