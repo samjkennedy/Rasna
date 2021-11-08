@@ -28,6 +28,9 @@ public class BoundArrayAccessExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
+        if (array.getType() == TypeSymbol.TUPLE) {
+            return TypeSymbol.TUPLE;
+        }
         return index.getType();
     }
 

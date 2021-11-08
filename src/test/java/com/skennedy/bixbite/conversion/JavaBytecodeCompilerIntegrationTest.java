@@ -1,6 +1,6 @@
 package com.skennedy.bixbite.conversion;
 
-import com.skennedy.lazuli.conversion.JavaBytecodeILConverter;
+import com.skennedy.lazuli.conversion.JavaBytecodeCompiler;
 import com.skennedy.lazuli.lowering.Lowerer;
 import com.skennedy.lazuli.parsing.Parser;
 import com.skennedy.lazuli.parsing.Program;
@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class JavaBytecodeILConverterIntegrationTest {
+class JavaBytecodeCompilerIntegrationTest {
 
 
     @ParameterizedTest
@@ -48,7 +48,7 @@ class JavaBytecodeILConverterIntegrationTest {
         Lowerer lowerer = new Lowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
-        JavaBytecodeILConverter compiler = new JavaBytecodeILConverter();
+        JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
         compiler.convert(boundProgram, filename.split("\\.")[0]);
 
         Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);

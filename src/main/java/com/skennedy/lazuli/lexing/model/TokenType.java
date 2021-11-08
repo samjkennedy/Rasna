@@ -55,6 +55,7 @@ public enum TokenType {
     RETURN_KEYWORD("return"),
     MATCH_KEYWORD("match"),
     CONST_KEYWORD("const"),
+    VAR_KEYWORD("var"),
 
     //Types
     VOID_KEYWORD("Void"),
@@ -64,6 +65,8 @@ public enum TokenType {
     STRING_KEYWORD("String"),
     INT_ARRAY_KEYWORD("IntArray"), //Temporary until Array can have a type
     FUNCTION_TYPE_KEYWORD("Function"),
+
+    TUPLE_KEYWORD("Tuple"),
 
     //Intrinsics
     PRINT_INTR("print"),

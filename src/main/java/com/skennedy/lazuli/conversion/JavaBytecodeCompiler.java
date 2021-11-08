@@ -23,6 +23,7 @@ import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundPrintExpression;
 import com.skennedy.lazuli.typebinding.BoundProgram;
 import com.skennedy.lazuli.typebinding.BoundReturnExpression;
+import com.skennedy.lazuli.typebinding.BoundTupleLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
 import com.skennedy.lazuli.typebinding.BoundVariableExpression;
 import com.skennedy.lazuli.typebinding.FunctionSymbol;
@@ -50,11 +51,14 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import static org.objectweb.asm.Opcodes.AALOAD;
+import static org.objectweb.asm.Opcodes.AASTORE;
 import static org.objectweb.asm.Opcodes.ACC_PRIVATE;
 import static org.objectweb.asm.Opcodes.ACC_PUBLIC;
 import static org.objectweb.asm.Opcodes.ACC_STATIC;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
 import static org.objectweb.asm.Opcodes.ALOAD;
+import static org.objectweb.asm.Opcodes.ANEWARRAY;
 import static org.objectweb.asm.Opcodes.ARETURN;
 import static org.objectweb.asm.Opcodes.ARRAYLENGTH;
 import static org.objectweb.asm.Opcodes.ASTORE;
@@ -108,9 +112,9 @@ import static org.objectweb.asm.Opcodes.SIPUSH;
 import static org.objectweb.asm.Opcodes.T_INT;
 import static org.objectweb.asm.Opcodes.V11;
 
-public class JavaBytecodeILConverter implements ILConverter {
+public class JavaBytecodeCompiler implements Compiler {
 
-    private static final Logger log = LogManager.getLogger(JavaBytecodeILConverter.class);
+    private static final Logger log = LogManager.getLogger(JavaBytecodeCompiler.class);
 
     private final ClassWriter classWriter;
     private Textifier textifierVisitor;
@@ -137,7 +141,7 @@ public class JavaBytecodeILConverter implements ILConverter {
 
     private Scope scope;
 
-    public JavaBytecodeILConverter() {
+    public JavaBytecodeCompiler() {
         this.classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
 
         // Variable0 is reserved for args[] in :  `main(String[] var0)`
@@ -323,6 +327,9 @@ public class JavaBytecodeILConverter implements ILConverter {
                 break;
             case NOOP:
                 break;
+            case TUPLE_LITERAL_EXPRESSION:
+                visit((BoundTupleLiteralExpression) expression, methodVisitor);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
@@ -426,13 +433,16 @@ public class JavaBytecodeILConverter implements ILConverter {
         if (variableDeclarationExpression.getType() == TypeSymbol.INT || variableDeclarationExpression.getType() == TypeSymbol.BOOL) {
             methodVisitor.visitVarInsn(ISTORE, variableIndex);
             textifierVisitor.visitVarInsn(ISTORE, variableIndex);
-        } else if (variableDeclarationExpression.getType() == TypeSymbol.INT_ARRAY) {
+        } else if (variableDeclarationExpression.getType() == TypeSymbol.INT_ARRAY || variableDeclarationExpression.getType() == TypeSymbol.TUPLE) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
         } else if (variableDeclarationExpression.getType() == TypeSymbol.REAL) {
             methodVisitor.visitVarInsn(DSTORE, variableIndex);
             textifierVisitor.visitVarInsn(DSTORE, variableIndex);
         } else if (variableDeclarationExpression.getType() == TypeSymbol.STRING) {
+            methodVisitor.visitVarInsn(ASTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ASTORE, variableIndex);
+        } else if (variableDeclarationExpression.getType() == TypeSymbol.VAR) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
         } else {
@@ -463,8 +473,14 @@ public class JavaBytecodeILConverter implements ILConverter {
         if (type == TypeSymbol.INT_ARRAY) {
             return "[I";
         }
+        if (type == TypeSymbol.TUPLE) {
+            return "[L";
+        }
         if (type == TypeSymbol.STRING) {
             return "Ljava/lang/String;";
+        }
+        if (type == TypeSymbol.VAR) {
+            return "Ljava/lang/Object;";
         }
         throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
     }
@@ -491,16 +507,22 @@ public class JavaBytecodeILConverter implements ILConverter {
             throw new UndefinedVariableException(variable.getName());
         }
         int variableIdx = variables.get(variable.getName());
-        if (boundVariableExpression.getType() == TypeSymbol.INT || boundVariableExpression.getType() == TypeSymbol.BOOL) {
+        if (variable.getType() == TypeSymbol.INT || variable.getType() == TypeSymbol.BOOL) {
             methodVisitor.visitVarInsn(ILOAD, variableIdx);
             textifierVisitor.visitVarInsn(ILOAD, variableIdx);
-        } else if (boundVariableExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+        } else if (variable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
-        } else if (boundVariableExpression.getType() == TypeSymbol.REAL) {
+        } else if (variable.getType().isAssignableFrom(TypeSymbol.TUPLE)) {
+            methodVisitor.visitVarInsn(ALOAD, variableIdx);
+            textifierVisitor.visitVarInsn(ALOAD, variableIdx);
+        } else if (variable.getType() == TypeSymbol.REAL) {
             methodVisitor.visitVarInsn(DLOAD, variableIdx);
             textifierVisitor.visitVarInsn(DLOAD, variableIdx);
-        } else if (boundVariableExpression.getType() == TypeSymbol.STRING) {
+        } else if (variable.getType() == TypeSymbol.STRING) {
+            methodVisitor.visitVarInsn(ALOAD, variableIdx);
+            textifierVisitor.visitVarInsn(ALOAD, variableIdx);
+        } else if (variable.getType() == TypeSymbol.VAR) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
         } else {
@@ -524,6 +546,9 @@ public class JavaBytecodeILConverter implements ILConverter {
             methodVisitor.visitVarInsn(ISTORE, variableIdx);
             textifierVisitor.visitVarInsn(ISTORE, variableIdx);
         } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+            methodVisitor.visitVarInsn(ASTORE, variableIdx);
+            textifierVisitor.visitVarInsn(ASTORE, variableIdx);
+        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.TUPLE)) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
         } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
@@ -551,6 +576,37 @@ public class JavaBytecodeILConverter implements ILConverter {
         scope.popStack();
         scope.popStack();
         scope.popStack();
+    }
+
+    private void visit(BoundTupleLiteralExpression tupleLiteralExpression, MethodVisitor methodVisitor) {
+
+        List<BoundExpression> elements = tupleLiteralExpression.getElements();
+
+        visit(new BoundLiteralExpression(elements.size()), methodVisitor);
+
+        methodVisitor.visitTypeInsn(ANEWARRAY, Type.getType(Object.class).getInternalName());
+        textifierVisitor.visitTypeInsn(ANEWARRAY, Type.getType(Object.class).getInternalName());
+
+        int index = 0;
+        for (BoundExpression element : elements) {
+            methodVisitor.visitInsn(DUP);
+            textifierVisitor.visitInsn(DUP);
+            visit(new BoundLiteralExpression(index), methodVisitor);
+            visit(element, methodVisitor);
+            if (TypeSymbol.INT.equals(element.getType())) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+                textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+            } else if (TypeSymbol.BOOL.equals(element.getType())) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+                textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+            }
+            methodVisitor.visitInsn(AASTORE);
+            textifierVisitor.visitInsn(AASTORE);
+
+            scope.popStack();
+            scope.popStack();
+            index++;
+        }
     }
 
     private void visit(BoundArrayLiteralExpression arrayLiteralExpression, MethodVisitor methodVisitor) {
@@ -582,12 +638,23 @@ public class JavaBytecodeILConverter implements ILConverter {
         visit(arrayAccessExpression.getArray(), methodVisitor);
         visit(arrayAccessExpression.getIndex(), methodVisitor);
 
-        methodVisitor.visitInsn(IALOAD);
-        textifierVisitor.visitInsn(IALOAD);
+        if (arrayAccessExpression.getType() == TypeSymbol.TUPLE) {
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
 
-        scope.popStack(); //Array index
-        scope.popStack(); //Array ref
-        scope.pushStack(TypeSymbol.INT); //Value from array
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.VAR); //Value from array
+
+        } else {
+            //TODO: More types in arrays
+            methodVisitor.visitInsn(IALOAD);
+            textifierVisitor.visitInsn(IALOAD);
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.INT); //Value from array
+        }
     }
 
     private void visit(BoundArrayLengthExpression arrayLengthExpression, MethodVisitor methodVisitor) {
@@ -894,8 +961,8 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
 
         //TODO: Keep track of method locals
-        methodVisitor.visitMaxs(1024, 1024);
-        textifierVisitor.visitMaxs(1024, 1024);
+        methodVisitor.visitMaxs(1000, 1000);
+        textifierVisitor.visitMaxs(1000, 1000);
         variableIndex = globalVariableIndex;
 
         methodVisitor.visitEnd();
@@ -932,6 +999,12 @@ public class JavaBytecodeILConverter implements ILConverter {
         }
         if (type == TypeSymbol.STRING) {
             return "Ljava/lang/String;";
+        }
+        if (type == TypeSymbol.VAR) {
+            return "Ljava/lang/Object;";
+        }
+        if (type == TypeSymbol.TUPLE) {
+            return "[Ljava/lang/Object;";
         }
         throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
     }
@@ -974,6 +1047,9 @@ public class JavaBytecodeILConverter implements ILConverter {
         } else if (returnExpression.getReturnValue().getType() == TypeSymbol.REAL) {
             methodVisitor.visitInsn(DRETURN);
             textifierVisitor.visitInsn(DRETURN);
+        } else if (returnExpression.getReturnValue().getType() == TypeSymbol.TUPLE) {
+            methodVisitor.visitInsn(ARETURN);
+            textifierVisitor.visitInsn(ARETURN);
         } else {
             throw new UnsupportedOperationException("Functions that return type " + returnExpression.getReturnValue().getType() + " are not yet supported");
         }

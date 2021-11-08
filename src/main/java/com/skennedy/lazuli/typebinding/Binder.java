@@ -30,6 +30,7 @@ import com.skennedy.lazuli.parsing.ParenthesisedExpression;
 import com.skennedy.lazuli.parsing.PrintExpression;
 import com.skennedy.lazuli.parsing.Program;
 import com.skennedy.lazuli.parsing.ReturnExpression;
+import com.skennedy.lazuli.parsing.TupleLiteralExpression;
 import com.skennedy.lazuli.parsing.TypeofExpression;
 import com.skennedy.lazuli.parsing.VariableDeclarationExpression;
 import com.skennedy.lazuli.parsing.WhileExpression;
@@ -112,9 +113,21 @@ public class Binder {
                 return bindArrayLengthExpression((ArrayLengthExpression) expression);
             case ARRAY_ASSIGNMENT_EXPR:
                 return bindArrayAssignmentExpression((ArrayAssignmentExpression) expression);
+            case TUPLE_LITERAL_EXPR:
+                return bindTupleLiteralExpression((TupleLiteralExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindTupleLiteralExpression(TupleLiteralExpression tupleLiteralExpression) {
+
+        List<BoundExpression> boundElements = new ArrayList<>();
+        for (Expression element : tupleLiteralExpression.getElements()) {
+            boundElements.add(bind(element));
+        }
+
+        return new BoundTupleLiteralExpression(boundElements);
     }
 
     private BoundExpression bindMatchExpression(MatchExpression matchExpression) {
@@ -186,7 +199,7 @@ public class Binder {
     private BoundExpression bindArrayLengthExpression(ArrayLengthExpression arrayLengthExpression) {
 
         BoundExpression boundExpression = bind(arrayLengthExpression.getExpression());
-        if (!boundExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+        if (!boundExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && boundExpression.getType() != TypeSymbol.TUPLE) {
             errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, boundExpression.getType()));
         }
 
@@ -240,8 +253,8 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
 
         BoundExpression iterable = bind(forInExpression.getIterable());
-        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
-            throw new IllegalStateException("For-in expression only applicable to Array type");
+        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && iterable.getType() != TypeSymbol.TUPLE) {
+            throw new IllegalStateException("For-in expression only applicable to Array or Tuple types");
         }
 
         TypeSymbol type = parseType(forInExpression.getTypeKeyword());
@@ -286,6 +299,10 @@ public class Binder {
                 return TypeSymbol.REAL;
             case FUNCTION_TYPE_KEYWORD:
                 return TypeSymbol.FUNCTION;
+            case TUPLE_KEYWORD:
+                return TypeSymbol.TUPLE;
+            case VAR_KEYWORD:
+                return TypeSymbol.VAR;
             default:
                 throw new IllegalStateException("Unexpected value: " + keyword.getTokenType());
         }
