@@ -10,16 +10,16 @@ import java.util.List;
 
 public class FunctionDeclarationExpression extends Expression {
 
-    private final IdentifierExpression typeKeyword;
+    private final TypeExpression typeIdentifier;
     private final IdentifierExpression identifier;
     private final IdentifierExpression openParen;
     private final List<FunctionArgumentExpression> arguments;
     private final IdentifierExpression closeParen;
     private final BlockExpression body;
 
-    public FunctionDeclarationExpression(IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionArgumentExpression> arguments, IdentifierExpression closeParen, BlockExpression body) {
+    public FunctionDeclarationExpression(TypeExpression typeIdentifier, IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionArgumentExpression> arguments, IdentifierExpression closeParen, BlockExpression body) {
 
-        this.typeKeyword = typeKeyword;
+        this.typeIdentifier = typeIdentifier;
         this.identifier = identifier;
         this.openParen = openParen;
         this.arguments = arguments;
@@ -34,11 +34,11 @@ public class FunctionDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)typeKeyword, identifier, openParen, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode)typeIdentifier, identifier, openParen, closeParen, body).iterator();
     }
 
-    public IdentifierExpression getTypeKeyword() {
-        return typeKeyword;
+    public TypeExpression getTypeIdentifier() {
+        return typeIdentifier;
     }
 
     public IdentifierExpression getIdentifier() {

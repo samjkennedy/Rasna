@@ -31,6 +31,7 @@ import com.skennedy.lazuli.parsing.PrintExpression;
 import com.skennedy.lazuli.parsing.Program;
 import com.skennedy.lazuli.parsing.ReturnExpression;
 import com.skennedy.lazuli.parsing.TupleLiteralExpression;
+import com.skennedy.lazuli.parsing.TypeExpression;
 import com.skennedy.lazuli.parsing.TypeofExpression;
 import com.skennedy.lazuli.parsing.VariableDeclarationExpression;
 import com.skennedy.lazuli.parsing.WhileExpression;
@@ -185,9 +186,9 @@ public class Binder {
         if (variable.isEmpty()) {
             throw new UndefinedVariableException((String) identifier.getValue());
         }
-        if (!variable.get().getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
-            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, variable.get().getType()));
-        }
+//        if (!variable.get().getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
+//            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, variable.get().getType()));
+//        }
         BoundExpression index = bind(arrayAccessExpression.getIndex());
 
         if (!index.getType().isAssignableFrom(TypeSymbol.INT)) {
@@ -199,9 +200,9 @@ public class Binder {
     private BoundExpression bindArrayLengthExpression(ArrayLengthExpression arrayLengthExpression) {
 
         BoundExpression boundExpression = bind(arrayLengthExpression.getExpression());
-        if (!boundExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && boundExpression.getType() != TypeSymbol.TUPLE) {
-            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, boundExpression.getType()));
-        }
+//        if (!boundExpression.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && boundExpression.getType() != TypeSymbol.TUPLE) {
+//            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, boundExpression.getType()));
+//        }
 
         return new BoundArrayLengthExpression(boundExpression);
     }
@@ -219,7 +220,7 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
         BoundExpression initialiser = bind(forExpression.getInitialiser());
 
-        TypeSymbol type = parseType(forExpression.getTypeKeyword());
+        TypeSymbol type = parseType(forExpression.getTypeExpression());
 
         if (!type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
@@ -253,16 +254,15 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
 
         BoundExpression iterable = bind(forInExpression.getIterable());
-        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && iterable.getType() != TypeSymbol.TUPLE) {
-            throw new IllegalStateException("For-in expression only applicable to Array or Tuple types");
-        }
-
-        TypeSymbol type = parseType(forInExpression.getTypeKeyword());
-
-        //TODO: Type check array type
-//        if (!type.isAssignableFrom(iterable.getType())) {
-//            errors.add(Error.raiseTypeMismatch(type, iterable.getType()));
+//        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && iterable.getType() != TypeSymbol.TUPLE) {
+//            throw new IllegalStateException("For-in expression only applicable to Array or Tuple types");
 //        }
+
+        TypeSymbol type = parseType(forInExpression.getTypeExpression());
+
+        if (!type.isAssignableFrom(iterable.getType())) {
+            errors.add(Error.raiseTypeMismatch(type, iterable.getType()));
+        }
         VariableSymbol variable = getVariableSymbol(type, forInExpression.getIdentifier(), null, true);
 
         try {
@@ -283,29 +283,42 @@ public class Binder {
         return new BoundForInExpression(variable, iterable, guard, body);
     }
 
-    private TypeSymbol parseType(IdentifierExpression keyword) {
-        switch (keyword.getTokenType()) {
+    private TypeSymbol parseType(TypeExpression typeExpression) {
+        TypeSymbol typeSymbol;
+
+        switch (typeExpression.getIdentifier().getTokenType()) {
             case VOID_KEYWORD:
-                return TypeSymbol.VOID;
+                typeSymbol = TypeSymbol.VOID;
+                break;
             case INT_KEYWORD:
-                return TypeSymbol.INT;
-            case INT_ARRAY_KEYWORD:
-                return TypeSymbol.INT_ARRAY;
+                typeSymbol = TypeSymbol.INT;
+                break;
             case BOOL_KEYWORD:
-                return TypeSymbol.BOOL;
+                typeSymbol = TypeSymbol.BOOL;
+                break;
             case STRING_KEYWORD:
-                return TypeSymbol.STRING;
+                typeSymbol = TypeSymbol.STRING;
+                break;
             case REAL_KEYWORD:
-                return TypeSymbol.REAL;
+                typeSymbol = TypeSymbol.REAL;
+                break;
             case FUNCTION_TYPE_KEYWORD:
-                return TypeSymbol.FUNCTION;
+                typeSymbol = TypeSymbol.FUNCTION;
+                break;
             case TUPLE_KEYWORD:
-                return TypeSymbol.TUPLE;
+                typeSymbol = TypeSymbol.TUPLE;
+                break;
             case VAR_KEYWORD:
-                return TypeSymbol.VAR;
+                typeSymbol = TypeSymbol.VAR;
+                break;
             default:
-                throw new IllegalStateException("Unexpected value: " + keyword.getTokenType());
+                throw new IllegalStateException("Unexpected value: " + typeExpression.getIdentifier().getTokenType());
         }
+        //TODO: This doesn't do N-Dimensional arrays yet
+        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket()!= null) {
+            return new ArrayTypeSymbol(typeSymbol);
+        }
+        return typeSymbol;
     }
 
     private VariableSymbol getVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression guard, boolean readOnly) {
@@ -412,7 +425,7 @@ public class Binder {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
-        TypeSymbol type = parseType(functionDeclarationExpression.getTypeKeyword());
+        TypeSymbol type = parseType(functionDeclarationExpression.getTypeIdentifier());
 
         currentScope = new BoundScope(currentScope);
 
@@ -450,7 +463,7 @@ public class Binder {
                 return;
             }
             if (expression.getBoundExpressionType() == BoundExpressionType.RETURN) {
-                if (expression.getType() != function.getType()) {
+                if (!expression.getType().isAssignableFrom(function.getType())) {
                     throw new TypeMismatchException(function.getType(), expression.getType());
                 }
                 return;
@@ -461,7 +474,7 @@ public class Binder {
     private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression argumentExpression) {
 
         IdentifierExpression identifier = argumentExpression.getIdentifier();
-        TypeSymbol type = parseType(argumentExpression.getTypeKeyword());
+        TypeSymbol type = parseType(argumentExpression.getTypeExpression());
 
         //Create placeholder
         try {
@@ -516,7 +529,7 @@ public class Binder {
 
         //Create placeholder
         try {
-            TypeSymbol type = parseType(variableDeclarationExpression.getTypeKeyword());
+            TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false));
         } catch (VariableAlreadyDeclaredException vade) {
             errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
@@ -528,8 +541,7 @@ public class Binder {
             assert guard.getType().isAssignableFrom(TypeSymbol.BOOL);
         }
 
-        //TODO: Array of what?
-        TypeSymbol type = variableDeclarationExpression.isArray() ? TypeSymbol.INT_ARRAY : parseType(variableDeclarationExpression.getTypeKeyword());
+        TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
 
         if (initialiser != null && !type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));

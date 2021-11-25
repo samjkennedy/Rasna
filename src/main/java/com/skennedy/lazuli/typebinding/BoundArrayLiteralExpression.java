@@ -18,7 +18,9 @@ public class BoundArrayLiteralExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.INT_ARRAY;
+        //HMM
+        //TODO: Maybe a List<Expression> should be an expression in and of itself - ListExpression - that way it has a type
+        return new ArrayTypeSymbol(elements.get(0).getType());
     }
 
     @Override

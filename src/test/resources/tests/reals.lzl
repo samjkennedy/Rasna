@@ -1,5 +1,5 @@
-Real sqrt(Real S | S >= 0.0) {
-    Int iterations = 10
+Real sqrt(Real S) {
+    Int iterations = 100
     Real x0 = S / 10.0
     Real x1 = (x0 + (S / x0)) / 2.0
     for (Int i = 1 to iterations) {
@@ -10,7 +10,7 @@ Real sqrt(Real S | S >= 0.0) {
     return x0
 }
 
-print(sqrt(4.0))
+print(sqrt(4.))
 print(sqrt(5.0))
-print(sqrt(35.0))
-print(sqrt(125348.0))
+print(sqrt(35.2))
+print(sqrt(125348.))

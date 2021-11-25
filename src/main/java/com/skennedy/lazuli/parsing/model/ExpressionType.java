@@ -24,6 +24,7 @@ public enum ExpressionType {
     PRINT_EXPR,
     RETURN_EXPR,
     TUPLE_LITERAL_EXPR,
+    TYPE_EXPR,
     TYPEOF_EXPR,
     UNARY_EXPR,
     VAR_DECLARATION_EXPR,

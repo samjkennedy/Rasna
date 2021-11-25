@@ -11,7 +11,7 @@ public class ForInExpression extends Expression {
 
     private final IdentifierExpression forKeyword;
     private final IdentifierExpression openParen;
-    private final IdentifierExpression typeKeyword;
+    private final TypeExpression typeExpression;
     private final IdentifierExpression identifier;
     private final IdentifierExpression inKeyword;
     private final Expression iterable;
@@ -19,11 +19,11 @@ public class ForInExpression extends Expression {
     private final IdentifierExpression closeParen;
     private final Expression body;
 
-    public ForInExpression(IdentifierExpression forKeyword, IdentifierExpression openParen, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression inKeyword, Expression iterable, Expression guard, IdentifierExpression closeParen, Expression body) {
+    public ForInExpression(IdentifierExpression forKeyword, IdentifierExpression openParen, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression inKeyword, Expression iterable, Expression guard, IdentifierExpression closeParen, Expression body) {
 
         this.forKeyword = forKeyword;
         this.openParen = openParen;
-        this.typeKeyword = typeKeyword;
+        this.typeExpression = typeExpression;
         this.identifier = identifier;
         this.inKeyword = inKeyword;
         this.iterable = iterable;
@@ -40,7 +40,7 @@ public class ForInExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)forKeyword,  openParen, typeKeyword, identifier, inKeyword, iterable, guard, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode)forKeyword,  openParen, typeExpression, identifier, inKeyword, iterable, guard, closeParen, body).iterator();
     }
 
     public IdentifierExpression getForKeyword() {
@@ -51,8 +51,8 @@ public class ForInExpression extends Expression {
         return openParen;
     }
 
-    public IdentifierExpression getTypeKeyword() {
-        return typeKeyword;
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
     }
 
     public IdentifierExpression getIdentifier() {
