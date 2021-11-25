@@ -10,14 +10,14 @@ import java.util.Iterator;
 public class FunctionArgumentExpression extends Expression {
 
     private final IdentifierExpression constKeyword;
-    private final IdentifierExpression typeKeyword;
+    private final TypeExpression typeExpression;
     private final IdentifierExpression identifier;
     private final IdentifierExpression bar;
     private final Expression guard;
 
-    public FunctionArgumentExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
+    public FunctionArgumentExpression(IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
         this.constKeyword = constKeyword;
-        this.typeKeyword = typeKeyword;
+        this.typeExpression = typeExpression;
         this.identifier = identifier;
         this.bar = bar;
         this.guard = guard;
@@ -30,15 +30,15 @@ public class FunctionArgumentExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)typeKeyword, identifier, bar, guard).iterator();
+        return Arrays.asList((SyntaxNode)typeExpression, identifier, bar, guard).iterator();
     }
 
     public IdentifierExpression getConstKeyword() {
         return constKeyword;
     }
 
-    public IdentifierExpression getTypeKeyword() {
-        return typeKeyword;
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
     }
 
     public IdentifierExpression getIdentifier() {

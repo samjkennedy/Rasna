@@ -63,7 +63,6 @@ public enum TokenType {
     INT_KEYWORD("Int"),
     REAL_KEYWORD("Real"),
     STRING_KEYWORD("String"),
-    INT_ARRAY_KEYWORD("IntArray"), //Temporary until Array can have a type
     FUNCTION_TYPE_KEYWORD("Function"),
 
     TUPLE_KEYWORD("Tuple"),

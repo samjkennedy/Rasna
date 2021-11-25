@@ -10,18 +10,17 @@ import java.util.Iterator;
 public class VariableDeclarationExpression extends Expression {
 
     private final IdentifierExpression constKeyword;
-    private final IdentifierExpression typeKeyword;
-    private boolean isArray;
+    private final TypeExpression typeExpression;
     private final IdentifierExpression identifier;
     private final IdentifierExpression bar;
     private final Expression guard;
     private final IdentifierExpression equals;
     private final Expression initialiser;
 
-    public VariableDeclarationExpression(IdentifierExpression constKeyword, IdentifierExpression typeKeyword, boolean isArray, IdentifierExpression identifier, IdentifierExpression colon, Expression guard, IdentifierExpression equals, Expression initialiser) {
+    //TODO: roll const into typeExpression
+    public VariableDeclarationExpression(IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression colon, Expression guard, IdentifierExpression equals, Expression initialiser) {
         this.constKeyword = constKeyword;
-        this.typeKeyword = typeKeyword;
-        this.isArray = isArray;
+        this.typeExpression = typeExpression;
         this.identifier = identifier;
         this.bar = colon;
         this.guard = guard;
@@ -36,19 +35,15 @@ public class VariableDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) constKeyword, typeKeyword, identifier, equals, initialiser).iterator();
+        return Arrays.asList((SyntaxNode) constKeyword, typeExpression, identifier, equals, initialiser).iterator();
     }
 
     public IdentifierExpression getConstKeyword() {
         return constKeyword;
     }
 
-    public IdentifierExpression getTypeKeyword() {
-        return typeKeyword;
-    }
-
-    public boolean isArray() {
-        return isArray;
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
     }
 
     public IdentifierExpression getIdentifier() {

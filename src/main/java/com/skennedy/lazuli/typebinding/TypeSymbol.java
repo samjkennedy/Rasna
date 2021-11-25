@@ -2,7 +2,6 @@ package com.skennedy.lazuli.typebinding;
 
 public class TypeSymbol extends Symbol {
 
-
     public static final TypeSymbol VOID = new TypeSymbol("Void");
     public static final TypeSymbol BOOL = new TypeSymbol("Bool");
     public static final TypeSymbol INT = new TypeSymbol("Int");
@@ -12,7 +11,6 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol TUPLE = new TypeSymbol("Tuple");
     public static final TypeSymbol VAR = new TypeSymbol("Var");
     public static final TypeSymbol FUNCTION = new TypeSymbol("Function");
-    public static final TypeSymbol INT_ARRAY = new TypeSymbol("IntArray"); //TODO: TEMP
 
     public TypeSymbol(String name) {
         super(name);
@@ -31,7 +29,7 @@ public class TypeSymbol extends Symbol {
         if (this == REAL) {
             return other == INT;
         }
-        return false;
+        return this == VAR;
     }
 
     @Override

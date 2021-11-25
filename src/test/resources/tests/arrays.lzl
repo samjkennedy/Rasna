@@ -1,9 +1,4 @@
-IntArray ints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-for (Int int in ints) {
-    print(int)
-}
-
-IntArray sort(IntArray array) {
+Int[] sort(Int[] array) {
 
    Int n = len(array)
    for (Int i = 1 to n) {
@@ -18,5 +13,17 @@ IntArray sort(IntArray array) {
    return array
 }
 
-IntArray arr = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
+Int[] arr = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
 for (Int a in sort(arr)) print(a)
+
+Int[] ints = [1, 2, 3]
+for (Int i in ints) print(i)
+
+Bool[] bools = [true, false, true, true, false]
+for (Bool b in bools) print(b)
+
+String[] strings = ["Hello", "World"]
+for (String s in strings) print(s)
+
+Real[] reals = [1.414, 2.718, 3.141]
+for (Real r in reals) print(r)

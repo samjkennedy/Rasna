@@ -122,13 +122,12 @@ public class Lowerer extends BoundProgramRewriter {
         if (rewrittenForInExpression.getBody() instanceof BoundNoOpExpression) {
             return new BoundNoOpExpression();
         }
-        VariableSymbol arrayLength = new VariableSymbol(generateInternalVariableName(), TypeSymbol.INT, null, false);
+        VariableSymbol arrayLength = new VariableSymbol("array-length-" + generateInternalVariableName(), TypeSymbol.INT, null, false);
         BoundVariableExpression arrayLengthExpression = new BoundVariableExpression(arrayLength);
-        VariableSymbol iterationCounter = new VariableSymbol(generateInternalVariableName(), TypeSymbol.INT, null, false);
+        VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + generateInternalVariableName(), TypeSymbol.INT, null, false);
         BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
         BoundBlockExpression preLoop = new BoundBlockExpression(
-                forInExpression.getIterable(), //Load array
                 new BoundVariableDeclarationExpression( //Store array length
                         arrayLength,
                         null,

@@ -4,6 +4,7 @@ import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 import com.skennedy.lazuli.parsing.model.SyntaxNode;
 
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -11,7 +12,7 @@ public class ForExpression extends Expression {
 
     private final IdentifierExpression forKeyword;
     private final IdentifierExpression openParen;
-    private final IdentifierExpression typeKeyword;
+    private final TypeExpression typeExpression;
     private final IdentifierExpression identifier;
     private final IdentifierExpression equals;
     private final Expression initialiser;
@@ -25,7 +26,7 @@ public class ForExpression extends Expression {
 
     public ForExpression(IdentifierExpression forKeyword,
                          IdentifierExpression openParen,
-                         IdentifierExpression typeKeyword,
+                         TypeExpression typeExpression,
                          IdentifierExpression identifier,
                          IdentifierExpression equals,
                          Expression initialiser,
@@ -39,7 +40,7 @@ public class ForExpression extends Expression {
 
         this.forKeyword = forKeyword;
         this.openParen = openParen;
-        this.typeKeyword = typeKeyword;
+        this.typeExpression = typeExpression;
         this.identifier = identifier;
         this.equals = equals;
         this.initialiser = initialiser;
@@ -59,7 +60,7 @@ public class ForExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeKeyword, identifier, equals, initialiser, toKeyword, terminator, step, guard, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeExpression, identifier, equals, initialiser, toKeyword, terminator, step, guard, closeParen, body).iterator();
     }
 
     public IdentifierExpression getForKeyword() {
@@ -70,8 +71,8 @@ public class ForExpression extends Expression {
         return openParen;
     }
 
-    public IdentifierExpression getTypeKeyword() {
-        return typeKeyword;
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
     }
 
     public IdentifierExpression getIdentifier() {
