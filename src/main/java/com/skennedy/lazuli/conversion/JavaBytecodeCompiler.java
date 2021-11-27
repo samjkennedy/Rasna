@@ -317,13 +317,34 @@ public class JavaBytecodeCompiler implements Compiler {
             case LAMBDA_FUNCTION:
                 visit((BoundLambdaExpression) expression, methodVisitor);
                 break;
+            case ARRAY_DECLARATION_EXPRESSION:
+                visit((BoundArrayDeclarationExpression) expression, methodVisitor);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
     }
 
-    private void visit(BoundLambdaExpression boundLambdaExpression, MethodVisitor methodVisitor) {
+    private void visit(BoundArrayDeclarationExpression arrayDeclarationExpression, MethodVisitor methodVisitor) {
+        visit(arrayDeclarationExpression.getElementCount(), methodVisitor);
 
+        if (arrayDeclarationExpression.getType().isAssignableFrom(TypeSymbol.INT)) {
+            methodVisitor.visitIntInsn(NEWARRAY, T_INT);
+            textifierVisitor.visitIntInsn(NEWARRAY, T_INT);
+        } else if (arrayDeclarationExpression.getType().isAssignableFrom(TypeSymbol.BOOL)) {
+            methodVisitor.visitIntInsn(NEWARRAY, T_BOOLEAN);
+            textifierVisitor.visitIntInsn(NEWARRAY, T_BOOLEAN);
+        } else if (arrayDeclarationExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
+            methodVisitor.visitIntInsn(NEWARRAY, T_DOUBLE);
+            textifierVisitor.visitIntInsn(NEWARRAY, T_DOUBLE);
+        } else {
+            methodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/String");
+            textifierVisitor.visitTypeInsn(ANEWARRAY, "java/lang/String");
+        }
+    }
+
+    private void visit(BoundLambdaExpression boundLambdaExpression, MethodVisitor methodVisitor) {
+        throw new UnsupportedOperationException("Bytecode compilation for lambda expressions is not yet supported");
     }
 
     private void visit(BoundLiteralExpression boundLiteralExpression, MethodVisitor methodVisitor) {

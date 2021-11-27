@@ -329,6 +329,8 @@ public class Parser {
 
             if (typeExpression.getIdentifier().getTokenType() == TokenType.FUNCTION_KEYWORD) {
                 initialiser = parseLambdaExpression();
+            } else if (TokenType.typeTokens.contains(current().getTokenType())) {
+                initialiser = parseArrayDeclarationExpression();
             } else {
                 initialiser = parseExpression();
             }
@@ -341,6 +343,43 @@ public class Parser {
         }
 
         return new VariableDeclarationExpression(constKeyword, typeExpression, identifier, bar, guard, equals, initialiser);
+    }
+
+    private Expression parseArrayDeclarationExpression() {
+        IdentifierExpression typeKeyword;
+        switch (current().getTokenType()) {
+            case VOID_KEYWORD:
+                typeKeyword = matchToken(TokenType.VOID_KEYWORD);
+                break;
+            case INT_KEYWORD:
+                typeKeyword = matchToken(TokenType.INT_KEYWORD);
+                break;
+            case BOOL_KEYWORD:
+                typeKeyword = matchToken(TokenType.BOOL_KEYWORD);
+                break;
+            case REAL_KEYWORD:
+                typeKeyword = matchToken(TokenType.REAL_KEYWORD);
+                break;
+            case STRING_KEYWORD:
+                typeKeyword = matchToken(TokenType.STRING_KEYWORD);
+                break;
+            case TUPLE_KEYWORD:
+                typeKeyword = matchToken(TokenType.TUPLE_KEYWORD);
+                break;
+            case FUNCTION_KEYWORD:
+                typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
+                break;
+            case VAR_KEYWORD:
+                typeKeyword = matchToken(TokenType.VAR_KEYWORD);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
+        }
+        IdentifierExpression openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
+        Expression elementCount = parseExpression();
+        IdentifierExpression closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+
+        return new ArrayDeclarationExpression(new TypeExpression(typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
     }
 
     private Expression parseLambdaExpression() {

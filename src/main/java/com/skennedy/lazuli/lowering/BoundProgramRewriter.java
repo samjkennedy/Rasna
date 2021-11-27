@@ -109,9 +109,20 @@ public abstract class BoundProgramRewriter {
                 return rewriteLambdaExpression((BoundLambdaExpression) expression);
             case MAP_EXPRESSION:
                 return rewriteMapExpression((BoundMapExpression) expression);
+            case ARRAY_DECLARATION_EXPRESSION:
+                return rewriteArrayDeclarationExpression((BoundArrayDeclarationExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundExpression rewriteArrayDeclarationExpression(BoundArrayDeclarationExpression arrayDeclarationExpression) {
+        BoundExpression rewrittenElementCount = rewriteExpression(arrayDeclarationExpression.getElementCount());
+
+        if (rewrittenElementCount == arrayDeclarationExpression.getElementCount()) {
+            return arrayDeclarationExpression;
+        }
+        return new BoundArrayDeclarationExpression((ArrayTypeSymbol)arrayDeclarationExpression.getType(), rewrittenElementCount);
     }
 
     protected BoundExpression rewriteMapExpression(BoundMapExpression mapExpression) {

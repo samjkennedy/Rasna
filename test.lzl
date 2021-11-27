@@ -1,0 +1,3 @@
+Int[] empty = Int[10]
+
+for (Int e in empty) print(e)

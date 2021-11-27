@@ -2,6 +2,9 @@ package com.skennedy.lazuli.lexing.model;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Arrays;
+import java.util.List;
+
 public enum TokenType {
 
     WHITESPACE(null),
@@ -78,6 +81,16 @@ public enum TokenType {
     EOF_TOKEN(null);
 
     private final String text;
+
+    public static List<TokenType> typeTokens = Arrays.asList(
+            BOOL_KEYWORD,
+            INT_KEYWORD,
+            REAL_KEYWORD,
+            STRING_KEYWORD,
+            FUNCTION_KEYWORD,
+            TUPLE_KEYWORD,
+            IDENTIFIER
+    );
 
     TokenType(String text) {
         this.text = text;

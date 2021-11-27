@@ -96,9 +96,21 @@ public class Binder {
                 return bindLambdaExpression((LambdaExpression) expression);
             case MAP_EXPRESSION:
                 return bindMapExpression((MapExpression) expression);
+            case ARRAY_DECLARATION_EXPR:
+                return bindArrayDeclarationExpression((ArrayDeclarationExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindArrayDeclarationExpression(ArrayDeclarationExpression arrayDeclarationExpression) {
+        BoundExpression elementCount = bind(arrayDeclarationExpression.getElementCount());
+        if (!elementCount.getType().isAssignableFrom(TypeSymbol.INT)) {
+            throw new IllegalStateException("Element count must be of type int");
+        }
+        ArrayTypeSymbol typeSymbol = new ArrayTypeSymbol(parseType(arrayDeclarationExpression.getTypeExpression()));
+
+        return new BoundArrayDeclarationExpression(typeSymbol, elementCount);
     }
 
     private BoundExpression bindMapExpression(MapExpression mapExpression) {
