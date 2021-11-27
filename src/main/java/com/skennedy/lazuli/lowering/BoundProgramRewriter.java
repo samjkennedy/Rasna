@@ -5,6 +5,7 @@ import com.skennedy.lazuli.parsing.model.OpType;
 import com.skennedy.lazuli.typebinding.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
@@ -476,18 +477,16 @@ public abstract class BoundProgramRewriter {
                             tempInit,
                             blockInitialiser
                     );
-                case FOR_IN:
+                case FOR_IN: {
                     BoundForInExpression forInExpression = (BoundForInExpression) boundVariableDeclarationExpression.getInitialiser();
 
-                    if (forInExpression.getGuard() != null) {
-                        throw new UnsupportedOperationException("Assignable loops with filters are not yet supported");
-                    }
                     VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
                     BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
                     new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression);
 
-                    return new BoundBlockExpression(
+                    List<BoundExpression> expressions = new ArrayList<>();
+                    expressions.addAll(Arrays.asList(
                             new BoundVariableDeclarationExpression(iterationCounter, null, new BoundLiteralExpression(0), false),
                             new BoundVariableDeclarationExpression(
                                     boundVariableDeclarationExpression.getVariable(),
@@ -501,17 +500,40 @@ public abstract class BoundProgramRewriter {
                                             new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression), expr),
                                             new BoundIncrementExpression(iterationCounter, new BoundLiteralExpression(1)
                                             ))
-                            )
-                    );
-                case FOR:
-                    BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
+                            )));
 
-                    if (forExpression.getGuard() != null) {
-                        throw new UnsupportedOperationException("Assignable loops with filters are not yet supported");
+                    if (forInExpression.getGuard() != null) {
+
+                        VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                        BoundVariableExpression copyIndexExpression = new BoundVariableExpression(copyIndex);
+
+                        VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false);
+                        BoundVariableExpression filteredArrayVariable = new BoundVariableExpression(filteredArray);
+                        BoundVariableExpression arrayVariableExpression = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
+
+                        expressions.addAll(Arrays.asList(
+                                //Create new array of index size
+                                new BoundVariableDeclarationExpression(filteredArray, null, new BoundArrayDeclarationExpression((ArrayTypeSymbol) filteredArrayVariable.getType(), iterationCounterExpression), false),
+                                //For each element copy to the array
+                                rewriteForExpression(new BoundForExpression(copyIndex, new BoundLiteralExpression(0), iterationCounterExpression, new BoundLiteralExpression(1), null, new BoundBlockExpression(
+                                        new BoundArrayAssignmentExpression(
+                                                new BoundArrayAccessExpression(filteredArrayVariable, copyIndexExpression),
+                                                new BoundArrayAccessExpression(arrayVariableExpression, copyIndexExpression)
+                                        )
+                                ))),
+                                //Assign the filtered array to the original variable
+                                new BoundAssignmentExpression(
+                                        boundVariableDeclarationExpression.getVariable(),
+                                        boundVariableDeclarationExpression.getGuard(),
+                                        filteredArrayVariable
+                                )
+                        ));
                     }
-                    if (forExpression.getStep() != null) {
-                        throw new UnsupportedOperationException("Assignable for loops with steps are not yet supported");
-                    }
+
+                    return new BoundBlockExpression(expressions);
+                }
+                case FOR: {
+                    BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
 
                     //TODO: Step
                     BoundBinaryExpression elementCount = new BoundBinaryExpression(
@@ -528,18 +550,57 @@ public abstract class BoundProgramRewriter {
                             boundVariableDeclarationExpression.isReadOnly()
                     );
 
+                    //TODO: This can be optimised in the case where there is no guard or step - just use the in built array index
+
+                    VariableSymbol indexVariable = new VariableSymbol("index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                    BoundVariableExpression indexExpression = new BoundVariableExpression(indexVariable);
+
                     BoundBinaryExpression index = new BoundBinaryExpression(
-                            new BoundVariableExpression(forExpression.getIterator()),
+                            indexExpression,
                             BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
                             forExpression.getInitialiser()
                     );
                     BoundVariableExpression array = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
 
-                    return new BoundBlockExpression(
+                    List<BoundExpression> expressions = new ArrayList<>();
+                    expressions.addAll(Arrays.asList(
                             variableDeclarationExpression,
-                            rewriteBlockInitialiser((BoundBlockExpression) initialiser, expr -> new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(array, index), expr))
+                            new BoundVariableDeclarationExpression(indexVariable, null, forExpression.getInitialiser(), false),
+                            rewriteBlockInitialiser((BoundBlockExpression) initialiser, expr -> new BoundBlockExpression(
+                                    new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(array, index), expr),
+                                    new BoundIncrementExpression(indexVariable, new BoundLiteralExpression(1))
+                            ))
+                    ));
 
-                    );
+                    if (forExpression.getGuard() != null || forExpression.getStep() != null) {
+
+                        VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                        BoundVariableExpression copyIndexExpression = new BoundVariableExpression(copyIndex);
+
+                        VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false);
+                        BoundVariableExpression filteredArrayVariable = new BoundVariableExpression(filteredArray);
+                        BoundVariableExpression arrayVariableExpression = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
+
+                        expressions.addAll(Arrays.asList(
+                                //Create new array of index size
+                                new BoundVariableDeclarationExpression(filteredArray, null, new BoundArrayDeclarationExpression((ArrayTypeSymbol) filteredArrayVariable.getType(), index), false),
+                                //For each element copy to the array
+                                rewriteForExpression(new BoundForExpression(copyIndex, new BoundLiteralExpression(0), index, new BoundLiteralExpression(1), null, new BoundBlockExpression(
+                                        new BoundArrayAssignmentExpression(
+                                                new BoundArrayAccessExpression(filteredArrayVariable, copyIndexExpression),
+                                                new BoundArrayAccessExpression(arrayVariableExpression, copyIndexExpression)
+                                        )
+                                ))),
+                                //Assign the filtered array to the original variable
+                                new BoundAssignmentExpression(
+                                        boundVariableDeclarationExpression.getVariable(),
+                                        boundVariableDeclarationExpression.getGuard(),
+                                        filteredArrayVariable
+                                )
+                        ));
+                    }
+                    return new BoundBlockExpression(expressions);
+                }
             }
 
         }

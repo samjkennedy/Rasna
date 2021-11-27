@@ -557,7 +557,10 @@ public class JavaBytecodeCompiler implements Compiler {
 
         int variableIdx = variables.get(variable.getName());
 
-        if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
+        if (assignmentExpression.getType() instanceof ArrayTypeSymbol) {
+            methodVisitor.visitVarInsn(ASTORE, variableIdx);
+            textifierVisitor.visitVarInsn(ASTORE, variableIdx);
+        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
             methodVisitor.visitVarInsn(DSTORE, variableIdx);
             textifierVisitor.visitVarInsn(DSTORE, variableIdx);
         } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.INT) || assignmentExpression.getType().isAssignableFrom(TypeSymbol.BOOL)) {
