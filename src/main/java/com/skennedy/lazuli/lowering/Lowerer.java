@@ -1,24 +1,7 @@
 package com.skennedy.lazuli.lowering;
 
 import com.skennedy.lazuli.parsing.model.OpType;
-import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
-import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
-import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
-import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
-import com.skennedy.lazuli.typebinding.BoundBlockExpression;
-import com.skennedy.lazuli.typebinding.BoundExpression;
-import com.skennedy.lazuli.typebinding.BoundForExpression;
-import com.skennedy.lazuli.typebinding.BoundForInExpression;
-import com.skennedy.lazuli.typebinding.BoundIfExpression;
-import com.skennedy.lazuli.typebinding.BoundIncrementExpression;
-import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
-import com.skennedy.lazuli.typebinding.BoundMatchCaseExpression;
-import com.skennedy.lazuli.typebinding.BoundMatchExpression;
-import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
-import com.skennedy.lazuli.typebinding.BoundVariableExpression;
-import com.skennedy.lazuli.typebinding.BoundWhileExpression;
-import com.skennedy.lazuli.typebinding.TypeSymbol;
-import com.skennedy.lazuli.typebinding.VariableSymbol;
+import com.skennedy.lazuli.typebinding.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +10,35 @@ import java.util.UUID;
 public class Lowerer extends BoundProgramRewriter {
 
     private static int labelCount = 0;
+
+    @Override
+    protected BoundExpression rewriteMapExpression(BoundMapExpression mapExpression) {
+
+        BoundExpression expression = super.rewriteMapExpression(mapExpression);
+        if (expression instanceof BoundNoOpExpression) {
+            //Not sure if this can happen, empty body?
+            return expression;
+        }
+
+        VariableSymbol iterator = new VariableSymbol("iterator-" + generateInternalVariableName(), TypeSymbol.INT, null, false);
+
+        BoundBlockExpression body = new BoundBlockExpression(
+                new BoundArrayAssignmentExpression(
+                        new BoundArrayAccessExpression(mapExpression.getOperand(), new BoundVariableExpression(iterator)),
+                        mapExpression.getMapperFunction()
+                )
+        );
+
+        BoundForExpression boundForExpression = new BoundForExpression(
+                iterator,
+                new BoundLiteralExpression(0),
+                new BoundArrayLengthExpression(mapExpression.getOperand()),
+                new BoundLiteralExpression(1),
+                null,
+                body
+        );
+        return rewriteForExpression(boundForExpression);
+    }
 
     @Override
     protected BoundExpression rewriteWhileExpression(BoundWhileExpression boundWhileExpression) {

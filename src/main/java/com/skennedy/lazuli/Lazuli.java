@@ -109,6 +109,13 @@ public class Lazuli {
                 lowLevelTreeGrapher.graphAST(boundProgram);
             }
 
+            boolean printProgram = false;
+            if (printProgram) {
+                System.out.print(ConsoleColors.PURPLE_BOLD);
+                System.out.println(code);
+                System.out.print(ConsoleColors.RESET);
+            }
+
             switch (mode) {
                 case SIMULATION:
                     log.info("Simulating program {}", fileNameWithExt);

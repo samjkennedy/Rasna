@@ -7,6 +7,7 @@ public class BoundArrayLiteralExpression implements BoundExpression {
 
     private List<BoundExpression> elements;
 
+    //TODO: Allow empty arrays
     public BoundArrayLiteralExpression(List<BoundExpression> elements) {
         this.elements = elements;
     }
@@ -19,7 +20,7 @@ public class BoundArrayLiteralExpression implements BoundExpression {
     @Override
     public TypeSymbol getType() {
         //HMM
-        //TODO: Maybe a List<Expression> should be an expression in and of itself - ListExpression - that way it has a type
+        //TODO: Maybe a List<Expression> should be an expression in and of itself - ListExpression - that way it has a type and can be empty
         return new ArrayTypeSymbol(elements.get(0).getType());
     }
 

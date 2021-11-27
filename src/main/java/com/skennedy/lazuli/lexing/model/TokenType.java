@@ -37,7 +37,7 @@ public enum TokenType {
 
     //Syntax
     COMMA(","),
-    ARROW("->"),
+    ARROW("=>"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -63,7 +63,7 @@ public enum TokenType {
     INT_KEYWORD("Int"),
     REAL_KEYWORD("Real"),
     STRING_KEYWORD("String"),
-    FUNCTION_TYPE_KEYWORD("Function"),
+    FUNCTION_KEYWORD("Function"),
 
     TUPLE_KEYWORD("Tuple"),
 
@@ -71,6 +71,7 @@ public enum TokenType {
     PRINT_INTR("print"),
     LEN_INTR("len"),
     TYPEOF_INTR("typeof"),
+    MAP_INTR("map"),
 
     //Other
     BAD_TOKEN(null),

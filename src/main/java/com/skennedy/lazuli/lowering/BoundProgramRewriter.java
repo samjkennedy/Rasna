@@ -1,38 +1,13 @@
 package com.skennedy.lazuli.lowering;
 
 import com.skennedy.lazuli.exceptions.InfiniteLoopException;
-import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
-import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
-import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
-import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
-import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
-import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
-import com.skennedy.lazuli.typebinding.BoundBlockExpression;
-import com.skennedy.lazuli.typebinding.BoundConstDeclarationExpression;
-import com.skennedy.lazuli.typebinding.BoundExpression;
-import com.skennedy.lazuli.typebinding.BoundExpressionType;
-import com.skennedy.lazuli.typebinding.BoundForExpression;
-import com.skennedy.lazuli.typebinding.BoundForInExpression;
-import com.skennedy.lazuli.typebinding.BoundFunctionCallExpression;
-import com.skennedy.lazuli.typebinding.BoundFunctionDeclarationExpression;
-import com.skennedy.lazuli.typebinding.BoundIfExpression;
-import com.skennedy.lazuli.typebinding.BoundIncrementExpression;
-import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
-import com.skennedy.lazuli.typebinding.BoundMatchCaseExpression;
-import com.skennedy.lazuli.typebinding.BoundMatchExpression;
-import com.skennedy.lazuli.typebinding.BoundPrintExpression;
-import com.skennedy.lazuli.typebinding.BoundProgram;
-import com.skennedy.lazuli.typebinding.BoundReturnExpression;
-import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
-import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
-import com.skennedy.lazuli.typebinding.BoundVariableExpression;
-import com.skennedy.lazuli.typebinding.BoundWhileExpression;
-import com.skennedy.lazuli.typebinding.TypeSymbol;
+import com.skennedy.lazuli.typebinding.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.function.Function;
 
 public abstract class BoundProgramRewriter {
@@ -130,9 +105,33 @@ public abstract class BoundProgramRewriter {
                 return rewriteReturnCall((BoundReturnExpression) expression);
             case MATCH_EXPRESSION:
                 return rewriteMatchExpression((BoundMatchExpression) expression);
+            case LAMBDA_FUNCTION:
+                return rewriteLambdaExpression((BoundLambdaExpression) expression);
+            case MAP_EXPRESSION:
+                return rewriteMapExpression((BoundMapExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    protected BoundExpression rewriteMapExpression(BoundMapExpression mapExpression) {
+
+        BoundExpression rewrittenMapper = rewriteExpression(mapExpression.getMapperFunction());
+        BoundExpression rewrittenOperand = rewriteExpression(mapExpression.getOperand());
+
+        if (rewrittenMapper == mapExpression.getMapperFunction() && rewrittenOperand == mapExpression.getOperand()) {
+            return mapExpression;
+        }
+        return new BoundMapExpression(rewrittenMapper, rewrittenOperand);
+    }
+
+    private BoundExpression rewriteLambdaExpression(BoundLambdaExpression lambdaExpression) {
+        BoundExpression rewrittenBody = rewriteExpression(lambdaExpression.getBody());
+
+        if (rewrittenBody == lambdaExpression.getBody()) {
+            return lambdaExpression;
+        }
+        return new BoundLambdaExpression(lambdaExpression.getArguments(), rewrittenBody);
     }
 
     protected BoundExpression rewriteMatchExpression(BoundMatchExpression matchExpression) {
@@ -281,7 +280,7 @@ public abstract class BoundProgramRewriter {
                 BoundVariableExpression variableExpression = (BoundVariableExpression) binaryExpression.getLeft();
                 BoundLiteralExpression literalExpression = (BoundLiteralExpression) binaryExpression.getRight();
 
-                if (variableExpression.getType() == TypeSymbol.INT && (int) literalExpression.getValue() <= Byte.MAX_VALUE && (int)literalExpression.getValue() >= Byte.MIN_VALUE) {
+                if (variableExpression.getType() == TypeSymbol.INT && (int) literalExpression.getValue() <= Byte.MAX_VALUE && (int) literalExpression.getValue() >= Byte.MIN_VALUE) {
 
                     if (binaryExpression.getOperator().getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.ADDITION) {
                         return new BoundIncrementExpression(variableExpression.getVariable(), new BoundLiteralExpression(literalExpression.getValue()));
@@ -450,21 +449,92 @@ public abstract class BoundProgramRewriter {
         //TODO: The following three are more of the conditional's problem, not the assignments, since this should be the default behaviour
 
         if (initialiser instanceof BoundBlockExpression) {
-            BoundExpression blockInitialiser = rewriteBlockInitialiser(
-                    boundVariableDeclarationExpression.getInitialiser(),
-                    (BoundBlockExpression) initialiser,
-                    expr -> new BoundAssignmentExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), expr)
-            );
+            BoundExpression blockInitialiser;
+            switch (boundVariableDeclarationExpression.getInitialiser().getBoundExpressionType()) {
+                default:
+                    throw new UnsupportedOperationException("Assignment is not supported for expressions of type " + boundVariableDeclarationExpression.getInitialiser().getBoundExpressionType());
+                case IF:
+                case MATCH_EXPRESSION:
+                    blockInitialiser = rewriteBlockInitialiser(
+                            boundVariableDeclarationExpression.getInitialiser(),
+                            (BoundBlockExpression) initialiser,
+                            expr -> new BoundAssignmentExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), expr)
+                    );
+                    BoundVariableDeclarationExpression tempInit = new BoundVariableDeclarationExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), new BoundLiteralExpression(getTypeDefaultValue(boundVariableDeclarationExpression.getVariable().getType())), false);
 
-            BoundVariableDeclarationExpression tempInit = new BoundVariableDeclarationExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), new BoundLiteralExpression(0), false);
+                    return new BoundBlockExpression(
+                            tempInit,
+                            blockInitialiser
+                    );
+                case FOR_IN:
+                    BoundForInExpression forInExpression = (BoundForInExpression) boundVariableDeclarationExpression.getInitialiser();
 
-            return new BoundBlockExpression(
-                    tempInit,
-                    blockInitialiser
-            );
+                    if (forInExpression.getGuard() != null) {
+                        throw new UnsupportedOperationException("Assignable loops with filters are not yet supported");
+                    }
+                    VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                    BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
+
+                    new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression);
+
+                    return new BoundBlockExpression(
+                            new BoundVariableDeclarationExpression(iterationCounter, null, new BoundLiteralExpression(0), false),
+                            new BoundVariableDeclarationExpression(
+                                    boundVariableDeclarationExpression.getVariable(),
+                                    null,
+                                    forInExpression.getIterable(),
+                                    boundVariableDeclarationExpression.isReadOnly()
+                            ),
+                            rewriteBlockInitialiser(
+                                    boundVariableDeclarationExpression.getInitialiser(),
+                                    (BoundBlockExpression) initialiser,
+                                    expr -> new BoundBlockExpression(
+                                            new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression), expr),
+                                            new BoundIncrementExpression(iterationCounter, new BoundLiteralExpression(1)
+                                            ))
+                            )
+                    );
+//                case FOR:
+//                    BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
+//
+//                    if (forExpression.getGuard() != null) {
+//                        throw new UnsupportedOperationException("Assignable loops with filters are not yet supported");
+//                    }
+//                    if (forExpression.getStep() != null) {
+//                        throw new UnsupportedOperationException("Assignable for loops with steps are not yet supported");
+//                    }
+//
+//                    //TODO: Step
+//                    BoundBinaryExpression elementCount = new BoundBinaryExpression(
+//                            forExpression.getTerminator(),
+//                            BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
+//                            forExpression.getInitialiser()
+//                    );
+//
+//                    return new BoundBlockExpression(
+//
+//                    );
+            }
 
         }
         return boundVariableDeclarationExpression;
+    }
+
+    //TODO: This should be its own class perhaps
+    private Object getTypeDefaultValue(TypeSymbol type) {
+        if (type == TypeSymbol.INT) {
+            return 0;
+        }
+        if (type == TypeSymbol.BOOL) {
+            return false;
+        }
+        if (type == TypeSymbol.REAL) {
+            return 0.0D;
+        }
+        if (type == TypeSymbol.STRING) {
+            return "";
+        }
+        return null;
     }
 
     protected BoundExpression rewriteWhileExpression(BoundWhileExpression boundWhileExpression) {
@@ -502,7 +572,7 @@ public abstract class BoundProgramRewriter {
             case BINARY_EXPRESSION:
                 BoundBinaryExpression boundBinaryExpression = (BoundBinaryExpression) expression;
                 return expression; //TODO: Constant folding
-                //return calculateConstant(calculateConstant(boundBinaryExpression.getLeft()), calculateConstant(boundBinaryExpression.getRight()), boundBinaryExpression.getOperator());
+            //return calculateConstant(calculateConstant(boundBinaryExpression.getLeft()), calculateConstant(boundBinaryExpression.getRight()), boundBinaryExpression.getOperator());
             default:
                 throw new IllegalStateException("Unexpected expression type for constant folding: " + expression.getBoundExpressionType());
         }
@@ -598,11 +668,18 @@ public abstract class BoundProgramRewriter {
         }
         if (originalInitialiser instanceof BoundForInExpression) {
 
-            //Int[] arr = for (Int x in iterable) {
-            //  x * x
-            //}
+            //Int[] squares = for (Int x in iterable) x * x
 
-            throw new UnsupportedOperationException("For-in expression assignment is not yet supported");
+            List<BoundExpression> expressions = initialiser.getExpressions();
+            for (int i = 0; i < expressions.size(); i++) {
+                BoundExpression expr = expressions.get(i);
+                if (expr instanceof BoundLiteralExpression) {
+                    expressions.set(i, remapper.apply(expr));
+                } else if (expr instanceof BoundBinaryExpression) {
+                    expressions.set(i, remapper.apply(expr));
+                }
+            }
+            return new BoundBlockExpression(expressions);
         }
         if (originalInitialiser instanceof BoundWhileExpression) {
 

@@ -9,32 +9,7 @@ import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
-import com.skennedy.lazuli.parsing.ArrayAccessExpression;
-import com.skennedy.lazuli.parsing.ArrayAssignmentExpression;
-import com.skennedy.lazuli.parsing.ArrayLengthExpression;
-import com.skennedy.lazuli.parsing.ArrayLiteralExpression;
-import com.skennedy.lazuli.parsing.AssignmentExpression;
-import com.skennedy.lazuli.parsing.BinaryExpression;
-import com.skennedy.lazuli.parsing.BlockExpression;
-import com.skennedy.lazuli.parsing.Expression;
-import com.skennedy.lazuli.parsing.ForExpression;
-import com.skennedy.lazuli.parsing.ForInExpression;
-import com.skennedy.lazuli.parsing.FunctionArgumentExpression;
-import com.skennedy.lazuli.parsing.FunctionCallExpression;
-import com.skennedy.lazuli.parsing.FunctionDeclarationExpression;
-import com.skennedy.lazuli.parsing.IfExpression;
-import com.skennedy.lazuli.parsing.IncrementExpression;
-import com.skennedy.lazuli.parsing.MatchCaseExpression;
-import com.skennedy.lazuli.parsing.MatchExpression;
-import com.skennedy.lazuli.parsing.ParenthesisedExpression;
-import com.skennedy.lazuli.parsing.PrintExpression;
-import com.skennedy.lazuli.parsing.Program;
-import com.skennedy.lazuli.parsing.ReturnExpression;
-import com.skennedy.lazuli.parsing.TupleLiteralExpression;
-import com.skennedy.lazuli.parsing.TypeExpression;
-import com.skennedy.lazuli.parsing.TypeofExpression;
-import com.skennedy.lazuli.parsing.VariableDeclarationExpression;
-import com.skennedy.lazuli.parsing.WhileExpression;
+import com.skennedy.lazuli.parsing.*;
 import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
@@ -42,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public class Binder {
 
@@ -116,9 +92,26 @@ public class Binder {
                 return bindArrayAssignmentExpression((ArrayAssignmentExpression) expression);
             case TUPLE_LITERAL_EXPR:
                 return bindTupleLiteralExpression((TupleLiteralExpression) expression);
+            case LAMBDA_EXPRESSION:
+                return bindLambdaExpression((LambdaExpression) expression);
+            case MAP_EXPRESSION:
+                return bindMapExpression((MapExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindMapExpression(MapExpression mapExpression) {
+        BoundExpression boundMapperFunction = bind(mapExpression.getMapFunction());
+        if (!boundMapperFunction.getType().isAssignableFrom(TypeSymbol.FUNCTION)) {
+            throw new IllegalStateException("Map must take a function");
+        }
+        BoundExpression boundOperand = bind(mapExpression.getExpression());
+
+        if (!(boundOperand.getType() instanceof ArrayTypeSymbol)) {
+            throw new IllegalStateException("Map can only operate on array types");
+        }
+        return new BoundMapExpression(boundMapperFunction, boundOperand);
     }
 
     private BoundExpression bindTupleLiteralExpression(TupleLiteralExpression tupleLiteralExpression) {
@@ -263,7 +256,7 @@ public class Binder {
         if (!type.isAssignableFrom(iterable.getType())) {
             errors.add(Error.raiseTypeMismatch(type, iterable.getType()));
         }
-        VariableSymbol variable = getVariableSymbol(type, forInExpression.getIdentifier(), null, true);
+        VariableSymbol variable = getVariableSymbol(type, forInExpression.getIdentifier(), null, false);
 
         try {
             currentScope.declareVariable((String) forInExpression.getIdentifier().getValue(), variable);
@@ -302,7 +295,7 @@ public class Binder {
             case REAL_KEYWORD:
                 typeSymbol = TypeSymbol.REAL;
                 break;
-            case FUNCTION_TYPE_KEYWORD:
+            case FUNCTION_KEYWORD:
                 typeSymbol = TypeSymbol.FUNCTION;
                 break;
             case TUPLE_KEYWORD:
@@ -315,7 +308,7 @@ public class Binder {
                 throw new IllegalStateException("Unexpected value: " + typeExpression.getIdentifier().getTokenType());
         }
         //TODO: This doesn't do N-Dimensional arrays yet
-        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket()!= null) {
+        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
             return new ArrayTypeSymbol(typeSymbol);
         }
         return typeSymbol;
@@ -454,6 +447,42 @@ public class Binder {
         return new BoundFunctionDeclarationExpression(functionSymbol, arguments, body);
     }
 
+    private BoundLambdaExpression bindLambdaExpression(LambdaExpression lambdaExpression) {
+
+        //IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
+
+        currentScope = new BoundScope(currentScope);
+
+        //Declare the arguments within the function's scope
+        List<BoundFunctionArgumentExpression> boundArguments = new ArrayList<>();
+        for (FunctionArgumentExpression argumentExpression : lambdaExpression.getArgumentExpressions()) {
+            boundArguments.add(bindFunctionArgumentExpression(argumentExpression));
+        }
+
+        BoundExpression boundBody = new BoundBlockExpression(
+                new BoundReturnExpression(bind(lambdaExpression.getExpression()))
+        );
+        TypeSymbol type = boundBody.getType();
+
+        String anonymousFunctionIdentifier = "lambda-function-" + UUID.randomUUID().toString();
+
+        FunctionSymbol functionSymbol = new FunctionSymbol(anonymousFunctionIdentifier, type, boundArguments, null);
+        try {
+            //Declare the function in the parent scope
+            currentScope.getParentScope().declareFunction(anonymousFunctionIdentifier, functionSymbol);
+        } catch (FunctionAlreadyDeclaredException fade) {
+            errors.add(Error.raiseVariableAlreadyDeclared(anonymousFunctionIdentifier));
+        }
+
+//        if (functionSymbol.getType() != TypeSymbol.VOID) {
+//            analyzeBody(functionSymbol, body.getExpressions().iterator());
+//        }
+
+        currentScope = currentScope.getParentScope();
+
+        return new BoundLambdaExpression(boundArguments, boundBody);
+    }
+
     private void analyzeBody(FunctionSymbol function, Iterator<BoundExpression> expressions) {
 
         //BFS the body to ensure all paths return a value of the right type
@@ -546,6 +575,23 @@ public class Binder {
         if (initialiser != null && !type.isAssignableFrom(initialiser.getType())) {
             errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
         }
+
+        if (type == TypeSymbol.FUNCTION) {
+            //We're defining a lambda
+            if (!(variableDeclarationExpression.getInitialiser() instanceof LambdaExpression)) {
+                throw new IllegalStateException("Functions can not be initialised by " + variableDeclarationExpression.getInitialiser().getClass());
+            }
+            BoundLambdaExpression lambdaExpression = bindLambdaExpression((LambdaExpression) variableDeclarationExpression.getInitialiser());
+
+            //TODO: guarded lambdas
+            FunctionSymbol function = new FunctionSymbol((String) variableDeclarationExpression.getIdentifier().getValue(), lambdaExpression.getBody().getType(), lambdaExpression.getArguments(), null);
+            currentScope.declareFunction(function.getName(), function);
+            VariableSymbol variable = getVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null);
+            return new BoundFunctionDeclarationExpression(function, lambdaExpression.getArguments(), new BoundBlockExpression(
+                    new BoundReturnExpression(lambdaExpression.getBody())
+            ));
+        }
+
         VariableSymbol variable = getVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null);
 
         currentScope.reassignVariable((String) identifier.getValue(), variable);

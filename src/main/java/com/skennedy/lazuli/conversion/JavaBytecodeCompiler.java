@@ -314,9 +314,16 @@ public class JavaBytecodeCompiler implements Compiler {
             case TUPLE_LITERAL_EXPRESSION:
                 visit((BoundTupleLiteralExpression) expression, methodVisitor);
                 break;
+            case LAMBDA_FUNCTION:
+                visit((BoundLambdaExpression) expression, methodVisitor);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private void visit(BoundLambdaExpression boundLambdaExpression, MethodVisitor methodVisitor) {
+
     }
 
     private void visit(BoundLiteralExpression boundLiteralExpression, MethodVisitor methodVisitor) {
