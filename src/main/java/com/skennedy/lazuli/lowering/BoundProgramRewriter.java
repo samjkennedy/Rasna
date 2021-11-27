@@ -1,6 +1,7 @@
 package com.skennedy.lazuli.lowering;
 
 import com.skennedy.lazuli.exceptions.InfiniteLoopException;
+import com.skennedy.lazuli.parsing.model.OpType;
 import com.skennedy.lazuli.typebinding.*;
 
 import java.util.ArrayList;
@@ -122,7 +123,7 @@ public abstract class BoundProgramRewriter {
         if (rewrittenElementCount == arrayDeclarationExpression.getElementCount()) {
             return arrayDeclarationExpression;
         }
-        return new BoundArrayDeclarationExpression((ArrayTypeSymbol)arrayDeclarationExpression.getType(), rewrittenElementCount);
+        return new BoundArrayDeclarationExpression((ArrayTypeSymbol) arrayDeclarationExpression.getType(), rewrittenElementCount);
     }
 
     protected BoundExpression rewriteMapExpression(BoundMapExpression mapExpression) {
@@ -316,7 +317,6 @@ public abstract class BoundProgramRewriter {
         if (expression instanceof BoundBlockExpression) {
 
             return rewriteBlockInitialiser(
-                    assignmentExpression.getExpression(),
                     (BoundBlockExpression) expression,
                     expr -> new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getGuard(), expr));
         }
@@ -467,7 +467,6 @@ public abstract class BoundProgramRewriter {
                 case IF:
                 case MATCH_EXPRESSION:
                     blockInitialiser = rewriteBlockInitialiser(
-                            boundVariableDeclarationExpression.getInitialiser(),
                             (BoundBlockExpression) initialiser,
                             expr -> new BoundAssignmentExpression(boundVariableDeclarationExpression.getVariable(), boundVariableDeclarationExpression.getGuard(), expr)
                     );
@@ -497,7 +496,6 @@ public abstract class BoundProgramRewriter {
                                     boundVariableDeclarationExpression.isReadOnly()
                             ),
                             rewriteBlockInitialiser(
-                                    boundVariableDeclarationExpression.getInitialiser(),
                                     (BoundBlockExpression) initialiser,
                                     expr -> new BoundBlockExpression(
                                             new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression), expr),
@@ -505,26 +503,43 @@ public abstract class BoundProgramRewriter {
                                             ))
                             )
                     );
-//                case FOR:
-//                    BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
-//
-//                    if (forExpression.getGuard() != null) {
-//                        throw new UnsupportedOperationException("Assignable loops with filters are not yet supported");
-//                    }
-//                    if (forExpression.getStep() != null) {
-//                        throw new UnsupportedOperationException("Assignable for loops with steps are not yet supported");
-//                    }
-//
-//                    //TODO: Step
-//                    BoundBinaryExpression elementCount = new BoundBinaryExpression(
-//                            forExpression.getTerminator(),
-//                            BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
-//                            forExpression.getInitialiser()
-//                    );
-//
-//                    return new BoundBlockExpression(
-//
-//                    );
+                case FOR:
+                    BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
+
+                    if (forExpression.getGuard() != null) {
+                        throw new UnsupportedOperationException("Assignable loops with filters are not yet supported");
+                    }
+                    if (forExpression.getStep() != null) {
+                        throw new UnsupportedOperationException("Assignable for loops with steps are not yet supported");
+                    }
+
+                    //TODO: Step
+                    BoundBinaryExpression elementCount = new BoundBinaryExpression(
+                            forExpression.getTerminator(),
+                            BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
+                            forExpression.getInitialiser()
+                    );
+
+                    BoundArrayDeclarationExpression arrayDeclarationExpression = new BoundArrayDeclarationExpression(new ArrayTypeSymbol(TypeSymbol.INT), elementCount);
+                    BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(
+                            boundVariableDeclarationExpression.getVariable(),
+                            boundVariableDeclarationExpression.getGuard(),
+                            arrayDeclarationExpression,
+                            boundVariableDeclarationExpression.isReadOnly()
+                    );
+
+                    BoundBinaryExpression index = new BoundBinaryExpression(
+                            new BoundVariableExpression(forExpression.getIterator()),
+                            BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
+                            forExpression.getInitialiser()
+                    );
+                    BoundVariableExpression array = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
+
+                    return new BoundBlockExpression(
+                            variableDeclarationExpression,
+                            rewriteBlockInitialiser((BoundBlockExpression) initialiser, expr -> new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(array, index), expr))
+
+                    );
             }
 
         }
@@ -652,57 +667,21 @@ public abstract class BoundProgramRewriter {
         return new BoundPrintExpression(expression);
     }
 
-    private static <T extends BoundExpression> BoundExpression rewriteBlockInitialiser(BoundExpression originalInitialiser, BoundBlockExpression initialiser, Function<BoundExpression, T> remapper) {
+    private static <T extends BoundExpression> BoundExpression rewriteBlockInitialiser(BoundBlockExpression initialiser, Function<BoundExpression, T> remapper) {
+        List<BoundExpression> expressions = initialiser.getExpressions();
 
-        if (originalInitialiser instanceof BoundIfExpression || originalInitialiser instanceof BoundMatchExpression) {
-
-            List<BoundExpression> expressions = initialiser.getExpressions();
-
-            for (int i = 0; i < expressions.size(); i++) {
-                BoundExpression expr = expressions.get(i);
-                if (expr instanceof BoundLiteralExpression) {
-                    expressions.set(i, remapper.apply(expr));
-                } else if (expr instanceof BoundBinaryExpression) {
-                    expressions.set(i, remapper.apply(expr));
-                }
+        for (int i = 0; i < expressions.size(); i++) {
+            BoundExpression expr = expressions.get(i);
+            if (expr instanceof BoundLiteralExpression
+                    || expr instanceof BoundVariableExpression
+                    || expr instanceof BoundBinaryExpression
+                    || expr instanceof BoundFunctionCallExpression) {
+                expressions.set(i, remapper.apply(expr));
+            } else if (expr instanceof BoundBlockExpression) {
+                rewriteBlockInitialiser((BoundBlockExpression) expr, remapper);
             }
-            return new BoundBlockExpression(expressions);
-
         }
-        if (originalInitialiser instanceof BoundForExpression) {
-
-            //Int[] arr = for (Int x = 0 to 10) {
-            //  x * x
-            //}
-
-            throw new UnsupportedOperationException("For expression assignment is not yet supported");
-        }
-        if (originalInitialiser instanceof BoundForInExpression) {
-
-            //Int[] squares = for (Int x in iterable) x * x
-
-            List<BoundExpression> expressions = initialiser.getExpressions();
-            for (int i = 0; i < expressions.size(); i++) {
-                BoundExpression expr = expressions.get(i);
-                if (expr instanceof BoundLiteralExpression) {
-                    expressions.set(i, remapper.apply(expr));
-                } else if (expr instanceof BoundBinaryExpression) {
-                    expressions.set(i, remapper.apply(expr));
-                }
-            }
-            return new BoundBlockExpression(expressions);
-        }
-        if (originalInitialiser instanceof BoundWhileExpression) {
-
-            //Int a = 0
-            //Int[] arr = while (condition) {
-            //  a = a + 1
-            //  return a
-            //}
-
-            throw new UnsupportedOperationException("While expression assignment is not yet supported");
-        }
-        throw new UnsupportedOperationException("Assigning " + originalInitialiser.getBoundExpressionType() + " is not yet supported");
+        return new BoundBlockExpression(expressions);
     }
 
 }
