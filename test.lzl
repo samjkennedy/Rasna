@@ -1,6 +1,0 @@
-Int triangle(Int n) {
-    return (n * (n + 1)) / 2
-}
-
-Int[] triangles = for (Int i = 100 to 110) triangle(i)
-for (Int i in triangles) print(i)

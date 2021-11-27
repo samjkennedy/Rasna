@@ -88,8 +88,7 @@ public enum TokenType {
             REAL_KEYWORD,
             STRING_KEYWORD,
             FUNCTION_KEYWORD,
-            TUPLE_KEYWORD,
-            IDENTIFIER
+            TUPLE_KEYWORD
     );
 
     TokenType(String text) {

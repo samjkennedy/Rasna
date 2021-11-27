@@ -15,3 +15,10 @@ print(y)
 Int[] oneToTen = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 Int[] first10Squares = for (Int i in oneToTen) i * i
 for (Int s in first10Squares) print(s)
+
+Int triangle(Int n) {
+    return (n * (n + 1)) / 2
+}
+
+Int[] triangles = for (Int i = 100 to 110) triangle(i)
+for (Int i in triangles) print(i)
