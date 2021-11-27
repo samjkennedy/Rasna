@@ -458,8 +458,6 @@ public abstract class BoundProgramRewriter {
             return boundVariableDeclarationExpression;
         }
 
-        //TODO: The following three are more of the conditional's problem, not the assignments, since this should be the default behaviour
-
         if (initialiser instanceof BoundBlockExpression) {
             BoundExpression blockInitialiser;
             switch (boundVariableDeclarationExpression.getInitialiser().getBoundExpressionType()) {
@@ -535,14 +533,18 @@ public abstract class BoundProgramRewriter {
                 case FOR: {
                     BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
 
-                    //TODO: Step
-                    BoundBinaryExpression elementCount = new BoundBinaryExpression(
-                            forExpression.getTerminator(),
-                            BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
-                            forExpression.getInitialiser()
-                    );
+                    BoundExpression elementCount;
+                    if (!(forExpression.getInitialiser() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression)forExpression.getInitialiser()).getValue() != 0) {
+                        elementCount = new BoundBinaryExpression(
+                                forExpression.getTerminator(),
+                                BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
+                                forExpression.getInitialiser()
+                        );
+                    } else {
+                        elementCount = forExpression.getTerminator();
+                    }
 
-                    BoundArrayDeclarationExpression arrayDeclarationExpression = new BoundArrayDeclarationExpression(new ArrayTypeSymbol(TypeSymbol.INT), elementCount);
+                    BoundArrayDeclarationExpression arrayDeclarationExpression = new BoundArrayDeclarationExpression(new ArrayTypeSymbol(boundVariableDeclarationExpression.getType()), elementCount);
                     BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(
                             boundVariableDeclarationExpression.getVariable(),
                             boundVariableDeclarationExpression.getGuard(),
@@ -555,11 +557,17 @@ public abstract class BoundProgramRewriter {
                     VariableSymbol indexVariable = new VariableSymbol("index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
                     BoundVariableExpression indexExpression = new BoundVariableExpression(indexVariable);
 
-                    BoundBinaryExpression index = new BoundBinaryExpression(
-                            indexExpression,
-                            BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
-                            forExpression.getInitialiser()
-                    );
+                    BoundExpression index;
+                    if (!(forExpression.getInitialiser() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression)forExpression.getInitialiser()).getValue() != 0) {
+                        index = new BoundBinaryExpression(
+                                indexExpression,
+                                BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
+                                forExpression.getInitialiser()
+                        );
+                    } else {
+                        index = indexExpression;
+                    }
+
                     BoundVariableExpression array = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
 
                     List<BoundExpression> expressions = new ArrayList<>();

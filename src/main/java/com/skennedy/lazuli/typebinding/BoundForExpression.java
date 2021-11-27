@@ -28,7 +28,7 @@ public class BoundForExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return iterator.getType();
+        return body.getType();
     }
 
     @Override
