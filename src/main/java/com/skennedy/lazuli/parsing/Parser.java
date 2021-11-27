@@ -72,6 +72,8 @@ public class Parser {
                 return parsePrintIntrinsic();
             case LEN_INTR:
                 return parseLenIntrinsic();
+            case MAP_INTR:
+                return parseMapIntrinsic();
             case IF_KEYWORD:
                 return parseIfExpression();
             case WHILE_KEYWORD:
@@ -82,7 +84,7 @@ public class Parser {
             case INT_KEYWORD:
             case BOOL_KEYWORD:
             case REAL_KEYWORD:
-            case FUNCTION_TYPE_KEYWORD:
+            case FUNCTION_KEYWORD:
             case STRING_KEYWORD:
             case CONST_KEYWORD:
             case TUPLE_KEYWORD:
@@ -288,7 +290,6 @@ public class Parser {
         return new AssignmentExpression(identifier, equals, assignment);
     }
 
-    //TODO: This is a declaration AND assignment, currently cannot declare a variable without an assignment
     private Expression parseVariableOrFunctionDeclarationExpression() {
         IdentifierExpression constKeyword = null;
         if (current().getTokenType() == TokenType.CONST_KEYWORD) {
@@ -325,7 +326,14 @@ public class Parser {
         if (current().getTokenType() == TokenType.EQUALS) {
             //Variable declared but not assigned yet
             equals = matchToken(TokenType.EQUALS);
-            initialiser = parseExpression();
+
+            if (typeExpression.getIdentifier().getTokenType() == TokenType.FUNCTION_KEYWORD) {
+                initialiser = parseLambdaExpression();
+            } else if (TokenType.typeTokens.contains(current().getTokenType())) {
+                initialiser = parseArrayDeclarationExpression();
+            } else {
+                initialiser = parseExpression();
+            }
         }
 
         IdentifierExpression bar = null;
@@ -337,11 +345,78 @@ public class Parser {
         return new VariableDeclarationExpression(constKeyword, typeExpression, identifier, bar, guard, equals, initialiser);
     }
 
+    private Expression parseArrayDeclarationExpression() {
+        IdentifierExpression typeKeyword;
+        switch (current().getTokenType()) {
+            case VOID_KEYWORD:
+                typeKeyword = matchToken(TokenType.VOID_KEYWORD);
+                break;
+            case INT_KEYWORD:
+                typeKeyword = matchToken(TokenType.INT_KEYWORD);
+                break;
+            case BOOL_KEYWORD:
+                typeKeyword = matchToken(TokenType.BOOL_KEYWORD);
+                break;
+            case REAL_KEYWORD:
+                typeKeyword = matchToken(TokenType.REAL_KEYWORD);
+                break;
+            case STRING_KEYWORD:
+                typeKeyword = matchToken(TokenType.STRING_KEYWORD);
+                break;
+            case TUPLE_KEYWORD:
+                typeKeyword = matchToken(TokenType.TUPLE_KEYWORD);
+                break;
+            case FUNCTION_KEYWORD:
+                typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
+                break;
+            case VAR_KEYWORD:
+                typeKeyword = matchToken(TokenType.VAR_KEYWORD);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
+        }
+        IdentifierExpression openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
+        Expression elementCount = parseExpression();
+        IdentifierExpression closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+
+        return new ArrayDeclarationExpression(new TypeExpression(typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
+    }
+
+    private Expression parseLambdaExpression() {
+
+        List<FunctionArgumentExpression> functionArgumentExpressions = new ArrayList<>();
+        //Multi-variable lambda, TODO:
+        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+            IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+            while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
+                functionArgumentExpressions.add(parseFunctionArgumentExpression());
+
+                if (current().getTokenType() == TokenType.COMMA) {
+                    matchToken(TokenType.COMMA);
+                }
+            }
+            IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+        } else {
+
+            TypeExpression typeExpression = parseTypeExpression();
+            IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+
+            //TODO: Lambda guards
+            if (current().getTokenType() == TokenType.BAR) {
+                throw new UnsupportedOperationException("Lambda variable guards are not yet supported");
+            }
+            functionArgumentExpressions.add(new FunctionArgumentExpression(null, typeExpression, identifier, null, null));
+        }
+        IdentifierExpression arrow = matchToken(TokenType.ARROW);
+        Expression expression = parseExpression();
+
+        return new LambdaExpression(functionArgumentExpressions, arrow, expression);
+    }
+
     private Expression parseParenthesisedExpression() {
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
         Expression expression = parseExpression();
         if (current().getTokenType() == TokenType.COMMA) {
-            //A tuple!
             List<Expression> elements = new ArrayList<>();
             elements.add(expression);
             matchToken(TokenType.COMMA);
@@ -387,8 +462,8 @@ public class Parser {
             case TUPLE_KEYWORD:
                 typeKeyword = matchToken(TokenType.TUPLE_KEYWORD);
                 break;
-            case FUNCTION_TYPE_KEYWORD:
-                typeKeyword = matchToken(TokenType.FUNCTION_TYPE_KEYWORD);
+            case FUNCTION_KEYWORD:
+                typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
                 break;
             case VAR_KEYWORD:
                 typeKeyword = matchToken(TokenType.VAR_KEYWORD);
@@ -497,6 +572,26 @@ public class Parser {
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
         return new ArrayLengthExpression(len, openParen, expression, closeParen);
+    }
+
+//    private Expression parseReduceIntrinsic() {
+//        IdentifierExpression reduce = matchToken(TokenType.REDUCE_INTR);
+//        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+//        Expression expression = parseExpression();
+//        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+//
+//        return new ReduceExpression(reduce, openParen, expression, closeParen);
+//    }
+
+    private Expression parseMapIntrinsic() {
+        IdentifierExpression map = matchToken(TokenType.MAP_INTR);
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+        Expression lambda = parseLambdaExpression();
+        IdentifierExpression comma = matchToken(TokenType.COMMA);
+        Expression mapFunction = parseExpression();
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+        return new MapExpression(map, openParen, lambda, comma, mapFunction, closeParen);
     }
 
     private Expression parseTypeofIntrinsic() {

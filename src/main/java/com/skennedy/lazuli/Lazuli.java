@@ -93,7 +93,7 @@ public class Lazuli {
             //TODO: make this a flag
             boolean graphProgram = false;
             //Write first in case of errors in conversion or simulation
-            if (graphProgram) {
+            if (graphProgram ) {
                 log.info("Writing high level AST graph");
                 HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
                 highLevelTreeGrapher.graphAST(boundProgram);
@@ -107,6 +107,13 @@ public class Lazuli {
                 log.info("Writing low level AST graph");
                 LowLevelTreeGrapher lowLevelTreeGrapher = new LowLevelTreeGrapher();
                 lowLevelTreeGrapher.graphAST(boundProgram);
+            }
+
+            boolean printProgram = false;
+            if (printProgram) {
+                System.out.print(ConsoleColors.PURPLE_BOLD);
+                System.out.println(code);
+                System.out.print(ConsoleColors.RESET);
             }
 
             switch (mode) {

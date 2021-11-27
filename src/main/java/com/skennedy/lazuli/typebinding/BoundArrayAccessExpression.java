@@ -31,7 +31,7 @@ public class BoundArrayAccessExpression implements BoundExpression {
         if (array.getType() == TypeSymbol.TUPLE) {
             return TypeSymbol.TUPLE;
         }
-        return array.getType();
+        return ((ArrayTypeSymbol)array.getType()).getType();
     }
 
     @Override

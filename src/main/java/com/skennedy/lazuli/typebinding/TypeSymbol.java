@@ -10,7 +10,7 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol TYPE = new TypeSymbol("Type");
     public static final TypeSymbol TUPLE = new TypeSymbol("Tuple");
     public static final TypeSymbol VAR = new TypeSymbol("Var");
-    public static final TypeSymbol FUNCTION = new TypeSymbol("Function");
+    public static final TypeSymbol FUNCTION = new TypeSymbol("Function"); //TODO: Should be similar to ArrayTypeSymbol
 
     public TypeSymbol(String name) {
         super(name);
@@ -26,9 +26,7 @@ public class TypeSymbol extends Symbol {
         if (this.getName().equals(other.getName())) {
             return true;
         }
-        if (this == REAL) {
-            return other == INT;
-        }
+        //TODO: More sophisticated casting -> all INTs are REALs
         return this == VAR;
     }
 

@@ -80,14 +80,14 @@ Int i = if (x > y) {
 This will assign i to either 1 or 2 with the side effect of incrementing either x or y
 
 Implemented:
-   - [x] simulation
+   - [ ] simulation
    - [x] compilation
    
 This extends to loops as well, whose return type is an `Array`:
 
 ```javascript
 //Assigns x to an Array of Ints from 0 to 4
-IntArray ns = for (Int N = 0 to 5) {
+Int[] ns = for (Int N = 0 to 5) {
     N
 }
 print(ns) //prints [0, 1, 2, 3, 4]
@@ -97,14 +97,14 @@ These act as normal for loops and can contain multiple lines, as with if express
 
 ```javascript
 //Assigns x to an Array of the squares of all even numbers from 0 to 99
-IntArray xs = for (Int N = 0 to 100 if N mod 2 == 0) {
+Int[] xs = for (Int N = 0 to 100 if N mod 2 == 0) {
     N * N
 }
 ```
 
 Implemented:
    - [ ] simulation
-   - [ ] compilation
+   - [x] compilation
    
  ## Functions
  
@@ -141,15 +141,15 @@ For more see the examples and tests directory.
    
 ## Planned Features
 
-- Primitive types like `Int`, `Real` `Num`, `Bool` and `Str` 
+- Primitive types like `Int`, `Real`, `Bool` and `Str` 
     - [x] Int 
     - [x] Bool 
-    - [ ] Real 
-    - [ ] Num
-    - [ ] Str
+    - [x] Real 
+    - [x] Str
     
 - Custom Type system
 - Type subset system
+- REPL
 
 ## Acknowledgements
 

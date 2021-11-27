@@ -2,6 +2,9 @@ package com.skennedy.lazuli.lexing.model;
 
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Arrays;
+import java.util.List;
+
 public enum TokenType {
 
     WHITESPACE(null),
@@ -37,7 +40,7 @@ public enum TokenType {
 
     //Syntax
     COMMA(","),
-    ARROW("->"),
+    ARROW("=>"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -63,7 +66,7 @@ public enum TokenType {
     INT_KEYWORD("Int"),
     REAL_KEYWORD("Real"),
     STRING_KEYWORD("String"),
-    FUNCTION_TYPE_KEYWORD("Function"),
+    FUNCTION_KEYWORD("Function"),
 
     TUPLE_KEYWORD("Tuple"),
 
@@ -71,12 +74,22 @@ public enum TokenType {
     PRINT_INTR("print"),
     LEN_INTR("len"),
     TYPEOF_INTR("typeof"),
+    MAP_INTR("map"),
 
     //Other
     BAD_TOKEN(null),
     EOF_TOKEN(null);
 
     private final String text;
+
+    public static List<TokenType> typeTokens = Arrays.asList(
+            BOOL_KEYWORD,
+            INT_KEYWORD,
+            REAL_KEYWORD,
+            STRING_KEYWORD,
+            FUNCTION_KEYWORD,
+            TUPLE_KEYWORD
+    );
 
     TokenType(String text) {
         this.text = text;
