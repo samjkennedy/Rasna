@@ -31,7 +31,8 @@ public enum ExpressionType {
     TYPE_EXPR,
     UNARY_EXPR,
     VAR_DECLARATION_EXPR,
-    WHILE_EXPR
+    WHILE_EXPR,
+    YIELD_EXPRESSION
 
 
 }

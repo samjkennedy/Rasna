@@ -6,6 +6,7 @@ import com.skennedy.lazuli.lowering.BoundConditionalGotoExpression;
 import com.skennedy.lazuli.lowering.BoundGotoExpression;
 import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
+import com.skennedy.lazuli.parsing.YieldExpression;
 import com.skennedy.lazuli.typebinding.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -319,6 +320,9 @@ public class JavaBytecodeCompiler implements Compiler {
                 break;
             case ARRAY_DECLARATION_EXPRESSION:
                 visit((BoundArrayDeclarationExpression) expression, methodVisitor);
+                break;
+            case YIELD_EXPRESSION:
+                visit(((BoundYieldExpression)expression).getExpression(), methodVisitor);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
@@ -1108,8 +1112,9 @@ public class JavaBytecodeCompiler implements Compiler {
         textifierVisitor.visitMethodInsn(INVOKESTATIC, className, function.getName(), getMethodDescriptor(argumentTypes, function.getType()), false);
 
         //TODO: remove new variables declared in the variables map?
-
-        scope = scope.parent;
+        if (!scope.isGlobalScope()) {
+            scope = scope.parent;
+        }
         //Push return type onto stack
         if (functionCallExpression.getType() != TypeSymbol.VOID) {
             scope.pushStack(functionCallExpression.getType());

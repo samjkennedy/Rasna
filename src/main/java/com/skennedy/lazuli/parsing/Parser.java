@@ -101,9 +101,18 @@ public class Parser {
                 return parseReturnExpression();
             case MATCH_KEYWORD:
                 return parseMatchExpression();
+            case YIELD_KEYWORD:
+                return parseYieldExpression();
             default:
                 throw new IllegalStateException("Unexpected value: " + current().getTokenType());
         }
+    }
+
+    private Expression parseYieldExpression() {
+        IdentifierExpression yieldKeyword = matchToken(TokenType.YIELD_KEYWORD);
+        Expression expression = parseExpression();
+
+        return new YieldExpression(yieldKeyword, expression);
     }
 
     private Expression parseMatchExpression() {
