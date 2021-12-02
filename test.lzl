@@ -1,0 +1,34 @@
+////Assigned for loops with a single expression body are implicitly returned
+//Int[] squares = for (Int i = 0 to 10) i * i
+//for (Int square in squares) print(square)
+
+//Assigned for loop with a multi expression body require the `yield` keyword for clarity
+Int evenSquares = for (Int i = 0 to 10) {
+    Int square = i * i
+    if (square mod 2 == 0) {
+        yield square
+    } else {
+        yield 0
+    }
+}
+//for (Int square in evenSquares) print(square)
+//
+////If a particular value is to be skipped, use `continue`
+//Int evenSquares = for (Int i = 0 to 10) {
+//    Int square = i * i
+//    if (square mod 2 == 1) {
+//        continue
+//    }
+//    yield square
+//}
+//for (Int square in evenSquares) print(square)
+//
+////If a particular value is to halt the loop, use `break`
+//Int firstNEvenCubes = for (Int i = 2 to 10) {
+//    Int cube = i * i * i
+//    if (cube mod 2 == 1) {
+//        break
+//    }
+//    yield cube
+//}
+//for (Int cube in firstNEvenCubes) print(cube)

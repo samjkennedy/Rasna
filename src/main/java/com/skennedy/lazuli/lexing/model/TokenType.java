@@ -52,6 +52,7 @@ public enum TokenType {
     IN_KEYWORD("in"),
     TO_KEYWORD("to"),
     BY_KEYWORD("by"),
+    YIELD_KEYWORD("yield"),
     MOD_KEYWORD("mod"),
     TRUE_KEYWORD("true"),
     FALSE_KEYWORD("false"),

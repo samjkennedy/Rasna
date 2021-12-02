@@ -98,9 +98,17 @@ public class Binder {
                 return bindMapExpression((MapExpression) expression);
             case ARRAY_DECLARATION_EXPR:
                 return bindArrayDeclarationExpression((ArrayDeclarationExpression) expression);
+            case YIELD_EXPRESSION:
+                return bindYieldExpression((YieldExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindYieldExpression(YieldExpression yieldExpression) {
+        BoundExpression expression = bind(yieldExpression.getExpression());
+
+        return new BoundYieldExpression(expression);
     }
 
     private BoundExpression bindArrayDeclarationExpression(ArrayDeclarationExpression arrayDeclarationExpression) {

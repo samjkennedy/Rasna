@@ -33,7 +33,7 @@ public enum BoundExpressionType {
     TYPEOF_INTRINSIC,
     VARIABLE_DECLARATION,
     VARIABLE_EXPRESSION,
-    WHILE
-
+    WHILE,
+    YIELD_EXPRESSION
 
 }
