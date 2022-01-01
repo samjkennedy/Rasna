@@ -1,6 +1,6 @@
 # TODO
 
-- While and do/while loops
+- do/while loops
 - `break` and `continue` operations
 - Logical or, and, xor, not
 - Proper pattern matching

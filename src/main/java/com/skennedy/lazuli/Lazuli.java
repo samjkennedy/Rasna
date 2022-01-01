@@ -1,19 +1,19 @@
 package com.skennedy.lazuli;
 
 import com.skennedy.assertclauses.Assert;
-import com.skennedy.lazuli.graphing.LowLevelTreeGrapher;
-import com.skennedy.lazuli.simulation.Simulator;
+import com.skennedy.flags.Flag;
+import com.skennedy.flags.Flags;
 import com.skennedy.lazuli.conversion.JavaBytecodeCompiler;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.graphing.HighLevelTreeGrapher;
+import com.skennedy.lazuli.graphing.LowLevelTreeGrapher;
 import com.skennedy.lazuli.lowering.BoundProgramRewriter;
 import com.skennedy.lazuli.lowering.Lowerer;
 import com.skennedy.lazuli.parsing.Parser;
 import com.skennedy.lazuli.parsing.Program;
+import com.skennedy.lazuli.simulation.Simulator;
 import com.skennedy.lazuli.typebinding.Binder;
 import com.skennedy.lazuli.typebinding.BoundProgram;
-import com.skennedy.flags.Flag;
-import com.skennedy.flags.Flags;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -93,7 +93,7 @@ public class Lazuli {
             //TODO: make this a flag
             boolean graphProgram = false;
             //Write first in case of errors in compilation or simulation
-            if (graphProgram ) {
+            if (true) {
                 log.info("Writing high level AST graph");
                 HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
                 highLevelTreeGrapher.graphAST(boundProgram);
