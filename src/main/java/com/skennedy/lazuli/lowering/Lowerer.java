@@ -31,8 +31,7 @@ public class Lowerer extends BoundProgramRewriter {
 
         BoundForExpression boundForExpression = new BoundForExpression(
                 iterator,
-                new BoundLiteralExpression(0),
-                new BoundArrayLengthExpression(mapExpression.getOperand()),
+                new BoundRangeExpression(new BoundLiteralExpression(0), new BoundArrayLengthExpression(mapExpression.getOperand())),
                 new BoundLiteralExpression(1),
                 null,
                 body
@@ -84,7 +83,7 @@ public class Lowerer extends BoundProgramRewriter {
             return new BoundNoOpExpression();
         }
 
-        BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(rewrittenForExpression.getIterator(), null, rewrittenForExpression.getInitialiser(), false);
+        BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(rewrittenForExpression.getIterator(), null, rewrittenForExpression.getRangeExpression().getLowerBound(), false);
 
         BoundVariableExpression variableExpression = new BoundVariableExpression(rewrittenForExpression.getIterator());
 
@@ -111,7 +110,7 @@ public class Lowerer extends BoundProgramRewriter {
             whileBody = new BoundBlockExpression(guardClause, step);
         }
 
-        BoundBinaryExpression condition = new BoundBinaryExpression(variableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), boundForExpression.getTerminator());
+        BoundBinaryExpression condition = new BoundBinaryExpression(variableExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), boundForExpression.getRangeExpression().getUpperBound());
 
         BoundWhileExpression whileExpression = new BoundWhileExpression(condition, whileBody);
         BoundBlockExpression boundBlockExpression = new BoundBlockExpression(variableDeclarationExpression, whileExpression);

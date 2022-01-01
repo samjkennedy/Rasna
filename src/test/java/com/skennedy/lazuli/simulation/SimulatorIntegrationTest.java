@@ -1,9 +1,8 @@
-package com.skennedy.bixbite.simulation;
+package com.skennedy.lazuli.simulation;
 
 import com.skennedy.lazuli.lowering.Lowerer;
 import com.skennedy.lazuli.parsing.Parser;
 import com.skennedy.lazuli.parsing.Program;
-import com.skennedy.lazuli.simulation.Simulator;
 import com.skennedy.lazuli.typebinding.Binder;
 import com.skennedy.lazuli.typebinding.BoundProgram;
 import org.apache.commons.io.FileUtils;

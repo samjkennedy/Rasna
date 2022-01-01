@@ -400,8 +400,7 @@ public abstract class BoundProgramRewriter {
 
     protected BoundExpression rewriteForExpression(BoundForExpression forExpression) {
 
-        BoundExpression initialiser = rewriteExpression(forExpression.getInitialiser());
-        BoundExpression terminator = rewriteExpression(forExpression.getTerminator());
+        BoundRangeExpression range = rewriteRangeExpression(forExpression.getRangeExpression());
         BoundExpression step = null;
         if (forExpression.getStep() != null) {
             step = rewriteExpression(forExpression.getStep());
@@ -416,15 +415,26 @@ public abstract class BoundProgramRewriter {
             return new BoundNoOpExpression();
         }
 
-        if (initialiser == forExpression.getInitialiser()
-                && terminator == forExpression.getTerminator()
+        if (range == forExpression.getRangeExpression()
                 && step == forExpression.getStep()
                 && guard == forExpression.getGuard()
                 && body == forExpression.getBody()) {
             return forExpression;
         }
 
-        return new BoundForExpression(forExpression.getIterator(), initialiser, terminator, step, guard, body);
+        return new BoundForExpression(forExpression.getIterator(), range, step, guard, body);
+    }
+
+    private BoundRangeExpression rewriteRangeExpression(BoundRangeExpression rangeExpression) {
+
+        BoundExpression lowerBound = rewriteExpression(rangeExpression.getLowerBound());
+        BoundExpression upperBound = rewriteExpression(rangeExpression.getUpperBound());
+
+        if (lowerBound == rangeExpression.getLowerBound()
+            && upperBound == rangeExpression.getUpperBound()) {
+            return rangeExpression;
+        }
+        return new BoundRangeExpression(lowerBound, upperBound);
     }
 
     protected BoundExpression rewriteForInExpression(BoundForInExpression forInExpression) {
@@ -531,7 +541,7 @@ public abstract class BoundProgramRewriter {
                             //Create new array of index size
                             new BoundVariableDeclarationExpression(filteredArray, null, new BoundArrayDeclarationExpression((ArrayTypeSymbol) filteredArrayVariable.getType(), iterationCounterExpression), false),
                             //For each element copy to the array
-                            rewriteForExpression(new BoundForExpression(copyIndex, new BoundLiteralExpression(0), iterationCounterExpression, new BoundLiteralExpression(1), null, new BoundBlockExpression(
+                            rewriteForExpression(new BoundForExpression(copyIndex, new BoundRangeExpression(new BoundLiteralExpression(0), iterationCounterExpression), new BoundLiteralExpression(1), null, new BoundBlockExpression(
                                     new BoundArrayAssignmentExpression(
                                             new BoundArrayAccessExpression(filteredArrayVariable, copyIndexExpression),
                                             new BoundArrayAccessExpression(arrayVariableExpression, copyIndexExpression)
@@ -552,14 +562,15 @@ public abstract class BoundProgramRewriter {
                 BoundForExpression forExpression = (BoundForExpression) boundVariableDeclarationExpression.getInitialiser();
 
                 BoundExpression elementCount;
-                if (!(forExpression.getInitialiser() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression)forExpression.getInitialiser()).getValue() != 0) {
+                BoundRangeExpression rangeExpression = forExpression.getRangeExpression();
+                if (!(rangeExpression.getLowerBound() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression) rangeExpression.getLowerBound()).getValue() != 0) {
                     elementCount = new BoundBinaryExpression(
-                            forExpression.getTerminator(),
+                            rangeExpression.getUpperBound(),
                             BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
-                            forExpression.getInitialiser()
+                            rangeExpression.getLowerBound()
                     );
                 } else {
-                    elementCount = forExpression.getTerminator();
+                    elementCount = rangeExpression.getUpperBound();
                 }
 
                 BoundArrayDeclarationExpression arrayDeclarationExpression = new BoundArrayDeclarationExpression(new ArrayTypeSymbol(boundVariableDeclarationExpression.getType()), elementCount);
@@ -576,11 +587,11 @@ public abstract class BoundProgramRewriter {
                 BoundVariableExpression indexExpression = new BoundVariableExpression(indexVariable);
 
                 BoundExpression index;
-                if (!(forExpression.getInitialiser() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression)forExpression.getInitialiser()).getValue() != 0) {
+                if (!(rangeExpression.getLowerBound() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression)rangeExpression.getLowerBound()).getValue() != 0) {
                     index = new BoundBinaryExpression(
                             indexExpression,
                             BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
-                            forExpression.getInitialiser()
+                            rangeExpression.getLowerBound()
                     );
                 } else {
                     index = indexExpression;
@@ -591,7 +602,7 @@ public abstract class BoundProgramRewriter {
                 List<BoundExpression> expressions = new ArrayList<>();
                 expressions.addAll(Arrays.asList(
                         variableDeclarationExpression,
-                        new BoundVariableDeclarationExpression(indexVariable, null, forExpression.getInitialiser(), false),
+                        new BoundVariableDeclarationExpression(indexVariable, null, rangeExpression.getLowerBound(), false),
                         rewriteBlockInitialiser(initialiser, expr -> new BoundBlockExpression(
                                 new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(array, index), expr),
                                 new BoundIncrementExpression(indexVariable, new BoundLiteralExpression(1))
@@ -611,7 +622,7 @@ public abstract class BoundProgramRewriter {
                             //Create new array of index size
                             new BoundVariableDeclarationExpression(filteredArray, null, new BoundArrayDeclarationExpression((ArrayTypeSymbol) filteredArrayVariable.getType(), index), false),
                             //For each element copy to the array
-                            rewriteForExpression(new BoundForExpression(copyIndex, new BoundLiteralExpression(0), index, new BoundLiteralExpression(1), null, new BoundBlockExpression(
+                            rewriteForExpression(new BoundForExpression(copyIndex, new BoundRangeExpression(new BoundLiteralExpression(0), index), new BoundLiteralExpression(1), null, new BoundBlockExpression(
                                     new BoundArrayAssignmentExpression(
                                             new BoundArrayAccessExpression(filteredArrayVariable, copyIndexExpression),
                                             new BoundArrayAccessExpression(arrayVariableExpression, copyIndexExpression)

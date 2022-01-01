@@ -28,6 +28,7 @@ public enum BoundExpressionType {
     MATCH_EXPRESSION,
     NOOP,
     PRINT_INTRINSIC,
+    RANGE_EXPRESSION,
     RETURN,
     TUPLE_LITERAL_EXPRESSION,
     TYPEOF_INTRINSIC,
@@ -35,5 +36,6 @@ public enum BoundExpressionType {
     VARIABLE_EXPRESSION,
     WHILE,
     YIELD_EXPRESSION
+
 
 }

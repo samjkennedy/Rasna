@@ -25,6 +25,7 @@ public enum ExpressionType {
     MATCH_EXPRESSION,
     PARENTHESISED_EXPR,
     PRINT_EXPR,
+    RANGE_EXPR,
     RETURN_EXPR,
     TUPLE_LITERAL_EXPR,
     TYPEOF_EXPR,

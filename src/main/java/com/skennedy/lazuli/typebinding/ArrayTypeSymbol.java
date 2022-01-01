@@ -19,4 +19,9 @@ public class ArrayTypeSymbol extends TypeSymbol {
     public SymbolType getSymbolType() {
         return VARIABLE;
     }
+
+    @Override
+    public String toString() {
+        return getName() + "[]";
+    }
 }

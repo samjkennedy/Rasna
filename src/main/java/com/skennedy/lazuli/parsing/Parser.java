@@ -123,15 +123,30 @@ public class Parser {
 
         List<MatchCaseExpression> caseExpressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE && current().getTokenType() != TokenType.ELSE_KEYWORD) {
+
             Expression caseExpression = parseExpression();
+
+            if (current().getTokenType() == TokenType.TO_KEYWORD) {
+                IdentifierExpression toKeyword = matchToken(TokenType.TO_KEYWORD);
+                Expression terminator = parseExpression();
+
+                caseExpression = new RangeExpression(caseExpression, toKeyword, terminator);
+            }
+
             IdentifierExpression arrow = matchToken(TokenType.ARROW);
             Expression thenExpression = parseExpression();
+
             IdentifierExpression comma = matchToken(TokenType.COMMA);
 
-            if (caseExpression instanceof BinaryExpression && ((BinaryExpression) caseExpression).getOperation() == OpType.LOR) {
+            //TODO: This is a concern of the rewriter, not the parser. A case could be infinitely nested ors
+            if (caseExpression instanceof BinaryExpression) {
+                if (((BinaryExpression) caseExpression).getOperation() == OpType.LOR) {
 
-                caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression, comma));
-                caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression, comma));
+                    caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression, comma));
+                    caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression, comma));
+                } else {
+                    throw new IllegalStateException("Binary operation " + ((BinaryExpression) caseExpression).getOperation() + " is not supported in Match Case Statements");
+                }
             } else {
                 caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
             }
@@ -212,6 +227,8 @@ public class Parser {
             IdentifierExpression toKeyword = matchToken(TokenType.TO_KEYWORD);
             Expression terminator = parseExpression();
 
+            RangeExpression rangeExpression = new RangeExpression(initialiser, toKeyword, terminator);
+
             IdentifierExpression byKeyword = null;
             Expression step = null;
             if (current().getTokenType() == TokenType.BY_KEYWORD) {
@@ -227,7 +244,7 @@ public class Parser {
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             Expression body = parseExpression();
 
-            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, initialiser, toKeyword, terminator, byKeyword, step, guard, closeParen, body);
+            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, byKeyword, step, guard, closeParen, body);
         } else if (current().getTokenType() == TokenType.IN_KEYWORD) {
             IdentifierExpression inKeyword = matchToken(TokenType.IN_KEYWORD);
 

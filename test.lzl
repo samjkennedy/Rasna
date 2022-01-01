@@ -1,34 +1,47 @@
-////Assigned for loops with a single expression body are implicitly returned
-//Int[] squares = for (Int i = 0 to 10) i * i
-//for (Int square in squares) print(square)
+Int[] ints = [-2, -1, 0, 1, 2]
 
-//Assigned for loop with a multi expression body require the `yield` keyword for clarity
-Int evenSquares = for (Int i = 0 to 10) {
-    Int square = i * i
-    if (square mod 2 == 0) {
-        yield square
-    } else {
-        yield 0
-    }
+for (Int i = 0 to len(ints)) {
+    print(ints[i])
 }
-//for (Int square in evenSquares) print(square)
-//
-////If a particular value is to be skipped, use `continue`
-//Int evenSquares = for (Int i = 0 to 10) {
-//    Int square = i * i
-//    if (square mod 2 == 1) {
-//        continue
+
+//Int abs(Int x) {
+//    return match x {
+//        x < 0 -> -1 * x,
+//        else -> x
 //    }
-//    yield square
 //}
-//for (Int square in evenSquares) print(square)
 //
-////If a particular value is to halt the loop, use `break`
-//Int firstNEvenCubes = for (Int i = 2 to 10) {
-//    Int cube = i * i * i
-//    if (cube mod 2 == 1) {
-//        break
+//for (Int x in ints) {
+//    Int sqr = match x {
+//        0 or 1 -> x,
+//        2 -> 4,
+//        3 -> 9,
+//        4 -> 6,
+//        else -> {
+//            print("Falling back to calling expensive function")
+//            square(x)
+//        }
 //    }
-//    yield cube
+//    print(sqr)
 //}
-//for (Int cube in firstNEvenCubes) print(cube)
+
+//String[] inputCMDs = ["open", "test.lzl"] //e.g. parsing cmdline commands into an array of words
+//match inputCMDs {
+//    ["quit"] -> exit(),
+//    ["open", filename] -> open(filename),
+//    [action, object] -> parse(action, object),
+//    else -> print("Sorry, command not understood")
+//}
+//
+//Int x = 1
+
+//match x {
+//    0 or 1 -> print("Less than 2"),
+//    else -> print("Don't know")
+//}
+
+//match x {
+//    0 to 10 -> print("One digit"),
+//    10 to 100 -> print("Two digits"),
+//    else -> print("Many digits")
+//}
