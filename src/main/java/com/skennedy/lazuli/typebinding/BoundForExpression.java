@@ -6,16 +6,14 @@ import java.util.Iterator;
 public class BoundForExpression implements BoundExpression {
 
     private VariableSymbol iterator;
-    private final BoundExpression initialiser;
-    private final BoundExpression terminator;
+    private final BoundRangeExpression rangeExpression;
     private final BoundExpression step;
     private final BoundExpression guard;
     private final BoundExpression body;
 
-    public BoundForExpression(VariableSymbol iterator, BoundExpression initialiser, BoundExpression terminator, BoundExpression step, BoundExpression guard, BoundExpression body) {
+    public BoundForExpression(VariableSymbol iterator, BoundRangeExpression rangeExpression, BoundExpression step, BoundExpression guard, BoundExpression body) {
         this.iterator = iterator;
-        this.initialiser = initialiser;
-        this.terminator = terminator;
+        this.rangeExpression = rangeExpression;
         this.step = step;
         this.guard = guard;
         this.body = body;
@@ -33,19 +31,15 @@ public class BoundForExpression implements BoundExpression {
 
     @Override
     public Iterator<BoundExpression> getChildren() {
-        return Arrays.asList(initialiser, terminator, step, guard, body).iterator();
+        return Arrays.asList(rangeExpression, step, guard, body).iterator();
     }
 
     public VariableSymbol getIterator() {
         return iterator;
     }
 
-    public BoundExpression getInitialiser() {
-        return initialiser;
-    }
-
-    public BoundExpression getTerminator() {
-        return terminator;
+    public BoundRangeExpression getRangeExpression() {
+        return rangeExpression;
     }
 
     public BoundExpression getStep() {

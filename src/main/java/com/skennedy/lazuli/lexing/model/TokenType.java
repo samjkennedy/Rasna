@@ -40,7 +40,7 @@ public enum TokenType {
 
     //Syntax
     COMMA(","),
-    ARROW("=>"),
+    ARROW("->"),
 
     //Keywords
     OR_KEYWORD("or"),

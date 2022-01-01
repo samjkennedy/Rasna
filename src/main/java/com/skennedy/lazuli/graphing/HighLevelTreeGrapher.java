@@ -186,14 +186,14 @@ public class HighLevelTreeGrapher {
 
         MutableNode declaration = mutNode(nextId()).add(Label.of("FROM")).add(Shape.BOX);
 
-        MutableNode identifier = mutNode(nextId()).add(Label.of(forExpression.getInitialiser().getType().getName() + ": " + forExpression.getIterator().getName()));
-        MutableNode initialiser = graphExpression(forExpression.getInitialiser());
+        MutableNode identifier = mutNode(nextId()).add(Label.of(forExpression.getRangeExpression().getLowerBound().getType().getName() + ": " + forExpression.getIterator().getName()));
+        MutableNode initialiser = graphExpression(forExpression.getRangeExpression().getLowerBound());
 
         declaration.addLink(identifier);
         declaration.addLink(initialiser);
 
         MutableNode to = mutNode(nextId()).add(Label.of("TO")).add(Shape.BOX);
-        MutableNode terminator = graphExpression(forExpression.getTerminator());
+        MutableNode terminator = graphExpression(forExpression.getRangeExpression().getUpperBound());
 
         to.addLink(terminator);
         root.addLink(declaration);

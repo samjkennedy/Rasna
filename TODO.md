@@ -1,6 +1,9 @@
 # TODO
 
-- Logical or + and + xor + not
+- While and do/while loops
+- `break` and `continue` operations
+- Logical or, and, xor, not
+- Proper pattern matching
 - Longs
 - Fix Tuples
 - Non-scuffed control flow analysis

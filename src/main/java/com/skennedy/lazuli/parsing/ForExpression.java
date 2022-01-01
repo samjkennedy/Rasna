@@ -15,9 +15,7 @@ public class ForExpression extends Expression {
     private final TypeExpression typeExpression;
     private final IdentifierExpression identifier;
     private final IdentifierExpression equals;
-    private final Expression initialiser;
-    private final IdentifierExpression toKeyword;
-    private final Expression terminator;
+    private final RangeExpression rangeExpression;
     private final IdentifierExpression byKeyword;
     private final Expression step;
     private Expression guard;
@@ -29,9 +27,7 @@ public class ForExpression extends Expression {
                          TypeExpression typeExpression,
                          IdentifierExpression identifier,
                          IdentifierExpression equals,
-                         Expression initialiser,
-                         IdentifierExpression toKeyword,
-                         Expression terminator,
+                         RangeExpression rangeExpression,
                          IdentifierExpression byKeyword,
                          Expression step,
                          Expression guard,
@@ -43,9 +39,7 @@ public class ForExpression extends Expression {
         this.typeExpression = typeExpression;
         this.identifier = identifier;
         this.equals = equals;
-        this.initialiser = initialiser;
-        this.toKeyword = toKeyword;
-        this.terminator = terminator;
+        this.rangeExpression = rangeExpression;
         this.byKeyword = byKeyword;
         this.step = step;
         this.guard = guard;
@@ -60,7 +54,7 @@ public class ForExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeExpression, identifier, equals, initialiser, toKeyword, terminator, step, guard, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeExpression, identifier, equals, rangeExpression, step, guard, closeParen, body).iterator();
     }
 
     public IdentifierExpression getForKeyword() {
@@ -83,16 +77,8 @@ public class ForExpression extends Expression {
         return equals;
     }
 
-    public Expression getInitialiser() {
-        return initialiser;
-    }
-
-    public IdentifierExpression getToKeyword() {
-        return toKeyword;
-    }
-
-    public Expression getTerminator() {
-        return terminator;
+    public RangeExpression getRangeExpression() {
+        return rangeExpression;
     }
 
     public IdentifierExpression getByKeyword() {

@@ -1,10 +1,47 @@
 Int[] ints = [-2, -1, 0, 1, 2]
 
-
-Int getLowerBound() {
-    return 0
-}
-
-for (Int i in [getLowerBound() to len(ints)]) {
+for (Int i = 0 to len(ints)) {
     print(ints[i])
 }
+
+//Int abs(Int x) {
+//    return match x {
+//        x < 0 -> -1 * x,
+//        else -> x
+//    }
+//}
+//
+//for (Int x in ints) {
+//    Int sqr = match x {
+//        0 or 1 -> x,
+//        2 -> 4,
+//        3 -> 9,
+//        4 -> 6,
+//        else -> {
+//            print("Falling back to calling expensive function")
+//            square(x)
+//        }
+//    }
+//    print(sqr)
+//}
+
+//String[] inputCMDs = ["open", "test.lzl"] //e.g. parsing cmdline commands into an array of words
+//match inputCMDs {
+//    ["quit"] -> exit(),
+//    ["open", filename] -> open(filename),
+//    [action, object] -> parse(action, object),
+//    else -> print("Sorry, command not understood")
+//}
+//
+//Int x = 1
+
+//match x {
+//    0 or 1 -> print("Less than 2"),
+//    else -> print("Don't know")
+//}
+
+//match x {
+//    0 to 10 -> print("One digit"),
+//    10 to 100 -> print("Two digits"),
+//    else -> print("Many digits")
+//}

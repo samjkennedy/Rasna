@@ -48,7 +48,7 @@ public class Lazuli {
             log.info("Lazuli is in simulation mode");
             mode = Mode.SIMULATION;
         } else if ("com".equals(modeFlag.getValue())) {
-            log.info("Lazuli is in conversion mode");
+            log.info("Lazuli is in compilation mode");
             mode = Mode.COMPILATION;
         } else {
             Flags.usage();
@@ -92,7 +92,7 @@ public class Lazuli {
 
             //TODO: make this a flag
             boolean graphProgram = false;
-            //Write first in case of errors in conversion or simulation
+            //Write first in case of errors in compilation or simulation
             if (graphProgram ) {
                 log.info("Writing high level AST graph");
                 HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
