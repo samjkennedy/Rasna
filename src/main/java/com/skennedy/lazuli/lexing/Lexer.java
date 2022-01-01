@@ -74,6 +74,9 @@ public class Lexer {
                             if (lookAhead(line) == '-') {
                                 tokens.add(new Token(TokenType.DECREMENT, new Location(lineNumber, cursor)));
                                 next();
+                            } else if (lookAhead(line) == '>') {
+                                tokens.add(new Token(TokenType.ARROW, new Location(lineNumber, cursor)));
+                                next();
                             } else if (Character.isDigit(lookAhead(line))) {
                                 tokens.add(new Token(TokenType.INT_LITERAL, new Location(lineNumber, cursor), parseNum(line)));
                                 break;
@@ -127,9 +130,6 @@ public class Lexer {
                         case '=':
                             if (lookAhead(line) == '=') {
                                 tokens.add(new Token(TokenType.EQUALS_EQUALS, new Location(lineNumber, cursor)));
-                                next();
-                            } else if (lookAhead(line) == '>') {
-                                tokens.add(new Token(TokenType.ARROW, new Location(lineNumber, cursor)));
                                 next();
                             } else {
                                 tokens.add(new Token(TokenType.EQUALS, new Location(lineNumber, cursor)));

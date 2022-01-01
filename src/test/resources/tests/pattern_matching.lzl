@@ -2,15 +2,16 @@ Int x = 1
 
 //Literal matching
 match x {
-    1 => print(1),
-    2 => print(2),
+    1 -> print(1),
+    2 -> print(2),
     else print(0)
 }
 
+//Multiple matches
 for (Int z = 0 to 5) {
     match z {
-        1 or 2 => print(1),
-        else => print(0)
+        1 or 2 -> print(1),
+        else -> print(0)
     }
 }
 
@@ -26,3 +27,6 @@ for (Int z = 0 to 5) {
 //    10 to 99 -> print(2),
 //    else print(0)
 //}
+
+//Matching arrays and tuples
+//....

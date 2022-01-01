@@ -1,4 +1,4 @@
-package com.skennedy.bixbite.conversion;
+package com.skennedy.lazuli.compilation;
 
 import com.skennedy.lazuli.conversion.JavaBytecodeCompiler;
 import com.skennedy.lazuli.lowering.Lowerer;
@@ -30,7 +30,7 @@ class JavaBytecodeCompilerIntegrationTest {
         PrintStream console = System.out;
         //Set up output stream
         //TODO: figure out how to delete this
-        File outputFile = new File("src/test/resources/results/conversion/" + filename.split("\\.")[0] + "_result.txt");
+        File outputFile = new File("src/test/resources/results/compilation/" + filename.split("\\.")[0] + "_result.txt");
         outputFile.createNewFile();
         PrintStream out = new PrintStream(outputFile);
         // Store current System.out before assigning a new value
@@ -68,7 +68,7 @@ class JavaBytecodeCompilerIntegrationTest {
         System.setOut(console);
 
         String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt");
-        String actualResult = read("results/conversion", filename.split("\\.")[0] + "_result.txt");
+        String actualResult = read("results/compilation", filename.split("\\.")[0] + "_result.txt");
 
         assertEquals(expectedResult, actualResult);
     }

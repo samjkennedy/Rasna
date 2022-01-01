@@ -157,6 +157,9 @@ public class Binder {
                 throw new TypeMismatchException(type, boundMatchCaseExpression.getType());
             }
             type = boundMatchCaseExpression.getType();
+            if (boundMatchCaseExpression.getCaseExpression() != null && boundMatchCaseExpression.getCaseExpression().getType() != operand.getType()) {
+                throw new TypeMismatchException(operand.getType(), boundMatchCaseExpression.getCaseExpression().getType());
+            }
             boundMatchCaseExpressions.add(boundMatchCaseExpression);
         }
 
@@ -231,12 +234,12 @@ public class Binder {
     private BoundExpression bindForExpression(ForExpression forExpression) {
 
         currentScope = new BoundScope(currentScope);
-        BoundExpression initialiser = bind(forExpression.getInitialiser());
+        BoundRangeExpression range = bindRangeExpression(forExpression.getRangeExpression());
 
         TypeSymbol type = parseType(forExpression.getTypeExpression());
 
-        if (!type.isAssignableFrom(initialiser.getType())) {
-            errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
+        if (!type.isAssignableFrom(range.getType())) {
+            errors.add(Error.raiseTypeMismatch(type, range.getType()));
         }
 
         VariableSymbol variable = getVariableSymbol(type, forExpression.getIdentifier(), null, true);
@@ -247,7 +250,6 @@ public class Binder {
             errors.add(Error.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue()));
         }
 
-        BoundExpression terminator = bind(forExpression.getTerminator());
         BoundExpression step = null;
         if (forExpression.getStep() != null) {
             step = bind(forExpression.getStep());
@@ -260,7 +262,15 @@ public class Binder {
 
         currentScope = currentScope.getParentScope();
 
-        return new BoundForExpression(variable, initialiser, terminator, step, guard, body);
+        return new BoundForExpression(variable, range, step, guard, body);
+    }
+
+    private BoundRangeExpression bindRangeExpression(RangeExpression rangeExpression) {
+
+        BoundExpression lowerBound = bind(rangeExpression.getLowerBound());
+        BoundExpression upperBound = bind(rangeExpression.getUpperBound());
+
+        return new BoundRangeExpression(lowerBound, upperBound);
     }
 
     private BoundExpression bindForInExpression(ForInExpression forInExpression) {
