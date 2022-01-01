@@ -31,8 +31,7 @@ public class Lowerer extends BoundProgramRewriter {
 
         BoundForExpression boundForExpression = new BoundForExpression(
                 iterator,
-                new BoundRangeExpression(new BoundLiteralExpression(0), new BoundArrayLengthExpression(mapExpression.getOperand())),
-                new BoundLiteralExpression(1),
+                new BoundRangeExpression(new BoundLiteralExpression(0), new BoundArrayLengthExpression(mapExpression.getOperand()), new BoundLiteralExpression(1)),
                 null,
                 body
         );
@@ -89,7 +88,7 @@ public class Lowerer extends BoundProgramRewriter {
 
         BoundExpression step;
         //TODO: Make a BoundIncrementExpression that converts to the instruction iinc
-        if (rewrittenForExpression.getStep() == null) {
+        if (rewrittenForExpression.getRangeExpression().getStep() == null) {
             step = new BoundIncrementExpression(rewrittenForExpression.getIterator(), new BoundLiteralExpression(1));
         } else {
             step = new BoundAssignmentExpression(rewrittenForExpression.getIterator(),
@@ -97,7 +96,7 @@ public class Lowerer extends BoundProgramRewriter {
                     new BoundBinaryExpression(
                             variableExpression,
                             BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT),
-                            rewrittenForExpression.getStep()
+                            rewrittenForExpression.getRangeExpression().getStep()
                     )
             );
         }

@@ -12,11 +12,15 @@ public class RangeExpression extends Expression {
     private final Expression lowerBound;
     private final IdentifierExpression toKeyword;
     private final Expression upperBound;
+    private final IdentifierExpression byKeyword;
+    private final Expression step;
 
-    public RangeExpression(Expression lowerBound, IdentifierExpression toKeyword, Expression upperBound) {
+    public RangeExpression(Expression lowerBound, IdentifierExpression toKeyword, Expression upperBound, IdentifierExpression byKeyword, Expression step) {
         this.lowerBound = lowerBound;
         this.toKeyword = toKeyword;
         this.upperBound = upperBound;
+        this.byKeyword = byKeyword;
+        this.step = step;
     }
 
     public Expression getLowerBound() {
@@ -29,6 +33,14 @@ public class RangeExpression extends Expression {
 
     public Expression getUpperBound() {
         return upperBound;
+    }
+
+    public IdentifierExpression getByKeyword() {
+        return byKeyword;
+    }
+
+    public Expression getStep() {
+        return step;
     }
 
     @Override

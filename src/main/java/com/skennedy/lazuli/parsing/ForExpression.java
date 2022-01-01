@@ -16,8 +16,6 @@ public class ForExpression extends Expression {
     private final IdentifierExpression identifier;
     private final IdentifierExpression equals;
     private final RangeExpression rangeExpression;
-    private final IdentifierExpression byKeyword;
-    private final Expression step;
     private Expression guard;
     private final IdentifierExpression closeParen;
     private final Expression body;
@@ -28,8 +26,6 @@ public class ForExpression extends Expression {
                          IdentifierExpression identifier,
                          IdentifierExpression equals,
                          RangeExpression rangeExpression,
-                         IdentifierExpression byKeyword,
-                         Expression step,
                          Expression guard,
                          IdentifierExpression closeParen,
                          Expression body) {
@@ -40,8 +36,6 @@ public class ForExpression extends Expression {
         this.identifier = identifier;
         this.equals = equals;
         this.rangeExpression = rangeExpression;
-        this.byKeyword = byKeyword;
-        this.step = step;
         this.guard = guard;
         this.closeParen = closeParen;
         this.body = body;
@@ -54,7 +48,7 @@ public class ForExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeExpression, identifier, equals, rangeExpression, step, guard, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode) forKeyword, openParen, typeExpression, identifier, equals, rangeExpression, guard, closeParen, body).iterator();
     }
 
     public IdentifierExpression getForKeyword() {
@@ -79,14 +73,6 @@ public class ForExpression extends Expression {
 
     public RangeExpression getRangeExpression() {
         return rangeExpression;
-    }
-
-    public IdentifierExpression getByKeyword() {
-        return byKeyword;
-    }
-
-    public Expression getStep() {
-        return step;
     }
 
     public Expression getGuard() {

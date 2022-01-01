@@ -130,7 +130,13 @@ public class Parser {
                 IdentifierExpression toKeyword = matchToken(TokenType.TO_KEYWORD);
                 Expression terminator = parseExpression();
 
-                caseExpression = new RangeExpression(caseExpression, toKeyword, terminator);
+                IdentifierExpression byKeyword = null;
+                Expression step = null;
+                if (current().getTokenType() == TokenType.BY_KEYWORD) {
+                    byKeyword = matchToken(TokenType.BY_KEYWORD);
+                    step = parseExpression();
+                }
+                caseExpression = new RangeExpression(caseExpression, toKeyword, terminator, byKeyword, step);
             }
 
             IdentifierExpression arrow = matchToken(TokenType.ARROW);
@@ -227,14 +233,13 @@ public class Parser {
             IdentifierExpression toKeyword = matchToken(TokenType.TO_KEYWORD);
             Expression terminator = parseExpression();
 
-            RangeExpression rangeExpression = new RangeExpression(initialiser, toKeyword, terminator);
-
             IdentifierExpression byKeyword = null;
             Expression step = null;
             if (current().getTokenType() == TokenType.BY_KEYWORD) {
                 byKeyword = matchToken(TokenType.BY_KEYWORD);
                 step = parseExpression();
             }
+            RangeExpression rangeExpression = new RangeExpression(initialiser, toKeyword, terminator, byKeyword, step);
 
             Expression guard = null;
             if (current().getTokenType() == TokenType.BAR) {
@@ -244,8 +249,10 @@ public class Parser {
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             Expression body = parseExpression();
 
-            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, byKeyword, step, guard, closeParen, body);
+            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, guard, closeParen, body);
+
         } else if (current().getTokenType() == TokenType.IN_KEYWORD) {
+
             IdentifierExpression inKeyword = matchToken(TokenType.IN_KEYWORD);
 
             Expression iterable;

@@ -1,21 +1,6 @@
 package com.skennedy.lazuli.graphing;
 
-import com.skennedy.lazuli.typebinding.BoundProgram;
-import com.skennedy.lazuli.typebinding.VariableSymbol;
-import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
-import com.skennedy.lazuli.typebinding.BoundBinaryExpression;
-import com.skennedy.lazuli.typebinding.BoundBinaryOperator;
-import com.skennedy.lazuli.typebinding.BoundBlockExpression;
-import com.skennedy.lazuli.typebinding.BoundConstDeclarationExpression;
-import com.skennedy.lazuli.typebinding.BoundExpression;
-import com.skennedy.lazuli.typebinding.BoundForExpression;
-import com.skennedy.lazuli.typebinding.BoundIfExpression;
-import com.skennedy.lazuli.typebinding.BoundLiteralExpression;
-import com.skennedy.lazuli.typebinding.BoundPrintExpression;
-import com.skennedy.lazuli.typebinding.BoundTypeofExpression;
-import com.skennedy.lazuli.typebinding.BoundVariableDeclarationExpression;
-import com.skennedy.lazuli.typebinding.BoundVariableExpression;
-import com.skennedy.lazuli.typebinding.BoundWhileExpression;
+import com.skennedy.lazuli.typebinding.*;
 import guru.nidi.graphviz.attribute.Label;
 import guru.nidi.graphviz.attribute.Shape;
 import guru.nidi.graphviz.engine.Format;
@@ -80,6 +65,8 @@ public class HighLevelTreeGrapher {
                 return graphWhileExpression((BoundWhileExpression) expression);
             case FOR:
                 return graphForExpression((BoundForExpression) expression);
+            case FOR_IN:
+                return graphForInExpression((BoundForInExpression) expression);
             case VARIABLE_DECLARATION:
                 if (expression instanceof BoundConstDeclarationExpression) {
                     return graphConstDeclarationExpression((BoundConstDeclarationExpression) expression);
@@ -134,7 +121,7 @@ public class HighLevelTreeGrapher {
             root = mutNode(nextId()).add(Label.of("VAR")).add(Shape.BOX);
         }
 
-        MutableNode identifier = mutNode(nextId()).add(Label.of(variableDeclarationExpression.getType().getName() + ": " + variableDeclarationExpression.getVariable().getName()));
+        MutableNode identifier = mutNode(nextId()).add(Label.of(variableDeclarationExpression.getVariable().getType() + ": " + variableDeclarationExpression.getVariable().getName()));
         MutableNode initialiser = graphExpression(variableDeclarationExpression.getInitialiser());
 
         root.addLink(identifier);
@@ -199,9 +186,9 @@ public class HighLevelTreeGrapher {
         root.addLink(declaration);
         root.addLink(to);
 
-        if (forExpression.getStep() != null) {
+        if (forExpression.getRangeExpression().getStep() != null) {
             MutableNode by = mutNode(nextId()).add(Label.of("BY")).add(Shape.BOX);
-            MutableNode step = graphExpression(forExpression.getStep());
+            MutableNode step = graphExpression(forExpression.getRangeExpression().getStep());
             by.addLink(step);
             root.addLink(by);
         }
@@ -214,6 +201,26 @@ public class HighLevelTreeGrapher {
         }
 
         MutableNode body = graphExpression(forExpression.getBody());
+        root.addLink(body);
+
+        return root;
+    }
+
+    private MutableNode graphForInExpression(BoundForInExpression forInExpression) {
+
+        MutableNode root = mutNode(nextId()).attrs().add(Label.of("FOR")).add(Shape.DIAMOND);
+
+        MutableNode declaration = mutNode(nextId()).add(Label.of("IN")).add(Shape.BOX);
+
+        MutableNode identifier = mutNode(nextId()).add(Label.of(forInExpression.getIterable().getType().getName() + ": " + forInExpression.getVariable().getName()));
+        MutableNode range = graphExpression(forInExpression.getIterable());
+
+        declaration.addLink(identifier);
+        declaration.addLink(range);
+
+        root.addLink(declaration);
+
+        MutableNode body = graphExpression(forInExpression.getBody());
         root.addLink(body);
 
         return root;

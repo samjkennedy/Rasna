@@ -249,11 +249,6 @@ public class Binder {
         } catch (VariableAlreadyDeclaredException vade) {
             errors.add(Error.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue()));
         }
-
-        BoundExpression step = null;
-        if (forExpression.getStep() != null) {
-            step = bind(forExpression.getStep());
-        }
         BoundExpression guard = null;
         if (forExpression.getGuard() != null) {
             guard = bind(forExpression.getGuard());
@@ -262,7 +257,7 @@ public class Binder {
 
         currentScope = currentScope.getParentScope();
 
-        return new BoundForExpression(variable, range, step, guard, body);
+        return new BoundForExpression(variable, range, guard, body);
     }
 
     private BoundRangeExpression bindRangeExpression(RangeExpression rangeExpression) {
@@ -270,7 +265,12 @@ public class Binder {
         BoundExpression lowerBound = bind(rangeExpression.getLowerBound());
         BoundExpression upperBound = bind(rangeExpression.getUpperBound());
 
-        return new BoundRangeExpression(lowerBound, upperBound);
+        BoundExpression step = null;
+        if (rangeExpression.getStep() != null) {
+            step = bind(rangeExpression.getStep());
+        }
+
+        return new BoundRangeExpression(lowerBound, upperBound, step);
     }
 
     private BoundExpression bindForInExpression(ForInExpression forInExpression) {
