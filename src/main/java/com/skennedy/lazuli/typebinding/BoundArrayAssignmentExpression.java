@@ -5,10 +5,10 @@ import java.util.Iterator;
 
 public class BoundArrayAssignmentExpression implements BoundExpression {
 
-    private final BoundArrayAccessExpression arrayAccessExpression;
+    private final BoundPositionalAccessExpression arrayAccessExpression;
     private final BoundExpression assignment;
 
-    public BoundArrayAssignmentExpression(BoundArrayAccessExpression arrayAccessExpression, BoundExpression assignment) {
+    public BoundArrayAssignmentExpression(BoundPositionalAccessExpression arrayAccessExpression, BoundExpression assignment) {
         this.arrayAccessExpression = arrayAccessExpression;
         this.assignment = assignment;
     }
@@ -28,7 +28,7 @@ public class BoundArrayAssignmentExpression implements BoundExpression {
         return Arrays.asList(arrayAccessExpression, assignment).iterator();
     }
 
-    public BoundArrayAccessExpression getArrayAccessExpression() {
+    public BoundPositionalAccessExpression getArrayAccessExpression() {
         return arrayAccessExpression;
     }
 

@@ -11,7 +11,7 @@ import com.skennedy.lazuli.lowering.BoundGotoExpression;
 import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
 import com.skennedy.lazuli.lowering.BoundNoOpExpression;
-import com.skennedy.lazuli.typebinding.BoundArrayAccessExpression;
+import com.skennedy.lazuli.typebinding.BoundPositionalAccessExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayAssignmentExpression;
 import com.skennedy.lazuli.typebinding.BoundArrayLiteralExpression;
 import com.skennedy.lazuli.typebinding.BoundAssignmentExpression;
@@ -129,8 +129,8 @@ public class Simulator {
             case ARRAY_LITERAL_EXPRESSION:
                 evaluateArrayLiteralExpression((BoundArrayLiteralExpression) expression);
                 break;
-            case ARRAY_ACCESS_EXPRESSION:
-                evaluateArrayAccessExpression((BoundArrayAccessExpression) expression);
+            case POSITIONAL_ACCESS_EXPRESSION:
+                evaluateArrayAccessExpression((BoundPositionalAccessExpression) expression);
                 break;
             case ARRAY_LENGTH_EXPRESSION:
                 evaluateArrayLengthExpression((BoundArrayLengthExpression) expression);
@@ -287,7 +287,7 @@ public class Simulator {
         localsStack.push(new LazuliArray<>(array));
     }
 
-    private void evaluateArrayAccessExpression(BoundArrayAccessExpression arrayAccessExpression) {
+    private void evaluateArrayAccessExpression(BoundPositionalAccessExpression arrayAccessExpression) {
         evaluate(arrayAccessExpression.getArray());
         evaluate(arrayAccessExpression.getIndex());
         int index = (int) localsStack.pop();

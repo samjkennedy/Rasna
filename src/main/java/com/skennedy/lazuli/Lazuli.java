@@ -39,7 +39,7 @@ public class Lazuli {
                 .build();
         Flag<String> fileFlag = Flags.stringFlag()
                 .withName("f")
-                .withDescription("The file to convert")
+                .withDescription("The file to compile")
                 .build();
         Flags.parse(args);
 
@@ -127,7 +127,7 @@ public class Lazuli {
                 case COMPILATION:
                     log.info("Compiling program {}", fileNameWithExt);
                     JavaBytecodeCompiler javaBytecodeCompiler = new JavaBytecodeCompiler();
-                    javaBytecodeCompiler.convert(boundProgram, fileName);
+                    javaBytecodeCompiler.compile(boundProgram, fileName);
                     Instant end = Instant.now();
                     log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 

@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public abstract class BoundProgramRewriter {
 
@@ -63,8 +62,8 @@ public abstract class BoundProgramRewriter {
 
             case ARRAY_LITERAL_EXPRESSION:
                 return rewriteArrayLiteralExpression((BoundArrayLiteralExpression) expression);
-            case ARRAY_ACCESS_EXPRESSION:
-                return rewriteArrayAccessExpression((BoundArrayAccessExpression) expression);
+            case POSITIONAL_ACCESS_EXPRESSION:
+                return rewriteArrayAccessExpression((BoundPositionalAccessExpression) expression);
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 return rewriteArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
             case ARRAY_LENGTH_EXPRESSION:
@@ -317,14 +316,14 @@ public abstract class BoundProgramRewriter {
         return arrayLiteralExpression;
     }
 
-    private BoundExpression rewriteArrayAccessExpression(BoundArrayAccessExpression arrayAccessExpression) {
+    private BoundExpression rewriteArrayAccessExpression(BoundPositionalAccessExpression arrayAccessExpression) {
 
         BoundExpression index = rewriteExpression(arrayAccessExpression.getIndex());
 
         if (index == arrayAccessExpression.getIndex()) {
             return arrayAccessExpression;
         }
-        return new BoundArrayAccessExpression(arrayAccessExpression.getArray(), index);
+        return new BoundPositionalAccessExpression(arrayAccessExpression.getArray(), index);
     }
 
     private BoundExpression rewriteArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
@@ -562,7 +561,7 @@ public abstract class BoundProgramRewriter {
                 VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
                 BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
-                new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression);
+                new BoundPositionalAccessExpression(forInExpression.getIterable(), iterationCounterExpression);
 
                 List<BoundExpression> expressions = new ArrayList<>();
                 expressions.addAll(Arrays.asList(
@@ -576,7 +575,7 @@ public abstract class BoundProgramRewriter {
                         rewriteBlockInitialiser(
                                 initialiser,
                                 expr -> new BoundBlockExpression(
-                                        new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(forInExpression.getIterable(), iterationCounterExpression), expr),
+                                        new BoundArrayAssignmentExpression(new BoundPositionalAccessExpression(forInExpression.getIterable(), iterationCounterExpression), expr),
                                         new BoundIncrementExpression(iterationCounter, new BoundLiteralExpression(1)
                                         ))
                         )));
@@ -596,8 +595,8 @@ public abstract class BoundProgramRewriter {
                             //For each element copy to the array
                             rewriteForExpression(new BoundForExpression(copyIndex, new BoundRangeExpression(new BoundLiteralExpression(0), iterationCounterExpression, new BoundLiteralExpression(1)), null, new BoundBlockExpression(
                                     new BoundArrayAssignmentExpression(
-                                            new BoundArrayAccessExpression(filteredArrayVariable, copyIndexExpression),
-                                            new BoundArrayAccessExpression(arrayVariableExpression, copyIndexExpression)
+                                            new BoundPositionalAccessExpression(filteredArrayVariable, copyIndexExpression),
+                                            new BoundPositionalAccessExpression(arrayVariableExpression, copyIndexExpression)
                                     )
                             ))),
                             //Assign the filtered array to the original variable
@@ -657,7 +656,7 @@ public abstract class BoundProgramRewriter {
                         variableDeclarationExpression,
                         new BoundVariableDeclarationExpression(indexVariable, null, rangeExpression.getLowerBound(), false),
                         rewriteBlockInitialiser(initialiser, expr -> new BoundBlockExpression(
-                                new BoundArrayAssignmentExpression(new BoundArrayAccessExpression(array, index), expr),
+                                new BoundArrayAssignmentExpression(new BoundPositionalAccessExpression(array, index), expr),
                                 new BoundIncrementExpression(indexVariable, new BoundLiteralExpression(1))
                         ))
                 ));
@@ -677,8 +676,8 @@ public abstract class BoundProgramRewriter {
                             //For each element copy to the array
                             rewriteForExpression(new BoundForExpression(copyIndex, new BoundRangeExpression(new BoundLiteralExpression(0), index, new BoundLiteralExpression(1)), null, new BoundBlockExpression(
                                     new BoundArrayAssignmentExpression(
-                                            new BoundArrayAccessExpression(filteredArrayVariable, copyIndexExpression),
-                                            new BoundArrayAccessExpression(arrayVariableExpression, copyIndexExpression)
+                                            new BoundPositionalAccessExpression(filteredArrayVariable, copyIndexExpression),
+                                            new BoundPositionalAccessExpression(arrayVariableExpression, copyIndexExpression)
                                     )
                             ))),
                             //Assign the filtered array to the original variable

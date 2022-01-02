@@ -24,7 +24,7 @@ public class Lowerer extends BoundProgramRewriter {
 
         BoundBlockExpression body = new BoundBlockExpression(
                 new BoundArrayAssignmentExpression(
-                        new BoundArrayAccessExpression(mapExpression.getOperand(), new BoundVariableExpression(iterator)),
+                        new BoundPositionalAccessExpression(mapExpression.getOperand(), new BoundVariableExpression(iterator)),
                         mapExpression.getMapperFunction()
                 )
         );
@@ -153,7 +153,7 @@ public class Lowerer extends BoundProgramRewriter {
                 new BoundVariableDeclarationExpression( //Initialise iterator
                         ((BoundForInExpression) expression).getVariable(),
                         ((BoundForInExpression) expression).getGuard(),
-                        new BoundArrayAccessExpression(((BoundForInExpression) expression).getIterable(), new BoundLiteralExpression(0)),
+                        new BoundPositionalAccessExpression(((BoundForInExpression) expression).getIterable(), new BoundLiteralExpression(0)),
                         false
                 )
         );
@@ -162,7 +162,7 @@ public class Lowerer extends BoundProgramRewriter {
                 new BoundAssignmentExpression(
                         ((BoundForInExpression) expression).getVariable(),
                         ((BoundForInExpression) expression).getGuard(),
-                        new BoundArrayAccessExpression(((BoundForInExpression) expression).getIterable(), iterationCounterExpression)
+                        new BoundPositionalAccessExpression(((BoundForInExpression) expression).getIterable(), iterationCounterExpression)
                 )
         );
 
