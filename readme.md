@@ -176,6 +176,12 @@ They can be constructed literally like so:
 t: Tuple = ("Hello", 1, false)
 ```
 
+A tuple of one element should be constructed with a trailing comma, like so:
+
+```julia
+singleton: Tuple = ("Hello",)
+```
+
 Values can be accessed by their position:
 
 ```julia
