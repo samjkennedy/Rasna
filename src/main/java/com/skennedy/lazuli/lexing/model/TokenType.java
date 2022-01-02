@@ -41,6 +41,7 @@ public enum TokenType {
     //Syntax
     COMMA(","),
     ARROW("->"),
+    DOT("."),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -60,6 +61,7 @@ public enum TokenType {
     MATCH_KEYWORD("match"),
     CONST_KEYWORD("const"),
     VAR_KEYWORD("var"),
+    STRUCT_KEYWORD("struct"),
 
     //Types
     VOID_KEYWORD("Void"),

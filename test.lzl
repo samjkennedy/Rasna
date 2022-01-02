@@ -1,5 +1,38 @@
-Int[] evens = for (Int N = 0 to 10 by 2) {
-    N
+//Int isqrt(Int x) {
+//    Int i = 1
+//    Int result = 1
+//    while (result <= x) {
+//     i = i + 1
+//     result = i * i
+//    }
+//    return i - 1
+//}
+
+//Int[] v2i(Int x, Int y) {
+//    return [x, y]
+//}
+//
+//Int[] v = v2i(1, 2)
+//
+//for (Int i in v) print(i)
+
+struct V2i {
+    Int x
+    Int y
+
+//    Int mag() {
+//        return isqrt(x * x + y * y)
+//    }
 }
 
-for (Int e in evens) print(e)
+//struct V3i {
+//    Int x
+//    Int y
+//    Int z
+//}
+////TODO: This should create an array internally
+V2i v = V2i(1, 2)
+
+print(v.x)
+//print(v.y)
+//print(v.mag())

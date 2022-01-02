@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public abstract class BoundProgramRewriter {
 
@@ -115,9 +116,27 @@ public abstract class BoundProgramRewriter {
                 return rewriteArrayDeclarationExpression((BoundArrayDeclarationExpression) expression);
             case YIELD_EXPRESSION:
                 return rewriteYieldExpression((BoundYieldExpression) expression);
+            case STRUCT_DECLARATION_EXPRESSION:
+                return rewriteStructDeclarationExpression((BoundStructDeclarationExpression) expression);
+            case STRUCT_LITERAL_EXPRESSION:
+                return rewriteStructLiteralExpression((BoundStructLiteralExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    protected BoundExpression rewriteStructDeclarationExpression(BoundStructDeclarationExpression structDeclarationExpression) {
+
+        List<BoundExpression> members = new ArrayList<>();
+        for (BoundExpression member : structDeclarationExpression.getMembers()) {
+            members.add(rewriteExpression(member));
+        }
+
+        if (members == structDeclarationExpression.getMembers()) {
+            return structDeclarationExpression;
+        }
+
+        return new BoundStructDeclarationExpression(structDeclarationExpression.getType(), members);
     }
 
     private BoundExpression rewriteYieldExpression(BoundYieldExpression yieldExpression) {
@@ -243,6 +262,26 @@ public abstract class BoundProgramRewriter {
             return new BoundFunctionCallExpression(functionCallExpression.getFunction(), rewrittenArgs);
         }
         return functionCallExpression;
+    }
+
+    private BoundExpression rewriteStructLiteralExpression(BoundStructLiteralExpression structLiteralExpression) {
+
+        List<BoundExpression> rewrittenElements = new ArrayList<>();
+
+        boolean rewritten = false;
+        for (BoundExpression element : structLiteralExpression.getElements()) {
+
+            BoundExpression rewrittenElement = rewriteExpression(element);
+            rewrittenElements.add(rewrittenElement);
+            if (rewrittenElement != element) {
+                rewritten = true;
+            }
+        }
+
+        if (rewritten) {
+            return new BoundStructLiteralExpression(rewrittenElements);
+        }
+        return structLiteralExpression;
     }
 
     private BoundExpression rewriteArrayLiteralExpression(BoundArrayLiteralExpression arrayLiteralExpression) {

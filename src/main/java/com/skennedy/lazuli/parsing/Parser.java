@@ -89,12 +89,20 @@ public class Parser {
             case CONST_KEYWORD:
             case TUPLE_KEYWORD:
                 return parseVariableOrFunctionDeclarationExpression();
+            case STRUCT_KEYWORD:
+                return parseStructDeclarationExpression();
             case IDENTIFIER:
                 if (nextToken().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
                     return parseArrayAccessExpression();
                 }
                 if (nextToken().getTokenType() == TokenType.OPEN_PARENTHESIS) {
                     return parseFunctionCallExpression();
+                }
+                if (nextToken().getTokenType() == TokenType.IDENTIFIER) {
+                    return parseVariableOrFunctionDeclarationExpression();
+                }
+                if (nextToken().getTokenType() == TokenType.DOT) {
+                    return parseMemberAccessorExpression();
                 }
                 return parseAssignmentExpression();
             case RETURN_KEYWORD:
@@ -106,6 +114,10 @@ public class Parser {
             default:
                 throw new IllegalStateException("Unexpected value: " + current().getTokenType());
         }
+    }
+
+    private Expression parseMemberAccessorExpression() {
+        return null;
     }
 
     private Expression parseYieldExpression() {
@@ -323,6 +335,23 @@ public class Parser {
         return new AssignmentExpression(identifier, equals, assignment);
     }
 
+    private Expression parseStructDeclarationExpression() {
+        IdentifierExpression structKeyword = matchToken(TokenType.STRUCT_KEYWORD);
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
+
+        List<Expression> members = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN
+        ) {
+            members.add(parseExpression());
+        }
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
+
+        return new StructDeclarationExpression(structKeyword, identifier, openCurly, members, closeCurly);
+    }
+
     private Expression parseVariableOrFunctionDeclarationExpression() {
         IdentifierExpression constKeyword = null;
         if (current().getTokenType() == TokenType.CONST_KEYWORD) {
@@ -502,7 +531,8 @@ public class Parser {
                 typeKeyword = matchToken(TokenType.VAR_KEYWORD);
                 break;
             default:
-                throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
+                typeKeyword = matchToken(TokenType.IDENTIFIER);
+                break;
         }
         IdentifierExpression openSquareBrace = null;
         IdentifierExpression closeSquareBrace = null;
