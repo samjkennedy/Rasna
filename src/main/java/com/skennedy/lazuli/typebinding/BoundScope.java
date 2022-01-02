@@ -1,6 +1,7 @@
 package com.skennedy.lazuli.typebinding;
 
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
+import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 
@@ -13,11 +14,13 @@ public class BoundScope {
     private final BoundScope parentScope;
     private final Map<String, VariableSymbol> definedVariables;
     private final Map<String, FunctionSymbol> definedFunctions;
+    private final Map<String, TypeSymbol> definedTypes;
 
     public BoundScope(BoundScope parentScope) {
         this.parentScope = parentScope;
         this.definedVariables = new HashMap<>();
         this.definedFunctions = new HashMap<>();
+        this.definedTypes = new HashMap<>();
     }
 
     public BoundScope getParentScope() {
@@ -46,6 +49,17 @@ public class BoundScope {
         return Optional.empty();
     }
 
+    public Optional<TypeSymbol> tryLookupType(String name) {
+
+        if (definedTypes.containsKey(name)) {
+            return Optional.of(definedTypes.get(name));
+        }
+        if (parentScope != null) {
+            return parentScope.tryLookupType(name);
+        }
+        return Optional.empty();
+    }
+
     public void declareVariable(String name, VariableSymbol variable) {
         if (tryLookupVariable(name).isPresent()) {
             throw new VariableAlreadyDeclaredException(name);
@@ -68,5 +82,20 @@ public class BoundScope {
             throw new FunctionAlreadyDeclaredException(name);
         }
         definedFunctions.put(name, function);
+    }
+
+    public void declareType(String name, TypeSymbol type) {
+        if (tryLookupType(name).isPresent()) {
+            throw new TypeAlreadyDeclaredException(name);
+        }
+        definedTypes.put(name, type);
+    }
+
+    public Map<String, FunctionSymbol> getDefinedFunctions() {
+        return definedFunctions;
+    }
+
+    public Map<String, VariableSymbol> getDefinedVariables() {
+        return definedVariables;
     }
 }

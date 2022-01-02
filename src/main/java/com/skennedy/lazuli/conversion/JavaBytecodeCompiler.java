@@ -6,7 +6,6 @@ import com.skennedy.lazuli.lowering.BoundConditionalGotoExpression;
 import com.skennedy.lazuli.lowering.BoundGotoExpression;
 import com.skennedy.lazuli.lowering.BoundLabel;
 import com.skennedy.lazuli.lowering.BoundLabelExpression;
-import com.skennedy.lazuli.parsing.YieldExpression;
 import com.skennedy.lazuli.typebinding.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -20,6 +19,7 @@ import org.objectweb.asm.util.Textifier;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +44,7 @@ import static org.objectweb.asm.Opcodes.ASTORE;
 import static org.objectweb.asm.Opcodes.BALOAD;
 import static org.objectweb.asm.Opcodes.BASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
+import static org.objectweb.asm.Opcodes.CHECKCAST;
 import static org.objectweb.asm.Opcodes.DADD;
 import static org.objectweb.asm.Opcodes.DALOAD;
 import static org.objectweb.asm.Opcodes.DASTORE;
@@ -243,6 +244,10 @@ public class JavaBytecodeCompiler implements Compiler {
 
                 visit((BoundArrayLiteralExpression) expression, methodVisitor);
                 break;
+            case STRUCT_LITERAL_EXPRESSION:
+
+                visit((BoundStructLiteralExpression) expression, methodVisitor);
+                break;
             case ARRAY_ACCESS_EXPRESSION:
 
                 visit((BoundArrayAccessExpression) expression, methodVisitor);
@@ -322,11 +327,187 @@ public class JavaBytecodeCompiler implements Compiler {
                 visit((BoundArrayDeclarationExpression) expression, methodVisitor);
                 break;
             case YIELD_EXPRESSION:
-                visit(((BoundYieldExpression)expression).getExpression(), methodVisitor);
+                visit(((BoundYieldExpression) expression).getExpression(), methodVisitor);
+                break;
+            case STRUCT_DECLARATION_EXPRESSION:
+                //visit((BoundStructDeclarationExpression) expression);
+                break;
+            case MEMBER_ACCESSOR:
+                visit((BoundMemberAccessorExpression) expression, methodVisitor);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private void visit(BoundMemberAccessorExpression memberAccessorExpression, MethodVisitor methodVisitor) {
+
+        //Currently we only support structs and variable accessors so we can confidently assume this is accessing a variable in a struct, for now
+        visit(memberAccessorExpression.getOwner(), methodVisitor);
+
+        if (memberAccessorExpression.getMember() instanceof BoundFunctionCallExpression) {
+            throw new UnsupportedOperationException("Method calls on structs are not yet supported");
+//            BoundFunctionCallExpression functionCallExpression = (BoundFunctionCallExpression) memberAccessorExpression.getMember();
+//
+//            visit(functionCallExpression, methodVisitor);
+        }
+
+        //TODO: This is atrocious lmao
+        VariableSymbol variable = ((BoundVariableExpression) memberAccessorExpression.getMember()).getVariable();
+        int index = new ArrayList<>(memberAccessorExpression.getOwner().getType().getFields().values()).indexOf(variable);
+        visit(new BoundLiteralExpression(index), methodVisitor);
+
+        if (variable.getType() == TypeSymbol.TUPLE) {
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.VAR); //Value from array
+            return;
+        }
+
+        if (variable.getType().getName().equals(TypeSymbol.INT.getName())) {
+
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+
+            methodVisitor.visitVarInsn(ISTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ISTORE, variableIndex);
+            methodVisitor.visitVarInsn(ILOAD, variableIndex);
+            textifierVisitor.visitVarInsn(ILOAD, variableIndex);
+            variableIndex++;
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.INT); //Value from array
+
+        } else if (variable.getType().getName().equals(TypeSymbol.BOOL.getName())) {
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+
+            methodVisitor.visitVarInsn(ISTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ISTORE, variableIndex);
+            methodVisitor.visitVarInsn(ILOAD, variableIndex);
+            textifierVisitor.visitVarInsn(ILOAD, variableIndex);
+            variableIndex++;
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.BOOL); //Value from array
+        } else if (variable.getType().getName().equals(TypeSymbol.REAL.getName())) {
+
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
+
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()" + getTypeDescriptor(TypeSymbol.REAL), false);
+            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()" + getTypeDescriptor(TypeSymbol.REAL), false);
+
+            methodVisitor.visitVarInsn(DSTORE, variableIndex);
+            textifierVisitor.visitVarInsn(DSTORE, variableIndex);
+            methodVisitor.visitVarInsn(DLOAD, variableIndex);
+            textifierVisitor.visitVarInsn(DLOAD, variableIndex);
+            variableIndex += 2;
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.REAL); //Value from array
+        } else {
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(variable.getType()); //Value from array
+        }
+    }
+
+    private void visit(BoundStructDeclarationExpression structDeclarationExpression) {
+
+        //Currently, declaring a struct does nothing, only using a struct will generate code
+
+        //TODO: All this code is more applicable to types proper
+        //This is where the fun begins
+//        String name = structDeclarationExpression.getType().getName();
+//        classWriter.visitInnerClass(
+//                className + "$" + name,
+//                className,
+//                name, // Class Name
+//                ACC_PRIVATE + ACC_SUPER // public static
+//        );
+//        textifierVisitor.visitInnerClass(
+//                className + "$" + name,
+//                className,
+//                name, // Class Name
+//                ACC_PRIVATE + ACC_SUPER // public static
+//        );
+//
+//        for (BoundExpression member : structDeclarationExpression.getMembers()) {
+//            switch (member.getBoundExpressionType()) {
+//                case VARIABLE_DECLARATION:
+//                    BoundVariableDeclarationExpression variableDeclarationExpression = (BoundVariableDeclarationExpression) member;
+//                    VariableSymbol variable = variableDeclarationExpression.getVariable();
+//                    classWriter.newField(name, variable.getName(), getTypeDescriptor(variable.getType()));
+//                    break;
+//                case FUNCTION_DECLARATION:
+//
+//                    break;
+//                default:
+//                    throw new IllegalStateException("Structs currently can only contain variable and function declarations");
+//            }
+//        }
+
+        //This is more for different files - todo for includes
+//        ClassWriter structWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+//        Textifier structTextifierWriter = new Textifier();
+//        structWriter.visit(
+//                V11, // Java 1.8
+//                ACC_PUBLIC + ACC_SUPER, // public static
+//                structDeclarationExpression.getType().getName(), // Class Name
+//                null, // Generics <T>
+//                "java/lang/Object", // Interface extends Object (Super Class),
+//                null // interface names
+//        );
+//        structTextifierWriter.visit(
+//                V11, // Java 1.8
+//                ACC_PUBLIC + ACC_SUPER, // public static
+//                structDeclarationExpression.getType().getName(), // Class Name
+//                null, // Generics <T>
+//                "java/lang/Object", // Interface extends Object (Super Class),
+//                null // interface names
+//        );
+//
+//
+//
+//        structWriter.visitEnd();
+//        structTextifierWriter.visitClassEnd();
+//
+//        byte[] code = structWriter.toByteArray();
+//
+//        File bytecodeFile = new File(structDeclarationExpression.getType().getName() + "_bytecode.txt");
+//        bytecodeFile.createNewFile();
+//        PrintWriter fileWriter = new PrintWriter(bytecodeFile);
+//        structTextifierWriter.print(fileWriter);
+//        fileWriter.close();
+//
+//        File outputFile = new File(structDeclarationExpression.getType().getName() + ".class");
+//        outputFile.createNewFile();
+//        FileUtils.writeByteArrayToFile(outputFile, code);
     }
 
     private void visit(BoundArrayDeclarationExpression arrayDeclarationExpression, MethodVisitor methodVisitor) {
@@ -465,7 +646,9 @@ public class JavaBytecodeCompiler implements Compiler {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
         } else {
-            throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
+            methodVisitor.visitVarInsn(ASTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ASTORE, variableIndex);
+            //throw new UnsupportedOperationException("Variables of type " + variableDeclarationExpression.getType().getName() + " are not yet supported");
         }
         scope.popStack();
 
@@ -484,7 +667,7 @@ public class JavaBytecodeCompiler implements Compiler {
 
     private Object getStackTypeCode(TypeSymbol type) {
         if (type instanceof ArrayTypeSymbol) {
-            return "[" + getType(((ArrayTypeSymbol) type).getType());
+            return "[" + getTypeDescriptor(((ArrayTypeSymbol) type).getType());
         }
         if (TypeSymbol.REAL.getName().equals(type.getName())) {
             return DOUBLE;
@@ -501,7 +684,8 @@ public class JavaBytecodeCompiler implements Compiler {
         if (TypeSymbol.VAR.getName().equals(type.getName())) {
             return "Ljava/lang/Object;";
         }
-        throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
+        return "Ljava/lang/Object;";
+        //throw new UnsupportedOperationException("Compilation is not yet supported for type: " + type.getName());
     }
 
     private void visit(BoundIncrementExpression incrementExpression, MethodVisitor methodVisitor) {
@@ -545,7 +729,9 @@ public class JavaBytecodeCompiler implements Compiler {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
         } else {
-            throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
+            methodVisitor.visitVarInsn(ALOAD, variableIdx);
+            textifierVisitor.visitVarInsn(ALOAD, variableIdx);
+            //throw new UnsupportedOperationException("Variables of type " + boundVariableExpression.getType().getName() + " are not yet supported");
         }
         scope.pushStack(variable.getType());
     }
@@ -641,6 +827,40 @@ public class JavaBytecodeCompiler implements Compiler {
         }
     }
 
+    private void visit(BoundStructLiteralExpression structLiteralExpression, MethodVisitor methodVisitor) {
+
+        List<BoundExpression> elements = structLiteralExpression.getElements();
+
+        visit(new BoundLiteralExpression(elements.size()), methodVisitor);
+
+        methodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+        textifierVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+
+        int index = 0;
+        for (BoundExpression element : elements) {
+            methodVisitor.visitInsn(DUP);
+            textifierVisitor.visitInsn(DUP);
+            visit(new BoundLiteralExpression(index), methodVisitor);
+            visit(element, methodVisitor);
+            if (TypeSymbol.INT.equals(element.getType())) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+                textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+            } else if (TypeSymbol.REAL.equals(element.getType())) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+                textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+            } else if (TypeSymbol.BOOL.equals(element.getType())) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+                textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+            }
+            methodVisitor.visitInsn(AASTORE);
+            textifierVisitor.visitInsn(AASTORE);
+
+            scope.popStack();
+            scope.popStack();
+            index++;
+        }
+    }
+
     private void visit(BoundArrayLiteralExpression arrayLiteralExpression, MethodVisitor methodVisitor) {
 
         List<BoundExpression> elements = arrayLiteralExpression.getElements();
@@ -723,7 +943,7 @@ public class JavaBytecodeCompiler implements Compiler {
 
                 scope.popStack(); //Array index
                 scope.popStack(); //Array ref
-                scope.pushStack(TypeSymbol.BOOL); //Value from array
+                scope.pushStack(TypeSymbol.REAL); //Value from array
             } else {
                 methodVisitor.visitInsn(AALOAD);
                 textifierVisitor.visitInsn(AALOAD);
@@ -1051,18 +1271,19 @@ public class JavaBytecodeCompiler implements Compiler {
         StringBuilder sb = new StringBuilder();
         sb.append("(");
         for (TypeSymbol type : argumentTypes) {
-            sb.append(getType(type));
+            sb.append(getTypeDescriptor(type));
         }
         sb.append(")");
-        sb.append(getType(returnType));
+        sb.append(getTypeDescriptor(returnType));
 
         return sb.toString();
     }
 
-    private String getType(TypeSymbol type) {
+    private String getTypeDescriptor(TypeSymbol type) {
         String javaType = getTypeFromName(type.getName());
         if (javaType == null) {
-            throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
+            return "[Ljava/lang/Object;";
+            //throw new UnsupportedOperationException("Type " + type.getName() + " is not yet supported");
         }
         if (type instanceof ArrayTypeSymbol) {
             return "[" + javaType;
@@ -1138,7 +1359,8 @@ public class JavaBytecodeCompiler implements Compiler {
             methodVisitor.visitInsn(ARETURN);
             textifierVisitor.visitInsn(ARETURN);
         } else {
-            throw new UnsupportedOperationException("Functions that return type " + returnExpression.getReturnValue().getType() + " are not yet supported");
+            methodVisitor.visitInsn(ARETURN);
+            textifierVisitor.visitInsn(ARETURN);
         }
     }
 

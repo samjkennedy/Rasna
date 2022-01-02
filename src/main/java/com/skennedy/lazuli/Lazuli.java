@@ -93,7 +93,7 @@ public class Lazuli {
             //TODO: make this a flag
             boolean graphProgram = false;
             //Write first in case of errors in compilation or simulation
-            if (true) {
+            if (graphProgram) {
                 log.info("Writing high level AST graph");
                 HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
                 highLevelTreeGrapher.graphAST(boundProgram);

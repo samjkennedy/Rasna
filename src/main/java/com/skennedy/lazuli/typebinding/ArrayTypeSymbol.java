@@ -1,5 +1,7 @@
 package com.skennedy.lazuli.typebinding;
 
+import java.util.Collections;
+
 import static com.skennedy.lazuli.typebinding.SymbolType.VARIABLE;
 
 public class ArrayTypeSymbol extends TypeSymbol {
@@ -7,7 +9,10 @@ public class ArrayTypeSymbol extends TypeSymbol {
     private final TypeSymbol type;
 
     public ArrayTypeSymbol(TypeSymbol type) {
-        super(type.getName());
+        super(type.getName(),
+                Collections.emptyMap(),    //TODO: split, reduce, etc etc
+                Collections.emptyMap()     //TODO: len, etc
+        );
         this.type = type;
     }
 

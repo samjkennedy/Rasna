@@ -8,6 +8,7 @@ import java.util.List;
 public enum TokenType {
 
     WHITESPACE(null),
+    LINE_BREAK("\n"),
     INT_LITERAL(null),
     STRING_LITERAL(null),
     IDENTIFIER(null),
@@ -41,6 +42,8 @@ public enum TokenType {
     //Syntax
     COMMA(","),
     ARROW("->"),
+    DOT("."),
+    COLON(":"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -60,6 +63,8 @@ public enum TokenType {
     MATCH_KEYWORD("match"),
     CONST_KEYWORD("const"),
     VAR_KEYWORD("var"),
+    STRUCT_KEYWORD("struct"),
+    FN_KEYWORD("fn"),
 
     //Types
     VOID_KEYWORD("Void"),

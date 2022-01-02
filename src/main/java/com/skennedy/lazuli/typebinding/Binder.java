@@ -3,6 +3,7 @@ package com.skennedy.lazuli.typebinding;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
+import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.TypeMismatchException;
 import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
@@ -16,8 +17,10 @@ import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class Binder {
 
@@ -100,9 +103,40 @@ public class Binder {
                 return bindArrayDeclarationExpression((ArrayDeclarationExpression) expression);
             case YIELD_EXPRESSION:
                 return bindYieldExpression((YieldExpression) expression);
+            case STRUCT_DECLARATION_EXPR:
+                return bindStructDeclarationExpression((StructDeclarationExpression) expression);
+            case MEMBER_ACCESSOR_EXPR:
+                return bindMemberAccessorExpression((MemberAccessorExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundMemberAccessorExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
+        BoundExpression boundOwner = bind(memberAccessorExpression.getOwner());
+
+        IdentifierExpression member = memberAccessorExpression.getMember();
+
+        BoundExpression boundMember;
+
+        Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
+        if (typeSymbol.isEmpty()) {
+            throw new IllegalStateException("No such type " + boundOwner.getType().getName() + " in scope, possibly a parser bug");
+        }
+        TypeSymbol type = typeSymbol.get();
+        if (type.getFunctions().containsKey(member.getValue())) {
+            throw new UnsupportedOperationException("Function reference accessors are not yet supported");
+        }
+
+        if (!type.getFields().containsKey(member.getValue())) {
+            //TODO: Better error reporting
+            throw new IllegalStateException("No such member " + member.getValue());
+        }
+
+        VariableSymbol variable = type.getFields().get(member.getValue());
+        boundMember = new BoundVariableExpression(variable);
+
+        return new BoundMemberAccessorExpression(boundOwner, boundMember);
     }
 
     private BoundExpression bindYieldExpression(YieldExpression yieldExpression) {
@@ -309,10 +343,11 @@ public class Binder {
     private TypeSymbol parseType(TypeExpression typeExpression) {
         TypeSymbol typeSymbol;
 
+        if (typeExpression == null) {
+            return TypeSymbol.VOID;
+        }
+
         switch (typeExpression.getIdentifier().getTokenType()) {
-            case VOID_KEYWORD:
-                typeSymbol = TypeSymbol.VOID;
-                break;
             case INT_KEYWORD:
                 typeSymbol = TypeSymbol.INT;
                 break;
@@ -335,7 +370,11 @@ public class Binder {
                 typeSymbol = TypeSymbol.VAR;
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + typeExpression.getIdentifier().getTokenType());
+                Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getIdentifier().getValue());
+                if (type.isPresent()) {
+                    return type.get();
+                }
+                throw new IllegalStateException("Unexpected value: " + typeExpression.getIdentifier().getValue());
         }
         //TODO: This doesn't do N-Dimensional arrays yet
         if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
@@ -383,6 +422,11 @@ public class Binder {
 
         } else if (identifierExpression.getTokenType() == TokenType.FALSE_KEYWORD) {
             return new BoundLiteralExpression(false);
+        }
+
+        Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifierExpression.getValue());
+        if (type.isPresent()) {
+            throw new UnsupportedOperationException("Custom types are not yet supported");
         }
 
         Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifierExpression.getValue());
@@ -444,11 +488,57 @@ public class Binder {
         return new BoundAssignmentExpression(variable, variable.getGuard(), initialiser);
     }
 
+    private BoundExpression bindStructDeclarationExpression(StructDeclarationExpression structDeclarationExpression) {
+
+        IdentifierExpression identifier = structDeclarationExpression.getIdentifier();
+
+        currentScope = new BoundScope(currentScope);
+
+        List<BoundExpression> members = new ArrayList<>();
+        for (Expression member : structDeclarationExpression.getMembers()) {
+            members.add(bind(member));
+        }
+
+        Map<String, FunctionSymbol> definedFunctions = currentScope.getDefinedFunctions();
+        Map<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
+
+        currentScope = currentScope.getParentScope();
+
+        //TODO: The defined functions and variables have no knowledge of their owner, two types with the same method may cause issues
+        TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedFunctions, definedVariables);
+
+        //Define constructor as a function
+        List<BoundFunctionArgumentExpression> args = new ArrayList<>();
+        for (VariableSymbol variable : definedVariables.values()) {
+            args.add(new BoundFunctionArgumentExpression(variable, null));
+        }
+        FunctionSymbol constructor = new FunctionSymbol((String) identifier.getValue(), type, args, null);
+
+        //Generate constructor
+        List<BoundExpression> variableExpressions = definedVariables.values().stream()
+                .map(BoundVariableExpression::new)
+                .collect(Collectors.toList());
+
+        BoundFunctionDeclarationExpression constructorExpression = new BoundFunctionDeclarationExpression(constructor, args,
+                new BoundBlockExpression(new BoundReturnExpression(new BoundStructLiteralExpression(variableExpressions)))
+        );
+
+        currentScope.declareFunction((String) identifier.getValue(), constructor);
+
+        try {
+            currentScope.declareType((String) identifier.getValue(), type);
+        } catch (TypeAlreadyDeclaredException tade) {
+            errors.add(Error.raiseTypeAlreadyDeclared((String) identifier.getValue()));
+        }
+
+        return new BoundBlockExpression(constructorExpression, new BoundStructDeclarationExpression(type, members));
+    }
+
     private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
-        TypeSymbol type = parseType(functionDeclarationExpression.getTypeIdentifier());
+        TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
 
         currentScope = new BoundScope(currentScope);
 
@@ -463,7 +553,7 @@ public class Binder {
             //Declare the function in the parent scope
             currentScope.getParentScope().declareFunction((String) identifier.getValue(), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
-            errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
+            errors.add(Error.raiseFunctionAlreadyDeclared((String) identifier.getValue()));
         }
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());

@@ -17,14 +17,14 @@ Lazuli is planned to be:
 
 Simple programs that print numbers from 0 to 99 in an ascending order:
 
-```javascript
-for (Int N = 0 to 100) {
+```julia
+for (N: Int = 0 to 100) {
     print(N)
 }
 ```
 
-```javascript
-Int N = 0
+```julia
+N: Int = 0
 while (N < 100) {
     print(N)
     N = N + 1
@@ -41,16 +41,16 @@ Lazuli features **Guards** where an expression can be defined for a specific **S
 
 For example with Variables:
 
-```javascript
-Int i | (i mod 2 == 0) = 0 //Variable i can only contain the set of even integers
+```julia
+i: Int | (i mod 2 == 0) = 0 //Variable i can only contain the set of even integers
 ...
 i = 3 //runtime error
 ```
 
 This can be combined with for expressions to loop over only a **specific subset** of the guard:
 
-```javascript
-for (Int N = 0 to 10 | N % 2 == 0) {
+```julia
+for (N: Int = 0 to 10 | N % 2 == 0) {
     print(N) //prints 0, 2, 4, 6, 8
 }
 ```
@@ -63,13 +63,13 @@ Implemented:
 
 In Lazuli, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
 
-```javascript
-Int i = if (x > y) 1 else 2
+```julia
+i: Int = if (x > y) 1 else 2
 ```
 If x > y then i will be assigned the value 1, else 2. If the body of the if is multiline, only the last line will be returned:
 
-```javascript
-Int i = if (x > y) {
+```julia
+i: Int = if (x > y) {
     x = x + 1
     1
 } else {
@@ -85,9 +85,9 @@ Implemented:
    
 This extends to loops as well, whose return type is an `Array`:
 
-```javascript
+```julia
 //Assigns x to an Array of Ints from 0 to 4
-Int[] ns = for (Int N = 0 to 5) {
+ns: Int[] = for (N: Int= 0 to 5) {
     N
 }
 print(ns) //prints [0, 1, 2, 3, 4]
@@ -95,9 +95,9 @@ print(ns) //prints [0, 1, 2, 3, 4]
 
 These act as normal for loops and can contain multiple lines, as with if expressions the last line of the body is assigned:
 
-```javascript
+```julia
 //Assigns x to an Array of the squares of all even numbers from 0 to 99
-Int[] xs = for (Int N = 0 to 100 if N mod 2 == 0) {
+xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
     N * N
 }
 ```
@@ -110,8 +110,8 @@ Implemented:
  
  Functions so far are pretty much like any other C-like language:
  
- ```javascript
- Int sum(Int a, Int b) {
+ ```julia
+ fn sum(a: Int, b: Int): Int {
      return a + b
  }
  
@@ -120,11 +120,11 @@ Implemented:
  
  Functions can also take guards on their parameters:
  
- ```javascript
- Int isqrt(Int x | x >= 0) { //Attempting to call isqrt with a negative number will throw an error
+ ```julia
+ fn isqrt(Int x | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
 
-     Int i = 1
-     Int result = 1
+     i: Int= 1
+     result: Int = 1
      while (result <= x) {
          i = i + 1
          result = i * i
@@ -136,6 +136,33 @@ Implemented:
 Implemented:
    - [x] simulation
    - [x] compilation
+   
+ ## Structs
+ 
+ Structs are no more than structured data:
+ 
+ ```julia
+ struct V3R {
+     x: Real
+     y: Real
+     z: Real
+ }
+ ```
+ 
+ They are initialised with a constructor syntax taking arguments in the order they were defined:
+ 
+ ```julia
+ v3: V3R = V3R(1.0, 2.0, 3.0)
+ ```
+ 
+ Unlike languages like c++ and Rust, structs cannot contain member functions. 
+ Once defined, a struct can be used in the return types and arguments of functions just like any other type:
+ 
+ ```julia
+ fn mag3(v: V3R): Real {
+     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+ }
+ ```
    
 For more see the examples and tests directory.
    

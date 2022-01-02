@@ -1,10 +1,10 @@
-Int[] sort(Int[] array) {
+fn sort(array: Int[] ): Int[] {
 
-   Int n = len(array)
-   for (Int i = 1 to n) {
-       for (Int j = 0 to n - i) {
+   n: Int = len(array)
+   for (i: Int = 1 to n) {
+       for (j: Int = 0 to n - i) {
            if (array[j] > array[j + 1]) {
-               Int tmp = array[j]
+               tmp: Int = array[j]
                array[j] = array[j + 1]
                array[j + 1] = tmp
            }
@@ -13,17 +13,17 @@ Int[] sort(Int[] array) {
    return array
 }
 
-Int[] arr = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
-for (Int a in sort(arr)) print(a)
+arr: Int[] = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
+for (a: Int in sort(arr)) print(a)
 
-Int[] ints = [1, 2, 3]
-for (Int i in ints) print(i)
+ints: Int[] = [1, 2, 3]
+for (i: Int in ints) print(i)
 
-Bool[] bools = [true, false, true, true, false]
-for (Bool b in bools) print(b)
+bools: Bool[] = [true, false, true, true, false]
+for (b: Bool in bools) print(b)
 
-String[] strings = ["Hello", "World"]
-for (String s in strings) print(s)
+strings: String[] = ["Hello", "World"]
+for (s: String in strings) print(s)
 
-Real[] reals = [1.414, 2.718, 3.141]
-for (Real r in reals) print(r)
+reals: Real[] = [1.414, 2.718, 3.141]
+for (r: Real in reals) print(r)

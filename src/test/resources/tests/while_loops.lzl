@@ -1,7 +1,7 @@
-Int i = 0
+i: Int = 0
 while(i < 10) {
     print(i)
     i = i + 1
 }
-Int x = 0
+x: Int = 0
 while(x < 10) x = x + 1

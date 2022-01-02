@@ -1,4 +1,4 @@
-Int x = 1
+x: Int = 1
 
 //Literal matching
 match x {
@@ -8,7 +8,7 @@ match x {
 }
 
 //Multiple matches
-for (Int z = 0 to 5) {
+for (z: Int = 0 to 5) {
     match z {
         1 or 2 -> print(1),
         else -> print(0)
@@ -30,3 +30,13 @@ for (Int z = 0 to 5) {
 
 //Matching arrays and tuples
 //....
+
+////Type matching
+//var v = 3
+//
+//match v {
+//    b: Bool -> print(b)
+//    i: Int -> print(i),
+//    s: String -> print(s),
+//    else -> print("Unknown type")
+//}

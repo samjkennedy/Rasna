@@ -1,24 +1,24 @@
-//Basic Void noargs method
-Int foo() {
+//Basic noargs method
+fn foo(): Int {
     return 1
 }
 
-//Method with range
-Void printFromTo(Int fromVal, Int toVal) {
-    for (Int i = 0 to 5) {
+//Void method with args
+fn printFromTo(fromVal: Int, toVal: Int) {
+    for (i: Int = 0 to 5) {
         print(i)
     }
 }
 
 //Bool arg method with control flow - BFS to check all branches return a value
-Int choice(Bool check) {
+fn choice(check: Bool): Int {
     if (check) {
         return 1
     }
     return 2
  }
 
-Void echo2or0(Bool x) {
+fn echo2or0(x: Bool) {
     if (x) {
         print(2)
     } else {
@@ -27,12 +27,12 @@ Void echo2or0(Bool x) {
 }
 
 //Seems that args are passed by value not by reference, TODO: Provide a way to pass by reference?
-Void mut(Int a) {
+fn mut(a: Int) {
     a = a + 1
 }
 
 //Two arg method
-Int sum(Int a, Int b) {
+fn sum(a: Int, b: Int): Int {
     return a + b
 }
 
