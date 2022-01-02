@@ -1,5 +1,6 @@
 package com.skennedy.lazuli.typebinding;
 
+import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
@@ -14,6 +15,7 @@ import com.skennedy.lazuli.parsing.*;
 import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
+import javax.naming.Binding;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -24,7 +26,7 @@ import java.util.stream.Collectors;
 
 public class Binder {
 
-    private List<Error> errors;
+    private List<BindingError> errors;
     private BoundScope currentScope;
 
     public Binder() {
@@ -240,7 +242,7 @@ public class Binder {
         BoundExpression index = bind(arrayAccessExpression.getIndex());
 
         if (!index.getType().isAssignableFrom(TypeSymbol.INT)) {
-            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT, index.getType()));
+            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.INT, index.getType(), arrayAccessExpression.getIndex().getSpan()));
         }
         return new BoundPositionalAccessExpression(new BoundVariableExpression(variable.get()), index);
     }
@@ -271,7 +273,7 @@ public class Binder {
         TypeSymbol type = parseType(forExpression.getTypeExpression());
 
         if (!type.isAssignableFrom(range.getType())) {
-            errors.add(Error.raiseTypeMismatch(type, range.getType()));
+            errors.add(BindingError.raiseTypeMismatch(type, range.getType(), forExpression.getRangeExpression().getSpan()));
         }
 
         VariableSymbol variable = getVariableSymbol(type, forExpression.getIdentifier(), null, true);
@@ -279,7 +281,7 @@ public class Binder {
         try {
             currentScope.declareVariable((String) forExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(Error.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue(), forExpression.getIdentifier().getSpan()));
         }
         BoundExpression guard = null;
         if (forExpression.getGuard() != null) {
@@ -316,14 +318,14 @@ public class Binder {
         TypeSymbol type = parseType(forInExpression.getTypeExpression());
 
         if (!type.isAssignableFrom(iterable.getType())) {
-            errors.add(Error.raiseTypeMismatch(type, iterable.getType()));
+            errors.add(BindingError.raiseTypeMismatch(type, iterable.getType(), forInExpression.getIterable().getSpan()));
         }
         VariableSymbol variable = getVariableSymbol(type, forInExpression.getIdentifier(), null, false);
 
         try {
             currentScope.declareVariable((String) forInExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(Error.raiseVariableAlreadyDeclared((String) forInExpression.getIdentifier().getValue()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forInExpression.getIdentifier().getValue(), forInExpression.getIdentifier().getSpan()));
         }
 
         BoundExpression guard = null;
@@ -372,7 +374,8 @@ public class Binder {
                 if (type.isPresent()) {
                     return type.get();
                 }
-                throw new IllegalStateException("Unexpected value: " + typeExpression.getIdentifier().getValue());
+                errors.add(BindingError.raiseUnknownType((String)typeExpression.getIdentifier().getValue(), typeExpression.getIdentifier().getSpan()));
+                typeSymbol = null;
         }
         //TODO: This doesn't do N-Dimensional arrays yet
         if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
@@ -389,7 +392,7 @@ public class Binder {
 
         BoundExpression condition = bind(ifExpression.getCondition());
         if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
-            errors.add(Error.raiseTypeMismatch(TypeSymbol.BOOL, condition.getType()));
+            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.BOOL, condition.getType(), ifExpression.getCondition().getSpan()));
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
         BoundExpression body = bind(ifExpression.getBody());
@@ -526,7 +529,7 @@ public class Binder {
         try {
             currentScope.declareType((String) identifier.getValue(), type);
         } catch (TypeAlreadyDeclaredException tade) {
-            errors.add(Error.raiseTypeAlreadyDeclared((String) identifier.getValue()));
+            errors.add(BindingError.raiseTypeAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
         }
 
         return new BoundBlockExpression(constructorExpression, new BoundStructDeclarationExpression(type, members));
@@ -551,7 +554,7 @@ public class Binder {
             //Declare the function in the parent scope
             currentScope.getParentScope().declareFunction((String) identifier.getValue(), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
-            errors.add(Error.raiseFunctionAlreadyDeclared((String) identifier.getValue()));
+            errors.add(BindingError.raiseFunctionAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
         }
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());
@@ -589,12 +592,8 @@ public class Binder {
             //Declare the function in the parent scope
             currentScope.getParentScope().declareFunction(anonymousFunctionIdentifier, functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
-            errors.add(Error.raiseVariableAlreadyDeclared(anonymousFunctionIdentifier));
+            errors.add(BindingError.raiseVariableAlreadyDeclared(anonymousFunctionIdentifier, lambdaExpression.getSpan()));
         }
-
-//        if (functionSymbol.getType() != TypeSymbol.VOID) {
-//            analyzeBody(functionSymbol, body.getExpressions().iterator());
-//        }
 
         currentScope = currentScope.getParentScope();
 
@@ -627,7 +626,7 @@ public class Binder {
         try {
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false));
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
         }
 
         BoundExpression guard = null;
@@ -679,7 +678,7 @@ public class Binder {
             TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false));
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(Error.raiseVariableAlreadyDeclared((String) identifier.getValue()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
         }
 
         BoundExpression guard = null;
@@ -691,7 +690,7 @@ public class Binder {
         TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
 
         if (initialiser != null && !type.isAssignableFrom(initialiser.getType())) {
-            errors.add(Error.raiseTypeMismatch(type, initialiser.getType()));
+            errors.add(BindingError.raiseTypeMismatch(type, initialiser.getType(), variableDeclarationExpression.getInitialiser().getSpan()));
         }
 
         if (type == TypeSymbol.FUNCTION) {

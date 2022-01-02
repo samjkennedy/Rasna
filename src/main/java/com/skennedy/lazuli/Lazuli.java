@@ -3,7 +3,8 @@ package com.skennedy.lazuli;
 import com.skennedy.assertclauses.Assert;
 import com.skennedy.flags.Flag;
 import com.skennedy.flags.Flags;
-import com.skennedy.lazuli.conversion.JavaBytecodeCompiler;
+import com.skennedy.lazuli.compilation.JavaBytecodeCompiler;
+import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.graphing.HighLevelTreeGrapher;
 import com.skennedy.lazuli.graphing.LowLevelTreeGrapher;
@@ -84,8 +85,12 @@ public class Lazuli {
             BoundProgram boundProgram = binder.bind(program);
 
             if (boundProgram.hasErrors()) {
-                for (Error error : boundProgram.getErrors()) {
-                    System.err.println(error.getMessage() + " at " + error.getLocation() + " -> " + error.getToken());
+                for (BindingError error : boundProgram.getErrors()) {
+                    if (error.getSpan().getStart() == error.getSpan().getEnd()) {
+                        System.err.println(error.getMessage() + " at " + error.getSpan().getStart());
+                    } else {
+                        System.err.println(error.getMessage() + " from " + error.getSpan().getStart() + " to " + error.getSpan().getEnd());
+                    }
                 }
                 return;
             }

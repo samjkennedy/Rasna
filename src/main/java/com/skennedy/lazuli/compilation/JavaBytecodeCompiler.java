@@ -1,4 +1,4 @@
-package com.skennedy.lazuli.conversion;
+package com.skennedy.lazuli.compilation;
 
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
