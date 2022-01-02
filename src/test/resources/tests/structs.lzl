@@ -1,0 +1,47 @@
+//TODO: This should be imported through a math.lzl file, one day
+fn sqrt(S: Real): Real {
+    iterations: Int = 100
+    x0: Real = (S / 10.0)
+    x1: Real = (x0 + (S / x0)) / 2.0
+    for (i: Int = 1 to iterations) {
+        tmp: Real = x0
+        x0 = (x1 + (S / x1)) / 2.0
+        x1 = tmp
+    }
+    return x0
+}
+
+struct V2R {
+    x: Real
+    y: Real
+}
+
+struct V3R {
+    x: Real
+    y: Real
+    z: Real
+}
+
+fn mag2(v: V2R): Real {
+    return sqrt(v.x * v.x + v.y * v.y)
+}
+
+fn mag3(v: V3R): Real {
+    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+}
+
+fn V2RR(r: Real): V2R {
+    return V2R(r, r)
+}
+
+v2: V2R = V2RR(1.0)
+print(v2.x)
+print(v2.y)
+print(mag2(v2))
+
+v3: V3R = V3R(1.0, 2.0, 3.0)
+//v: V2R = {1.0, 2.0} //This should also be allowed
+print(v3.x)
+print(v3.y)
+print(v3.z)
+print(mag3(v3))
