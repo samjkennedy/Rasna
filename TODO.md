@@ -7,11 +7,12 @@
 - Proper pattern matching
     - Type matching
     - Array matching
+- Be more consistent with `const`
 - Longs
 - Include files - standard library
 - Fix Tuples
 - Non-scuffed control flow analysis
 - Multidimensional arrays
 - Generics/Templates
-- Pythonish data structures: Dict, Tuple, Struct
+- Pythonish data structures: Dict, Tuple, ~~Struct~~
 - REPL

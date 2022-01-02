@@ -143,7 +143,7 @@ public class JavaBytecodeCompiler implements Compiler {
     }
 
     @Override
-    public void convert(BoundProgram program, String outputFileName) throws IOException {
+    public void compile(BoundProgram program, String outputFileName) throws IOException {
 
         this.program = program;
 
@@ -191,25 +191,26 @@ public class JavaBytecodeCompiler implements Compiler {
         textifierVisitor.visitInsn(RETURN);
         scope = scope.parent;
 
-        //TODO: determine how much memory the program requires and set accordingly
-        mainMethodVisitor.visitMaxs(1000, 1000);
         textifierVisitor.visitMaxs(1000, 1000);
-
-        // END 2: Close main()
-        mainMethodVisitor.visitEnd();
         textifierVisitor.visitMethodEnd();
-
-        // END 1: Close class()
-        classWriter.visitEnd();
-        textifierVisitor.visitClassEnd();
-
-        byte[] code = classWriter.toByteArray();
-
-        File bytecodeFile = new File(outputFileName + "_bytecode.txt");
+        textifierVisitor.visitClassEnd();File bytecodeFile = new File(outputFileName + "_bytecode.txt");
         bytecodeFile.createNewFile();
         PrintWriter fileWriter = new PrintWriter(bytecodeFile);
         textifierVisitor.print(fileWriter);
         fileWriter.close();
+
+        //TODO: determine how much memory the program requires and set accordingly
+        mainMethodVisitor.visitMaxs(1000, 1000);
+
+        // END 2: Close main()
+        mainMethodVisitor.visitEnd();
+
+        // END 1: Close class()
+        classWriter.visitEnd();
+
+        byte[] code = classWriter.toByteArray();
+
+
 
         File outputFile = new File(outputFileName + ".class");
         outputFile.createNewFile();
@@ -248,9 +249,9 @@ public class JavaBytecodeCompiler implements Compiler {
 
                 visit((BoundStructLiteralExpression) expression, methodVisitor);
                 break;
-            case ARRAY_ACCESS_EXPRESSION:
+            case POSITIONAL_ACCESS_EXPRESSION:
 
-                visit((BoundArrayAccessExpression) expression, methodVisitor);
+                visit((BoundPositionalAccessExpression) expression, methodVisitor);
                 break;
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 visit((BoundArrayAssignmentExpression) expression, methodVisitor);
@@ -630,19 +631,19 @@ public class JavaBytecodeCompiler implements Compiler {
         if (variable.getType() instanceof ArrayTypeSymbol) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.REAL)) {
+        } else if (TypeSymbol.REAL.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(DSTORE, variableIndex);
             textifierVisitor.visitVarInsn(DSTORE, variableIndex);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.INT) || variable.getType().isAssignableFrom(TypeSymbol.BOOL)) {
+        } else if (TypeSymbol.INT.isAssignableFrom(variable.getType()) || TypeSymbol.BOOL.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ISTORE, variableIndex);
             textifierVisitor.visitVarInsn(ISTORE, variableIndex);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.TUPLE)) {
+        } else if (TypeSymbol.TUPLE.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.STRING)) {
+        } else if (TypeSymbol.STRING.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.VAR)) {
+        } else if (TypeSymbol.VAR.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
         } else {
@@ -713,19 +714,19 @@ public class JavaBytecodeCompiler implements Compiler {
         if (variable.getType() instanceof ArrayTypeSymbol) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.REAL)) {
+        } else if (TypeSymbol.REAL.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(DLOAD, variableIdx);
             textifierVisitor.visitVarInsn(DLOAD, variableIdx);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.INT) || variable.getType().isAssignableFrom(TypeSymbol.BOOL)) {
+        } else if (TypeSymbol.INT.isAssignableFrom(variable.getType()) || TypeSymbol.BOOL.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ILOAD, variableIdx);
             textifierVisitor.visitVarInsn(ILOAD, variableIdx);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.TUPLE)) {
+        } else if (TypeSymbol.TUPLE.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.STRING)) {
+        } else if (TypeSymbol.STRING.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
-        } else if (variable.getType().isAssignableFrom(TypeSymbol.VAR)) {
+        } else if (TypeSymbol.VAR.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
         } else {
@@ -750,16 +751,19 @@ public class JavaBytecodeCompiler implements Compiler {
         if (assignmentExpression.getType() instanceof ArrayTypeSymbol) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
-        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
+        } else if (TypeSymbol.REAL.isAssignableFrom(assignmentExpression.getType())) {
             methodVisitor.visitVarInsn(DSTORE, variableIdx);
             textifierVisitor.visitVarInsn(DSTORE, variableIdx);
-        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.INT) || assignmentExpression.getType().isAssignableFrom(TypeSymbol.BOOL)) {
+        } else if (TypeSymbol.INT.isAssignableFrom(assignmentExpression.getType()) || TypeSymbol.BOOL.isAssignableFrom(assignmentExpression.getType())) {
             methodVisitor.visitVarInsn(ISTORE, variableIdx);
             textifierVisitor.visitVarInsn(ISTORE, variableIdx);
-        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.TUPLE)) {
+        } else if (TypeSymbol.TUPLE.isAssignableFrom(assignmentExpression.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
-        } else if (assignmentExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
+        } else if (TypeSymbol.STRING.isAssignableFrom(assignmentExpression.getType())) {
+            methodVisitor.visitVarInsn(ASTORE, variableIdx);
+            textifierVisitor.visitVarInsn(ASTORE, variableIdx);
+        } else if (TypeSymbol.VAR.isAssignableFrom(assignmentExpression.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
         } else {
@@ -909,7 +913,7 @@ public class JavaBytecodeCompiler implements Compiler {
         }
     }
 
-    private void visit(BoundArrayAccessExpression arrayAccessExpression, MethodVisitor methodVisitor) {
+    private void visit(BoundPositionalAccessExpression arrayAccessExpression, MethodVisitor methodVisitor) {
 
         visit(arrayAccessExpression.getArray(), methodVisitor);
         visit(arrayAccessExpression.getIndex(), methodVisitor);

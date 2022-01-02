@@ -6,5 +6,5 @@ import java.io.IOException;
 
 public interface Compiler {
 
-    void convert(BoundProgram program, String outputFileName) throws IOException;
+    void compile(BoundProgram program, String outputFileName) throws IOException;
 }

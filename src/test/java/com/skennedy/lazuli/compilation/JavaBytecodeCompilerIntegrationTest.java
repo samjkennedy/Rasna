@@ -49,7 +49,7 @@ class JavaBytecodeCompilerIntegrationTest {
         boundProgram = lowerer.rewrite(boundProgram);
 
         JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
-        compiler.convert(boundProgram, filename.split("\\.")[0]);
+        compiler.compile(boundProgram, filename.split("\\.")[0]);
 
         Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
         InputStream inputStream = process.getInputStream();

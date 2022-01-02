@@ -230,21 +230,19 @@ public class Binder {
         return new BoundArrayLiteralExpression(boundElements);
     }
 
-    private BoundArrayAccessExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
+    private BoundPositionalAccessExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
         IdentifierExpression identifier = arrayAccessExpression.getIdentifier();
         Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifier.getValue());
         if (variable.isEmpty()) {
             throw new UndefinedVariableException((String) identifier.getValue());
         }
-//        if (!variable.get().getType().isAssignableFrom(TypeSymbol.INT_ARRAY)) {
-//            errors.add(Error.raiseTypeMismatch(TypeSymbol.INT_ARRAY, variable.get().getType()));
-//        }
+
         BoundExpression index = bind(arrayAccessExpression.getIndex());
 
         if (!index.getType().isAssignableFrom(TypeSymbol.INT)) {
             errors.add(Error.raiseTypeMismatch(TypeSymbol.INT, index.getType()));
         }
-        return new BoundArrayAccessExpression(new BoundVariableExpression(variable.get()), index);
+        return new BoundPositionalAccessExpression(new BoundVariableExpression(variable.get()), index);
     }
 
     private BoundExpression bindArrayLengthExpression(ArrayLengthExpression arrayLengthExpression) {
@@ -259,7 +257,7 @@ public class Binder {
 
     private BoundExpression bindArrayAssignmentExpression(ArrayAssignmentExpression expression) {
 
-        BoundArrayAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(expression.getArrayAccessExpression());
+        BoundPositionalAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(expression.getArrayAccessExpression());
         BoundExpression assignment = bind(expression.getAssignment());
 
         return new BoundArrayAssignmentExpression(boundArrayAccessExpression, assignment);
