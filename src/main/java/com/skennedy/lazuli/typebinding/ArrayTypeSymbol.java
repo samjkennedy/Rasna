@@ -10,8 +10,8 @@ public class ArrayTypeSymbol extends TypeSymbol {
 
     public ArrayTypeSymbol(TypeSymbol type) {
         super(type.getName(),
-                Collections.emptyList(),    //TODO: split, reduce, etc etc
-                Collections.emptyList()     //TODO: len, etc
+                Collections.emptyMap(),    //TODO: split, reduce, etc etc
+                Collections.emptyMap()     //TODO: len, etc
         );
         this.type = type;
     }

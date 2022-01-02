@@ -5,14 +5,9 @@ import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class BoundScope {
 
@@ -96,11 +91,11 @@ public class BoundScope {
         definedTypes.put(name, type);
     }
 
-    public Collection<FunctionSymbol> getDefinedFunctions() {
-        return definedFunctions.values();
+    public Map<String, FunctionSymbol> getDefinedFunctions() {
+        return definedFunctions;
     }
 
-    public Collection<VariableSymbol> getDefinedVariables() {
-        return definedVariables.values();
+    public Map<String, VariableSymbol> getDefinedVariables() {
+        return definedVariables;
     }
 }

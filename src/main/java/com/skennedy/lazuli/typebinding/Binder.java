@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -105,9 +106,37 @@ public class Binder {
                 return bindYieldExpression((YieldExpression) expression);
             case STRUCT_DECLARATION_EXPR:
                 return bindStructDeclarationExpression((StructDeclarationExpression) expression);
+            case MEMBER_ACCESSOR_EXPR:
+                return bindMemberAccessorExpression((MemberAccessorExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundMemberAccessorExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
+        BoundExpression boundOwner = bind(memberAccessorExpression.getOwner());
+
+        IdentifierExpression member = memberAccessorExpression.getMember();
+
+        BoundExpression boundMember;
+
+        Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
+        if (typeSymbol.isEmpty()) {
+            throw new IllegalStateException("No such type " + boundOwner.getType().getName() + " in scope, possibly a parser bug");
+        }
+        TypeSymbol type = typeSymbol.get();
+        if (type.getFunctions().containsKey(member.getValue())) {
+            throw new UnsupportedOperationException("Member method calls are currently not supported");
+        }
+        if (!type.getFields().containsKey(member.getValue())) {
+            //TODO: Better error reporting
+            throw new IllegalStateException("No such member " + member.getValue());
+        }
+
+        VariableSymbol variable = type.getFields().get(member.getValue());
+        boundMember = new BoundVariableExpression(variable);
+
+        return new BoundMemberAccessorExpression(boundOwner, boundMember);
     }
 
     private BoundExpression bindYieldExpression(YieldExpression yieldExpression) {
@@ -469,23 +498,23 @@ public class Binder {
             members.add(bind(member));
         }
 
-        Collection<FunctionSymbol> definedFunctions = currentScope.getDefinedFunctions();
-        Collection<VariableSymbol> definedVariables = currentScope.getDefinedVariables();
+        Map<String, FunctionSymbol> definedFunctions = currentScope.getDefinedFunctions();
+        Map<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
 
         currentScope = currentScope.getParentScope();
 
         //TODO: The defined functions and variables have no knowledge of their owner, two types with the same method may cause issues
-        TypeSymbol type = new TypeSymbol((String) identifier.getValue(), new ArrayList<>(definedFunctions), new ArrayList<>(definedVariables));
+        TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedFunctions, definedVariables);
 
         //Define constructor as a function
         List<BoundFunctionArgumentExpression> args = new ArrayList<>();
-        for (VariableSymbol variable : definedVariables) {
+        for (VariableSymbol variable : definedVariables.values()) {
             args.add(new BoundFunctionArgumentExpression(variable, null));
         }
         FunctionSymbol constructor = new FunctionSymbol((String) identifier.getValue(), type, args, null);
 
         //Generate constructor
-        List<BoundExpression> variableExpressions = definedVariables.stream()
+        List<BoundExpression> variableExpressions = definedVariables.values().stream()
                 .map(BoundVariableExpression::new)
                 .collect(Collectors.toList());
 

@@ -1,35 +1,35 @@
 package com.skennedy.lazuli.typebinding;
 
 import java.util.Collections;
-import java.util.List;
+import java.util.Map;
 
 public class TypeSymbol extends Symbol {
 
     //TODO: Built in type functions
-    public static final TypeSymbol VOID = new TypeSymbol("Void", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol BOOL = new TypeSymbol("Bool", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol INT = new TypeSymbol("Int", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol REAL = new TypeSymbol("Real", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol STRING = new TypeSymbol("String", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol TYPE = new TypeSymbol("Type", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol TUPLE = new TypeSymbol("Tuple", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol VAR = new TypeSymbol("Var", Collections.emptyList(), Collections.emptyList());
-    public static final TypeSymbol FUNCTION = new TypeSymbol("Function", Collections.emptyList(), Collections.emptyList()); //TODO: Should be similar to ArrayTypeSymbol
+    public static final TypeSymbol VOID = new TypeSymbol("Void", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol BOOL = new TypeSymbol("Bool", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol INT = new TypeSymbol("Int", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol REAL = new TypeSymbol("Real", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol STRING = new TypeSymbol("String", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol TYPE = new TypeSymbol("Type", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol TUPLE = new TypeSymbol("Tuple", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol VAR = new TypeSymbol("Var", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol FUNCTION = new TypeSymbol("Function", Collections.emptyMap(), Collections.emptyMap()); //TODO: Should be similar to ArrayTypeSymbol
 
-    private final List<FunctionSymbol> functions;
-    private final List<VariableSymbol> fields;
+    private final Map<String, FunctionSymbol> functions;
+    private final Map<String, VariableSymbol> fields;
 
-    public TypeSymbol(String name, List<FunctionSymbol> functions, List<VariableSymbol> fields) {
+    public TypeSymbol(String name, Map<String, FunctionSymbol> functions, Map<String, VariableSymbol> fields) {
         super(name);
         this.functions = functions;
         this.fields = fields;
     }
 
-    public List<FunctionSymbol> getFunctions() {
+    public Map<String, FunctionSymbol> getFunctions() {
         return functions;
     }
 
-    public List<VariableSymbol> getFields() {
+    public Map<String, VariableSymbol> getFields() {
         return fields;
     }
 

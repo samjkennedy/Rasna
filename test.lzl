@@ -8,6 +8,18 @@
 //    return i - 1
 //}
 
+Real sqrt(Real S) {
+    Int iterations = 100
+    Real x0 = (S / 10.0)
+    Real x1 = (x0 + (S / x0)) / 2.0
+    for (Int i = 1 to iterations) {
+        Real tmp = x0
+        x0 = (x1 + (S / x1)) / 2.0
+        x1 = tmp
+    }
+    return x0
+}
+
 //Int[] v2i(Int x, Int y) {
 //    return [x, y]
 //}
@@ -16,23 +28,30 @@
 //
 //for (Int i in v) print(i)
 
-struct V2i {
-    Int x
-    Int y
+//struct V2i {
+//    Int x
+//    Int y
 
 //    Int mag() {
 //        return isqrt(x * x + y * y)
 //    }
-}
+//}
 
 //struct V3i {
 //    Int x
 //    Int y
 //    Int z
 //}
-////TODO: This should create an array internally
-V2i v = V2i(1, 2)
+
+struct V2r {
+    Real x
+    Real y
+}
+
+//print(sqrt(4.0))
+
+V2r v = V2r(1.0, 2.0)
 
 print(v.x)
-//print(v.y)
-//print(v.mag())
+print(v.y)
+print(v.x + v.y)

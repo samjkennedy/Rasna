@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -35,7 +36,7 @@ public class Parser {
             }
         }
 
-        //System.out.println(parsedTokens.stream().map(Token::toString).collect(Collectors.joining(", ")));
+        System.out.println(parsedTokens.stream().map(Token::toString).collect(Collectors.joining(", ")));
 
         List<Expression> expressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.EOF_TOKEN) {
@@ -112,12 +113,23 @@ public class Parser {
             case YIELD_KEYWORD:
                 return parseYieldExpression();
             default:
-                throw new IllegalStateException("Unexpected value: " + current().getTokenType());
+                throw new IllegalStateException("Unexpected value: " + current().getTokenType() + ", token text: " + current().getValue());
         }
     }
 
     private Expression parseMemberAccessorExpression() {
-        return null;
+
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        IdentifierExpression dot = matchToken(TokenType.DOT);
+
+        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+            throw new UnsupportedOperationException("Member method calls are not yet supported");
+        }
+
+        IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
+
+        //TODO: This might be more than just an identifier, e.g. method call
+        return new MemberAccessorExpression(identifier, dot, member);
     }
 
     private Expression parseYieldExpression() {

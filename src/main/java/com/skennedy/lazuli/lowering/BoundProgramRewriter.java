@@ -120,9 +120,22 @@ public abstract class BoundProgramRewriter {
                 return rewriteStructDeclarationExpression((BoundStructDeclarationExpression) expression);
             case STRUCT_LITERAL_EXPRESSION:
                 return rewriteStructLiteralExpression((BoundStructLiteralExpression) expression);
+            case MEMBER_ACCESSOR:
+                return rewriteMemberAccessorExpression((BoundMemberAccessorExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundExpression rewriteMemberAccessorExpression(BoundMemberAccessorExpression memberAccessorExpression) {
+
+        BoundExpression owner = rewriteExpression(memberAccessorExpression.getOwner());
+
+        if (owner == memberAccessorExpression.getOwner()) {
+            return memberAccessorExpression;
+        }
+
+        return new BoundMemberAccessorExpression(owner, memberAccessorExpression.getMember());
     }
 
     protected BoundExpression rewriteStructDeclarationExpression(BoundStructDeclarationExpression structDeclarationExpression) {

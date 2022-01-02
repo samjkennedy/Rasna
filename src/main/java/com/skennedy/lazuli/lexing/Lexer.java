@@ -174,6 +174,10 @@ public class Lexer {
                         case '"':
                             tokens.add(new Token(TokenType.STRING_LITERAL, new Location(lineNumber, cursor), parseString(line)));
                             break;
+                        case '.':
+                            tokens.add(new Token(TokenType.DOT, new Location(lineNumber, cursor)));
+                            next();
+                            break;
                         default:
                             tokens.add(new Token(TokenType.BAD_TOKEN, new Location(lineNumber, cursor)));
                             next();
