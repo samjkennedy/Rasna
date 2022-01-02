@@ -36,7 +36,7 @@ public class Parser {
             }
         }
 
-        System.out.println(parsedTokens.stream().map(Token::toString).collect(Collectors.joining(", ")));
+        //System.out.println(parsedTokens.stream().map(Token::toString).collect(Collectors.joining(", ")));
 
         List<Expression> expressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.EOF_TOKEN) {
@@ -81,15 +81,6 @@ public class Parser {
                 return parseWhileExpression();
             case FOR_KEYWORD:
                 return parseIteratorExpression();
-            case VOID_KEYWORD:
-            case INT_KEYWORD:
-            case BOOL_KEYWORD:
-            case REAL_KEYWORD:
-            case FUNCTION_KEYWORD:
-            case STRING_KEYWORD:
-            case CONST_KEYWORD:
-            case TUPLE_KEYWORD:
-                return parseVariableOrFunctionDeclarationExpression();
             case STRUCT_KEYWORD:
                 return parseStructDeclarationExpression();
             case IDENTIFIER:
@@ -100,10 +91,13 @@ public class Parser {
                     return parseFunctionCallExpression();
                 }
                 if (nextToken().getTokenType() == TokenType.IDENTIFIER) {
-                    return parseVariableOrFunctionDeclarationExpression();
+                    return parseVariableDeclarationExpression();
                 }
                 if (nextToken().getTokenType() == TokenType.DOT) {
                     return parseMemberAccessorExpression();
+                }
+                if (nextToken().getTokenType() == TokenType.COLON) {
+                    return parseVariableDeclarationExpression();
                 }
                 return parseAssignmentExpression();
             case RETURN_KEYWORD:
@@ -112,6 +106,8 @@ public class Parser {
                 return parseMatchExpression();
             case YIELD_KEYWORD:
                 return parseYieldExpression();
+            case FN_KEYWORD:
+                return parseFunctionDeclarationExpression();
             default:
                 throw new IllegalStateException("Unexpected value: " + current().getTokenType() + ", token text: " + current().getValue());
         }
@@ -246,9 +242,9 @@ public class Parser {
         IdentifierExpression forKeyword = matchToken(TokenType.FOR_KEYWORD);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
-        TypeExpression declarationKeyword = parseTypeExpression();
-
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+
+        TypeExpression declarationKeyword = parseTypeExpression();
 
         if (current().getTokenType() == TokenType.EQUALS) {
             IdentifierExpression equals = matchToken(TokenType.EQUALS);
@@ -364,32 +360,46 @@ public class Parser {
         return new StructDeclarationExpression(structKeyword, identifier, openCurly, members, closeCurly);
     }
 
-    private Expression parseVariableOrFunctionDeclarationExpression() {
+    private Expression parseFunctionDeclarationExpression() {
+
+        IdentifierExpression fnKeyword = matchToken(TokenType.FN_KEYWORD);
+
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+
+        List<FunctionArgumentExpression> argumentExpressions = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
+            argumentExpressions.add(parseFunctionArgumentExpression());
+
+            if (current().getTokenType() == TokenType.COMMA) {
+                matchToken(TokenType.COMMA);
+            }
+        }
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+        TypeExpression typeExpression = null;
+        if (current().getTokenType() == TokenType.COLON) {
+            typeExpression = parseTypeExpression();
+        }
+
+        BlockExpression body = parseBlockExpression();
+
+        return new FunctionDeclarationExpression(fnKeyword, identifier, openParen, argumentExpressions, closeParen, typeExpression, body);
+    }
+
+    private Expression parseVariableDeclarationExpression() {
         IdentifierExpression constKeyword = null;
         if (current().getTokenType() == TokenType.CONST_KEYWORD) {
             constKeyword = matchToken(TokenType.CONST_KEYWORD);
         }
-        TypeExpression typeExpression = parseTypeExpression();
 
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
-        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
-            IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-
-            List<FunctionArgumentExpression> argumentExpressions = new ArrayList<>();
-            while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
-                argumentExpressions.add(parseFunctionArgumentExpression());
-
-                if (current().getTokenType() == TokenType.COMMA) {
-                    matchToken(TokenType.COMMA);
-                }
-            }
-            IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-            BlockExpression body = parseBlockExpression();
-
-            return new FunctionDeclarationExpression(typeExpression, identifier, openParen, argumentExpressions, closeParen, body);
+        if (current().getTokenType() != TokenType.COLON) {
+            return identifier;
         }
+
+        TypeExpression typeExpression = parseTypeExpression();
 
         if (typeExpression.getIdentifier().getTokenType() == TokenType.VOID_KEYWORD) {
             throw new IllegalStateException("Variables cannot be of type Void");
@@ -420,6 +430,7 @@ public class Parser {
     }
 
     private Expression parseArrayDeclarationExpression() {
+        IdentifierExpression colon = matchToken(TokenType.COLON);
         IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
             case VOID_KEYWORD:
@@ -453,7 +464,7 @@ public class Parser {
         Expression elementCount = parseExpression();
         IdentifierExpression closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
 
-        return new ArrayDeclarationExpression(new TypeExpression(typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
+        return new ArrayDeclarationExpression(new TypeExpression(colon, typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
     }
 
     private Expression parseLambdaExpression() {
@@ -516,6 +527,9 @@ public class Parser {
     }
 
     private TypeExpression parseTypeExpression() {
+
+        IdentifierExpression colon = matchToken(TokenType.COLON);
+
         IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
             case VOID_KEYWORD:
@@ -552,12 +566,12 @@ public class Parser {
             openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
             closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
         }
-        return new TypeExpression(typeKeyword, openSquareBrace, closeSquareBrace);
+        return new TypeExpression(colon, typeKeyword, openSquareBrace, closeSquareBrace);
     }
 
     private FunctionArgumentExpression parseFunctionArgumentExpression() {
-        TypeExpression typeExpression = parseTypeExpression();
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        TypeExpression typeExpression = parseTypeExpression();
 
         IdentifierExpression bar = null;
         Expression guard = null;

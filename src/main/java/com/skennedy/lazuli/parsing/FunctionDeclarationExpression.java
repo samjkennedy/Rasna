@@ -10,20 +10,22 @@ import java.util.List;
 
 public class FunctionDeclarationExpression extends Expression {
 
-    private final TypeExpression typeIdentifier;
+    private final IdentifierExpression fnKeyword;
     private final IdentifierExpression identifier;
     private final IdentifierExpression openParen;
     private final List<FunctionArgumentExpression> arguments;
     private final IdentifierExpression closeParen;
+    private final TypeExpression typeExpression;
     private final BlockExpression body;
 
-    public FunctionDeclarationExpression(TypeExpression typeIdentifier, IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionArgumentExpression> arguments, IdentifierExpression closeParen, BlockExpression body) {
+    public FunctionDeclarationExpression(IdentifierExpression fnKeyword, IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionArgumentExpression> argumentExpressions, IdentifierExpression closeParen, TypeExpression typeExpression, BlockExpression body) {
 
-        this.typeIdentifier = typeIdentifier;
+        this.fnKeyword = fnKeyword;
         this.identifier = identifier;
         this.openParen = openParen;
-        this.arguments = arguments;
+        this.arguments = argumentExpressions;
         this.closeParen = closeParen;
+        this.typeExpression = typeExpression;
         this.body = body;
     }
 
@@ -34,11 +36,11 @@ public class FunctionDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)typeIdentifier, identifier, openParen, closeParen, body).iterator();
+        return Arrays.asList((SyntaxNode)fnKeyword, identifier, openParen, closeParen, typeExpression, body).iterator();
     }
 
-    public TypeExpression getTypeIdentifier() {
-        return typeIdentifier;
+    public IdentifierExpression getFnKeyword() {
+        return fnKeyword;
     }
 
     public IdentifierExpression getIdentifier() {
@@ -55,6 +57,10 @@ public class FunctionDeclarationExpression extends Expression {
 
     public IdentifierExpression getCloseParen() {
         return closeParen;
+    }
+
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
     }
 
     public BlockExpression getBody() {

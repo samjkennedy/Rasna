@@ -1,4 +1,4 @@
-Int i = 1
+i: Int = 1
 print(i > 1)
 print(i >= 1)
 print(i < 1)

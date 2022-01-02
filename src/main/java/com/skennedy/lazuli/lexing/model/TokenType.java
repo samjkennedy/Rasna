@@ -43,6 +43,7 @@ public enum TokenType {
     COMMA(","),
     ARROW("->"),
     DOT("."),
+    COLON(":"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -63,6 +64,7 @@ public enum TokenType {
     CONST_KEYWORD("const"),
     VAR_KEYWORD("var"),
     STRUCT_KEYWORD("struct"),
+    FN_KEYWORD("fn"),
 
     //Types
     VOID_KEYWORD("Void"),

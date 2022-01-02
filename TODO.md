@@ -5,6 +5,8 @@
 - `break` and `continue` operations
 - Logical or, and, xor, not
 - Proper pattern matching
+    - Type matching
+    - Array matching
 - Longs
 - Include files - standard library
 - Fix Tuples

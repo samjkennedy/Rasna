@@ -1,7 +1,7 @@
-Int i = 0
-Int x = if (i == 0) 10 else 20
+i: Int = 0
+x: Int = if (i == 0) 10 else 20
 print(x) //should be 10
-Int y = if (x == 20) 1 else if (x == 15) 2 else 3
+y: Int = if (x == 20) 1 else if (x == 15) 2 else 3
 print(y) //should be 3
 
 x = 1
@@ -12,20 +12,20 @@ y = match x {
 }
 print(y)
 
-Int[] oneToTen = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-Int[] oneTo100 = for (Int i = 0 to 100) i
-Int[] first10Squares = for (Int i in oneToTen) i * i
-for (Int s in first10Squares) print(s)
+oneToTen: Int[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+oneTo100: Int[] = for (i: Int = 0 to 100) i
+first10Squares: Int[] = for (i: Int in oneToTen) i * i
+for (s: Int in first10Squares) print(s)
 
-Int triangle(Int n) {
+fn triangle(n: Int): Int {
     return (n * (n + 1)) / 2
 }
 
-Int[] triangles = for (Int i = 100 to 110) triangle(i)
-for (Int i in triangles) print(i)
+triangles: Int[] = for (i: Int = 100 to 110) triangle(i)
+for (i: Int in triangles) print(i)
 
-Int[] evensDivisibleBy3 = for (Int i = 0 to 100 by 2 | i mod 3 == 0) i
-for (Int i in evensDivisibleBy3) print(i)
+evensDivisibleBy3: Int[] = for (i: Int = 0 to 100 by 2 | i mod 3 == 0) i
+for (i: Int in evensDivisibleBy3) print(i)
 
-Int[] evens = for (Int i in oneTo100 | i mod 2 == 0) i
-for (Int i in evens) print(i)
+evens: Int[] = for (i: Int in oneTo100 | i mod 2 == 0) i
+for (i: Int in evens) print(i)

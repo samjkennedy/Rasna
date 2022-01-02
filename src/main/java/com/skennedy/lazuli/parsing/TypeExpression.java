@@ -10,14 +10,20 @@ import java.util.Objects;
 
 public class TypeExpression extends Expression {
 
+    private IdentifierExpression colon;
     private final IdentifierExpression identifier;
     private final IdentifierExpression openSquareBracket;
     private final IdentifierExpression closeSquareBracket;
 
-    public TypeExpression(IdentifierExpression identifier, IdentifierExpression openSquareBracket, IdentifierExpression closeSquareBracket) {
+    public TypeExpression(IdentifierExpression colon, IdentifierExpression identifier, IdentifierExpression openSquareBracket, IdentifierExpression closeSquareBracket) {
+        this.colon = colon;
         this.identifier = identifier;
         this.openSquareBracket = openSquareBracket;
         this.closeSquareBracket = closeSquareBracket;
+    }
+
+    public IdentifierExpression getColon() {
+        return colon;
     }
 
     public IdentifierExpression getIdentifier() {
@@ -39,7 +45,7 @@ public class TypeExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)identifier, openSquareBracket, closeSquareBracket).stream()
+        return Arrays.asList((SyntaxNode)colon, identifier, openSquareBracket, closeSquareBracket).stream()
                 .filter(Objects::nonNull)
                 .iterator();
     }

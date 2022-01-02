@@ -15,7 +15,6 @@ import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -343,10 +342,11 @@ public class Binder {
     private TypeSymbol parseType(TypeExpression typeExpression) {
         TypeSymbol typeSymbol;
 
+        if (typeExpression == null) {
+            return TypeSymbol.VOID;
+        }
+
         switch (typeExpression.getIdentifier().getTokenType()) {
-            case VOID_KEYWORD:
-                typeSymbol = TypeSymbol.VOID;
-                break;
             case INT_KEYWORD:
                 typeSymbol = TypeSymbol.INT;
                 break;
@@ -537,7 +537,7 @@ public class Binder {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
-        TypeSymbol type = parseType(functionDeclarationExpression.getTypeIdentifier());
+        TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
 
         currentScope = new BoundScope(currentScope);
 
