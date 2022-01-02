@@ -163,18 +163,41 @@ Implemented:
      return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
  }
  ```
-   
+ 
+ ##Tuples
+
+Tuples are immutable structures that contain a fixed number of values, each with their own type.
+
+They can be useful when a method may need to return multiple values, although the types returned are not known at runtime (Yet).
+
+They can be constructed literally like so:
+
+```julia
+t: Tuple = ("Hello", 1, false)
+```
+
+Values can be accessed by their position:
+
+```julia
+print(t[0]) //will print "Hello"
+```
+
+or iterated through:
+
+```julia
+for (v: var in t) {
+    print(v)
+}
+```
+
+As shown here, the return type for accessing a tuple is `var` as the exact type is unknown at runtime, hopefully in future this will be fixed
+
 For more see the examples and tests directory.
    
 ## Planned Features
 
-- Primitive types like `Int`, `Real`, `Bool` and `Str` 
-    - [x] Int 
-    - [x] Bool 
-    - [x] Real 
-    - [x] Str
-    
-- Custom Type system
+- Pattern matching and type decomposition
+- Custom type system
 - Type subset system
 - REPL
 

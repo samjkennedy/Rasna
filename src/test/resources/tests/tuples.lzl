@@ -23,3 +23,11 @@ fn multiReturn(a: Int): Tuple {
 
 t = multiReturn(1)
 print(len(t))
+
+//Tuples of only one element require a trailing comma:
+
+singleton: Tuple = (10,)
+print(len(singleton))
+for (v: var in singleton) {
+    print(v)
+}

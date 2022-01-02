@@ -7,3 +7,5 @@ Hello
 1
 true
 2
+1
+10

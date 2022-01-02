@@ -1,4 +1,4 @@
-t: Tuple = ("Hello", 1, true)
+t: Tuple = ("Hello",)
 
 print(len(t))
 
