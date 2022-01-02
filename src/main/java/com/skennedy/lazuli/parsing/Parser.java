@@ -124,7 +124,27 @@ public class Parser {
 
         IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
 
-        //TODO: This might be more than just an identifier, e.g. method call
+        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+            IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+            List<Expression> arguments = new ArrayList<>();
+            while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
+                    && current().getTokenType() != TokenType.EOF_TOKEN
+                    && current().getTokenType() != TokenType.BAD_TOKEN) {
+
+                arguments.add(parseExpression());
+
+                if (current().getTokenType() == TokenType.CLOSE_PARENTHESIS) {
+                    break;
+                }
+                matchToken(TokenType.COMMA);
+            }
+            IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+            return new MemberFunctionAccessorExpression(identifier, dot, member, openParen, arguments, closeParen);
+        }
+
+        //TODO: This might be more than just an identifier, e.g. method call: getVal().x
+        //      Eventually ditch the need for the identifier and use whatever was evaluated last
         return new MemberAccessorExpression(identifier, dot, member);
     }
 

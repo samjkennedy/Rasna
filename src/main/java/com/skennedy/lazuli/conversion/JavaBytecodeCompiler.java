@@ -83,8 +83,6 @@ import static org.objectweb.asm.Opcodes.IF_ICMPNE;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
 import static org.objectweb.asm.Opcodes.INTEGER;
-import static org.objectweb.asm.Opcodes.INVOKEDYNAMIC;
-import static org.objectweb.asm.Opcodes.INVOKESPECIAL;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 import static org.objectweb.asm.Opcodes.IOR;
@@ -347,6 +345,13 @@ public class JavaBytecodeCompiler implements Compiler {
         //Currently we only support structs and variable accessors so we can confidently assume this is accessing a variable in a struct, for now
         visit(memberAccessorExpression.getOwner(), methodVisitor);
 
+        if (memberAccessorExpression.getMember() instanceof BoundFunctionCallExpression) {
+            throw new UnsupportedOperationException("Method calls on structs are not yet supported");
+//            BoundFunctionCallExpression functionCallExpression = (BoundFunctionCallExpression) memberAccessorExpression.getMember();
+//
+//            visit(functionCallExpression, methodVisitor);
+        }
+
         //TODO: This is atrocious lmao
         VariableSymbol variable = ((BoundVariableExpression) memberAccessorExpression.getMember()).getVariable();
         int index = new ArrayList<>(memberAccessorExpression.getOwner().getType().getFields().values()).indexOf(variable);
@@ -410,14 +415,14 @@ public class JavaBytecodeCompiler implements Compiler {
             methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
             textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
 
-            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()"+getTypeDescriptor(TypeSymbol.REAL), false);
-            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()"+getTypeDescriptor(TypeSymbol.REAL), false);
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()" + getTypeDescriptor(TypeSymbol.REAL), false);
+            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()" + getTypeDescriptor(TypeSymbol.REAL), false);
 
             methodVisitor.visitVarInsn(DSTORE, variableIndex);
             textifierVisitor.visitVarInsn(DSTORE, variableIndex);
             methodVisitor.visitVarInsn(DLOAD, variableIndex);
             textifierVisitor.visitVarInsn(DLOAD, variableIndex);
-            variableIndex+=2;
+            variableIndex += 2;
 
             scope.popStack(); //Array index
             scope.popStack(); //Array ref
@@ -1354,7 +1359,8 @@ public class JavaBytecodeCompiler implements Compiler {
             methodVisitor.visitInsn(ARETURN);
             textifierVisitor.visitInsn(ARETURN);
         } else {
-            throw new UnsupportedOperationException("Functions that return type " + returnExpression.getReturnValue().getType() + " are not yet supported");
+            methodVisitor.visitInsn(ARETURN);
+            textifierVisitor.visitInsn(ARETURN);
         }
     }
 

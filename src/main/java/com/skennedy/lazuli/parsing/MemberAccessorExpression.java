@@ -9,9 +9,9 @@ import java.util.Iterator;
 
 public class MemberAccessorExpression extends Expression {
 
-    private final Expression owner;
-    private final IdentifierExpression dot;
-    private final IdentifierExpression member;
+    final Expression owner;
+    final IdentifierExpression dot;
+    final IdentifierExpression member;
 
     public MemberAccessorExpression(Expression owner, IdentifierExpression dot, IdentifierExpression member) {
         this.owner = owner;

@@ -47,21 +47,29 @@ fn sqrt(S: Real): Real {
 struct V2R {
     x: Real
     y: Real
+
+    fn mag(): Real {
+        return sqrt(x * x + y * y)
+    }
 }
 
 struct V3R {
     x: Real
     y: Real
     z: Real
+
+    fn mag(): Real {
+        return sqrt(x * x + y * y + z * z)
+    }
 }
 
-fn mag3(v: V3R): Real {
-    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+fn V2RR(r: Real): V2R {
+    return V2R(r, r)
 }
+
 //
-v: V3R = V3R(1.0, 2.0, 3.0)
+v: V2R = V2R(1.0, 2.0)
 ////v: V2R = {1.0, 2.0} //This should also be allowed
 print(v.x)
 print(v.y)
-print(v.z)
-print(mag3(v))
+print(v.mag())
