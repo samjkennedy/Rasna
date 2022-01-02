@@ -125,25 +125,16 @@ public class Binder {
         }
         TypeSymbol type = typeSymbol.get();
         if (type.getFunctions().containsKey(member.getValue())) {
-            if (!(memberAccessorExpression instanceof MemberFunctionAccessorExpression)) {
-                throw new UnsupportedOperationException("Function reference accessors are not yet supported");
-            }
-            MemberFunctionAccessorExpression memberFunctionAccessorExpression = (MemberFunctionAccessorExpression) memberAccessorExpression;
-
-            List<BoundExpression> boundArguments = new ArrayList<>();
-            for (Expression arg : memberFunctionAccessorExpression.getArguments()) {
-                boundArguments.add(bind(arg));
-            }
-            boundMember = new BoundFunctionCallExpression(type.getFunctions().get(member.getValue()), boundArguments);
+            throw new UnsupportedOperationException("Function reference accessors are not yet supported");
         }
-        else if (type.getFields().containsKey(member.getValue())) {
 
-            VariableSymbol variable = type.getFields().get(member.getValue());
-            boundMember = new BoundVariableExpression(variable);
-        } else {
+        if (!type.getFields().containsKey(member.getValue())) {
             //TODO: Better error reporting
             throw new IllegalStateException("No such member " + member.getValue());
         }
+
+        VariableSymbol variable = type.getFields().get(member.getValue());
+        boundMember = new BoundVariableExpression(variable);
 
         return new BoundMemberAccessorExpression(boundOwner, boundMember);
     }
