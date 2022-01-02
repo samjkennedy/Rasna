@@ -1,5 +1,6 @@
 package com.skennedy.lazuli.typebinding;
 
+import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.diagnostics.Error;
 
 import java.util.List;
@@ -7,9 +8,9 @@ import java.util.List;
 public class BoundProgram {
 
     private final List<BoundExpression> expressions;
-    private final List<Error> errors;
+    private final List<BindingError> errors;
 
-    public BoundProgram(List<BoundExpression> expressions, List<Error> errors) {
+    public BoundProgram(List<BoundExpression> expressions, List<BindingError> errors) {
         this.expressions = expressions;
         this.errors = errors;
     }
@@ -18,7 +19,7 @@ public class BoundProgram {
         return expressions;
     }
 
-    public List<Error> getErrors() {
+    public List<BindingError> getErrors() {
         return errors;
     }
 

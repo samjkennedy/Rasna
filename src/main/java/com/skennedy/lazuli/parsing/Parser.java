@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -746,10 +745,10 @@ public class Parser {
         Token token = current();
         if (token.getTokenType() == tokenType) {
             position++;
-            return new IdentifierExpression(token.getTokenType(), token.getValue());
+            return new IdentifierExpression(token, token.getTokenType(), token.getValue());
         }
         errors.add(Error.raiseUnexpectedToken(tokenType, token));
-        return new IdentifierExpression(TokenType.BAD_TOKEN, null);
+        return new IdentifierExpression(token, TokenType.BAD_TOKEN, null);
     }
 
     private Token current() {

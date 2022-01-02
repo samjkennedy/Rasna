@@ -1,6 +1,5 @@
 package com.skennedy.lazuli.compilation;
 
-import com.skennedy.lazuli.conversion.JavaBytecodeCompiler;
 import com.skennedy.lazuli.lowering.Lowerer;
 import com.skennedy.lazuli.parsing.Parser;
 import com.skennedy.lazuli.parsing.Program;

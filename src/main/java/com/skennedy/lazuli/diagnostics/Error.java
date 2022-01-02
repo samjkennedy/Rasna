@@ -21,22 +21,6 @@ public class Error {
         return new Error("Expected " + expected + " but got " + actual.getTokenType(), actual, actual.getLocation());
     }
 
-    public static Error raiseVariableAlreadyDeclared(String name) {
-        return new Error("Variable " + name + " is already declared in the scope", null, null);
-    }
-
-    public static Error raiseFunctionAlreadyDeclared(String name) {
-        return new Error("Function " + name + " is already declared in the scope", null, null);
-    }
-
-    public static Error raiseTypeAlreadyDeclared(String name) {
-        return new Error("Type " + name + " is already declared in the scope", null, null);
-    }
-
-    public static Error raiseTypeMismatch(TypeSymbol expected, TypeSymbol actual) {
-        return new Error("Expected type `" + expected.getName() + "` but got `" + actual.getName() + "`", null, null);
-    }
-
     public String getMessage() {
         return message;
     }
