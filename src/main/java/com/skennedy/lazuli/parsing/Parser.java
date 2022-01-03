@@ -16,9 +16,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class Parser {
@@ -30,10 +28,10 @@ public class Parser {
 
     private List<Error> errors;
 
-    private String file;
+    private Path filePath;
 
-    public Program parse(String filePath, String program) {
-        this.file = filePath;
+    public Program parse(Path filePath, String program) {
+        this.filePath = filePath;
 
         errors = new ArrayList<>();
         List<Expression> expressions = new ArrayList<>();
@@ -41,7 +39,7 @@ public class Parser {
         Lexer lexer = new Lexer();
         this.position = 0;
         this.tokensToParse = new ArrayList<>();
-        for (Token token : lexer.lex(filePath, program)) {
+        for (Token token : lexer.lex(filePath.getFileName().toString(), program)) {
             if (token.getTokenType() != TokenType.WHITESPACE && token.getTokenType() != TokenType.COMMENT) {
                 tokensToParse.add(token);
             }
@@ -162,9 +160,9 @@ public class Parser {
             matchToken(TokenType.INLINE_KEYWORD);
             inline = true;
         }
-        IdentifierExpression filePath = matchToken(TokenType.STRING_LITERAL);
+        IdentifierExpression importPath = matchToken(TokenType.STRING_LITERAL);
 
-        Path path = Paths.get((String)filePath.getValue());
+        Path path = filePath.getParent().resolve((String)importPath.getValue());
 
         String fileNameWithExt = path.getFileName().toString();
         String[] fileParts = fileNameWithExt.split("\\.");
@@ -179,7 +177,7 @@ public class Parser {
             matchToken(TokenType.AS_KEYWORD);
             IdentifierExpression name = matchToken(TokenType.IDENTIFIER);
 
-            fileName = (String)name.getValue();
+            fileName = (String) name.getValue();
         }
 
         if (!Lazuli.LZL_EXT.equals(fileExt)) {
@@ -190,7 +188,7 @@ public class Parser {
             String code = String.join(StringUtils.LF, Files.readAllLines(path));
 
             Parser parser = new Parser();
-            Program program = parser.parse(fileNameWithExt, code);
+            Program program = parser.parse(path.toAbsolutePath(), code);
 
             if (program.hasErrors()) {
                 for (Error error : program.getErrors()) {
@@ -208,7 +206,7 @@ public class Parser {
             );
 
         } catch (IOException e) {
-            errors.add(Error.raiseImportError(path, filePath.getToken()));
+            errors.add(Error.raiseImportError(path, importPath.getToken()));
         }
         throw new IllegalStateException("Cannot resolve import: " + path);
     }

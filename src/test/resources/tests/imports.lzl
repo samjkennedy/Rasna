@@ -1,4 +1,4 @@
-import inline "src/test/resources/tests/libs/lib.lzl"
+import inline "libs/lib.lzl"
 
 a: A = A(5)
 b: A = square(a)

@@ -1,11 +1,3 @@
-struct A {
-    i: Int
-}
+import "std/math.lzl"
 
-fn square(a: A): A {
-    return A(a.i * a.i)
-}
-
-a: A = A(5)
-b: A = square(a)
-print(b.i)
+print(math::sqrt(1.2))

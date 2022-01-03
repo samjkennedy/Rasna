@@ -66,13 +66,13 @@ public class Lazuli {
             throw new IllegalArgumentException("File must be a ." + LZL_EXT + " file.");
         }
 
-        Path path = Paths.get(fileNameWithExt);
+        Path path = Paths.get(fileNameWithExt).toAbsolutePath();
         try {
             Instant start = Instant.now();
             String code = String.join(StringUtils.LF, Files.readAllLines(path));
 
             Parser parser = new Parser();
-            Program program = parser.parse(fileNameWithExt, code);
+            Program program = parser.parse(path, code);
 
             if (program.hasErrors()) {
                 for (Error error : program.getErrors()) {

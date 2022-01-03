@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -36,7 +37,7 @@ class SimulatorIntegrationTest {
         String code = read("tests", filename);
 
         Parser parser = new Parser();
-        Program program = parser.parse(filename, code);
+        Program program = parser.parse(Path.of(filename).toAbsolutePath(), code);
 
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);

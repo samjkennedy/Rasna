@@ -1,4 +1,4 @@
-import "std/math.lzl"
+import "math.lzl"
 
 struct V2R {
     x: Real
