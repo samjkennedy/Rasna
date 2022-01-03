@@ -114,9 +114,19 @@ public class Binder {
                 return bindNamespace((NamespaceExpression) expression);
             case NAMESPACE_ACCESSOR_EXPR:
                 return bindNamespaceAccessorExpression((NamespaceAccessorExpression) expression);
+            case CAST_EXPR:
+                return bindCastExpression((CastExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindCastExpression(CastExpression castExpression) {
+
+        BoundExpression boundExpression = bind(castExpression.getExpression());
+        TypeSymbol type = parseType(castExpression.getType());
+
+        return new BoundCastExpression(boundExpression, type);
     }
 
     private BoundExpression bindNamespaceAccessorExpression(NamespaceAccessorExpression namespaceAccessorExpression) {

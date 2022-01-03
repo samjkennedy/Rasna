@@ -61,6 +61,7 @@ import static org.objectweb.asm.Opcodes.DSUB;
 import static org.objectweb.asm.Opcodes.DUP;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
+import static org.objectweb.asm.Opcodes.I2D;
 import static org.objectweb.asm.Opcodes.IADD;
 import static org.objectweb.asm.Opcodes.IALOAD;
 import static org.objectweb.asm.Opcodes.IAND;
@@ -336,8 +337,40 @@ public class JavaBytecodeCompiler implements Compiler {
             case MEMBER_ACCESSOR:
                 visit((BoundMemberAccessorExpression) expression, methodVisitor);
                 break;
+            case CAST_EXPRESSION:
+                visit((BoundCastExpression) expression, methodVisitor);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
+        }
+    }
+
+    //TODO: NAH this should be done at the Lazuli typesymbol level
+    private void visit(BoundCastExpression castExpression, MethodVisitor methodVisitor) {
+
+        visit(castExpression.getExpression(), methodVisitor);
+
+        if (castExpression.getType().isAssignableFrom(TypeSymbol.INT)) {
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+        } else if (castExpression.getType().isAssignableFrom(TypeSymbol.BOOL)) {
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+        } else if (castExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
+            if (castExpression.getExpression().getType().isAssignableFrom(TypeSymbol.INT)){
+                methodVisitor.visitInsn(I2D);
+                textifierVisitor.visitInsn(I2D);
+            } else {
+                methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
+                textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
+            }
+        } else if (castExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
+        } else {
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Object");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Object");
         }
     }
 

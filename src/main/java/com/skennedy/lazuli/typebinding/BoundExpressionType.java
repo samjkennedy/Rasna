@@ -11,6 +11,7 @@ public enum BoundExpressionType {
     BINARY_EXPRESSION,
     BINARY_OPERATOR,
     BLOCK,
+    CAST_EXPRESSION,
     CONDITIONAL_GOTO,
     FOR,
     FOR_IN,
