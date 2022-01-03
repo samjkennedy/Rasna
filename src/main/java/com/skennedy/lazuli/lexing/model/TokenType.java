@@ -67,6 +67,7 @@ public enum TokenType {
     STRUCT_KEYWORD("struct"),
     FN_KEYWORD("fn"),
     IMPORT_KEYWORD("import"),
+    INLINE_KEYWORD("inline"),
     NAMESPACE_KEYWORD("namespace"),
     AS_KEYWORD("as"),
 

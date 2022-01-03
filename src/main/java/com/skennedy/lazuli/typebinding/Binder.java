@@ -138,6 +138,15 @@ public class Binder {
 
     private BoundExpression bindNamespace(NamespaceExpression namespaceExpression) {
 
+        if (namespaceExpression.isInline()) {
+            List<BoundExpression> boundExpressions = new ArrayList<>();
+
+            for (Expression expression : namespaceExpression.getBody().getExpressions()) {
+                boundExpressions.add(bind(expression));
+            }
+            return new BoundBlockExpression(boundExpressions);
+        }
+
         currentScope = new BoundScope(currentScope);
 
         List<BoundExpression> boundExpressions = new ArrayList<>();

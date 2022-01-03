@@ -1,4 +1,4 @@
-import "math.lzl" as math
+import inline "std/math.lzl"
 
 struct V2R {
     x: Real
@@ -6,7 +6,7 @@ struct V2R {
 }
 
 fn mag(v: V2R): Real {
-    return math::sqrt(v.x * v.x + v.y * v.y)
+    return sqrt(v.x * v.x + v.y * v.y)
 }
 
 fn dot(v1: V2R, v2: V2R): Real {

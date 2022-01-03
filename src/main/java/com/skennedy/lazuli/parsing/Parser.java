@@ -148,11 +148,17 @@ public class Parser {
         IdentifierExpression namespace = matchToken(TokenType.IDENTIFIER);
         BlockExpression blockExpression = parseBlockExpression();
 
-        return new NamespaceExpression(namespaceKeyword, namespace, blockExpression);
+        return new NamespaceExpression(namespaceKeyword, namespace, blockExpression, false);
     }
 
     private Expression parseImportStatement() {
         matchToken(TokenType.IMPORT_KEYWORD);
+
+        boolean inline = false;
+        if (current().getTokenType() == TokenType.INLINE_KEYWORD) {
+            matchToken(TokenType.INLINE_KEYWORD);
+            inline = true;
+        }
         IdentifierExpression filePath = matchToken(TokenType.STRING_LITERAL);
 
         String fileNameWithExt = ((String) filePath.getValue());
@@ -161,6 +167,10 @@ public class Parser {
         String fileExt = fileParts[1];
 
         if (current().getTokenType() == TokenType.AS_KEYWORD) {
+            if (inline) {
+                //TODO: Make this a compiler warning not a java warning
+                log.warn("No need to rename inline imports");
+            }
             matchToken(TokenType.AS_KEYWORD);
             IdentifierExpression name = matchToken(TokenType.IDENTIFIER);
 
@@ -189,7 +199,8 @@ public class Parser {
             return new NamespaceExpression(
                     new IdentifierExpression(new Token(TokenType.NAMESPACE_KEYWORD, new Location(-1, -1)), TokenType.NAMESPACE_KEYWORD, TokenType.NAMESPACE_KEYWORD.getText()),
                     new IdentifierExpression(new Token(TokenType.IDENTIFIER, new Location(-1, -1), fileName), TokenType.IDENTIFIER, fileName),
-                    new BlockExpression(program.getExpressions())
+                    new BlockExpression(program.getExpressions()),
+                    inline
             );
 
         } catch (IOException e) {
