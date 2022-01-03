@@ -123,7 +123,7 @@ public class Parser {
             case NAMESPACE_KEYWORD:
                 return parseNamespaceExpression();
             default:
-                throw new IllegalStateException("Unexpected value: " + current().getTokenType() + ", token text: " + current().getTokenType().getText());
+                throw new IllegalStateException("Unexpected token at " + current().getLocation() + ", token value: " + current().getTokenType() + ", token text: " + current().getTokenType().getText());
         }
     }
 

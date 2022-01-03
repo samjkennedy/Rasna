@@ -1,19 +1,10 @@
-import inline "std/math.lzl"
-
-struct V2R {
-    x: Real
-    y: Real
-}
-
-fn mag(v: V2R): Real {
-    return sqrt(v.x * v.x + v.y * v.y)
-}
-
-fn dot(v1: V2R, v2: V2R): Real {
-    return v1.x * v2.x + v1.y * v2.y
-}
+import inline "std/la.lzl"
 
 v1: V2R = V2R(0.9, 2.3)
 v2: V2R = V2R(3.5, 2.1)
 
-print(dot(v1, v2))
+print(dot2(v1, v2))
+
+v3: V3R = V3R(0.5, 1.0, 1.5)
+
+print(mag3(v3))
