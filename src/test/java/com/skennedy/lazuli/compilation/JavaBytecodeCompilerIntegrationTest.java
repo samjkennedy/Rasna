@@ -39,7 +39,7 @@ class JavaBytecodeCompilerIntegrationTest {
         String code = read("tests", filename);
 
         Parser parser = new Parser();
-        Program program = parser.parse(code);
+        Program program = parser.parse(filename, code);
 
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);

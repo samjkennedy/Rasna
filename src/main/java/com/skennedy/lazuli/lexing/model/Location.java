@@ -2,10 +2,12 @@ package com.skennedy.lazuli.lexing.model;
 
 public class Location {
 
+    private final String filePath;
     private final int row;
     private final int column;
 
-    public Location(int row, int column) {
+    public Location(String filePath, int row, int column) {
+        this.filePath = filePath;
         this.row = row;
         this.column = column;
     }
@@ -20,6 +22,6 @@ public class Location {
 
     @Override
     public String toString() {
-        return row + ":" + column;
+        return filePath + ":" + row + ":" + column;
     }
 }

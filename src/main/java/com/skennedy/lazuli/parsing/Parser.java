@@ -30,7 +30,10 @@ public class Parser {
 
     private List<Error> errors;
 
-    public Program parse(String program) {
+    private String file;
+
+    public Program parse(String filePath, String program) {
+        this.file = filePath;
 
         errors = new ArrayList<>();
         List<Expression> expressions = new ArrayList<>();
@@ -38,7 +41,7 @@ public class Parser {
         Lexer lexer = new Lexer();
         this.position = 0;
         this.tokensToParse = new ArrayList<>();
-        for (Token token : lexer.lex(program)) {
+        for (Token token : lexer.lex(filePath, program)) {
             if (token.getTokenType() != TokenType.WHITESPACE && token.getTokenType() != TokenType.COMMENT) {
                 tokensToParse.add(token);
             }
@@ -161,7 +164,9 @@ public class Parser {
         }
         IdentifierExpression filePath = matchToken(TokenType.STRING_LITERAL);
 
-        String fileNameWithExt = ((String) filePath.getValue());
+        Path path = Paths.get((String)filePath.getValue());
+
+        String fileNameWithExt = path.getFileName().toString();
         String[] fileParts = fileNameWithExt.split("\\.");
         String fileName = fileParts[0];
         String fileExt = fileParts[1];
@@ -181,12 +186,11 @@ public class Parser {
             throw new IllegalArgumentException("File must be a ." + Lazuli.LZL_EXT + " file.");
         }
 
-        Path path = Paths.get(fileNameWithExt);
         try {
             String code = String.join(StringUtils.LF, Files.readAllLines(path));
 
             Parser parser = new Parser();
-            Program program = parser.parse(code);
+            Program program = parser.parse(fileNameWithExt, code);
 
             if (program.hasErrors()) {
                 for (Error error : program.getErrors()) {
@@ -197,17 +201,16 @@ public class Parser {
 
             //This is real scuffed
             return new NamespaceExpression(
-                    new IdentifierExpression(new Token(TokenType.NAMESPACE_KEYWORD, new Location(-1, -1)), TokenType.NAMESPACE_KEYWORD, TokenType.NAMESPACE_KEYWORD.getText()),
-                    new IdentifierExpression(new Token(TokenType.IDENTIFIER, new Location(-1, -1), fileName), TokenType.IDENTIFIER, fileName),
+                    new IdentifierExpression(new Token(TokenType.NAMESPACE_KEYWORD, new Location(fileNameWithExt, -1, -1)), TokenType.NAMESPACE_KEYWORD, TokenType.NAMESPACE_KEYWORD.getText()),
+                    new IdentifierExpression(new Token(TokenType.IDENTIFIER, new Location(fileNameWithExt, -1, -1), fileName), TokenType.IDENTIFIER, fileName),
                     new BlockExpression(program.getExpressions()),
                     inline
             );
 
         } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
+            errors.add(Error.raiseImportError(path, filePath.getToken()));
         }
-        return new BlockExpression(Collections.emptyList());
+        throw new IllegalStateException("Cannot resolve import: " + path);
     }
 
     private Expression parseMemberAccessorExpression() {
@@ -629,6 +632,11 @@ public class Parser {
         IdentifierExpression colon = matchToken(TokenType.COLON);
 
         IdentifierExpression typeKeyword;
+
+        Expression namespaceExpression = null;
+        if (current().getTokenType() == TokenType.IDENTIFIER && nextToken().getTokenType() == TokenType.COLON_COLON) {
+            namespaceExpression = parseNamespaceAccessorExpression();
+        }
         switch (current().getTokenType()) {
             case VOID_KEYWORD:
                 typeKeyword = matchToken(TokenType.VOID_KEYWORD);

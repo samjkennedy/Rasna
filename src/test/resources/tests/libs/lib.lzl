@@ -1,0 +1,5 @@
+import inline "src/test/resources/tests/libs/lib2.lzl"
+
+fn square(a: A): A {
+    return A(a.i * a.i)
+}

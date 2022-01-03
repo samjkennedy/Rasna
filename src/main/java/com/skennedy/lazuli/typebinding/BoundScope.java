@@ -117,9 +117,18 @@ public class BoundScope {
 
     public void declareNamespace(String name, BoundScope scope) {
         if (tryLookupNamespace(name).isPresent()) {
-            throw new TypeAlreadyDeclaredException(name);
+            replaceNamespace(name, scope);
         }
         namespaces.put(name, scope);
+    }
+
+    private void replaceNamespace(String name, BoundScope scope) {
+        if (namespaces.containsKey(name)) {
+            namespaces.replace(name, scope);
+        }
+        if (parentScope != null) {
+            parentScope.replaceNamespace(name, scope);
+        }
     }
 
     public Map<String, FunctionSymbol> getDefinedFunctions() {

@@ -72,7 +72,7 @@ public class Lazuli {
             String code = String.join(StringUtils.LF, Files.readAllLines(path));
 
             Parser parser = new Parser();
-            Program program = parser.parse(code);
+            Program program = parser.parse(fileNameWithExt, code);
 
             if (program.hasErrors()) {
                 for (Error error : program.getErrors()) {

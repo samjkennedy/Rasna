@@ -13,14 +13,14 @@ public class Lexer {
     private static final char STRING_ESCAPE_CHAR = '\\';
     private int cursor;
 
-    public List<Token> lex(String program) {
+    public List<Token> lex(String filePath, String program) {
 
         List<Token> tokens = new ArrayList<>();
 
         int lineNumber = 0;
         for (String line : program.split(StringUtils.LF)) {
             if (StringUtils.isBlank(line)) {
-                tokens.add(new Token(TokenType.WHITESPACE, new Location(lineNumber, 0)));
+                tokens.add(new Token(TokenType.WHITESPACE, new Location(filePath, lineNumber, 0)));
                 lineNumber++;
                 continue;
             }
@@ -31,10 +31,10 @@ public class Lexer {
                     while (Character.isWhitespace(current(line))) {
                         next();
                     }
-                    tokens.add(new Token(TokenType.WHITESPACE, new Location(lineNumber, start)));
+                    tokens.add(new Token(TokenType.WHITESPACE, new Location(filePath, lineNumber, start)));
                 } else if (Character.isDigit(current(line))) {
 
-                    tokens.add(new Token(TokenType.INT_LITERAL, new Location(lineNumber, cursor), parseNum(line)));
+                    tokens.add(new Token(TokenType.INT_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
 
                 } else if (Character.isAlphabetic(current(line)) || current(line) == '_') {
                     int start = cursor;
@@ -49,13 +49,13 @@ public class Lexer {
                     TokenType tokenType = TokenType.fromText(tokenText);
                     if (tokenType == TokenType.IDENTIFIER) {
                         //TODO: This feels like an inelegant way to deal with identifiers
-                        tokens.add(new Token(tokenType, new Location(lineNumber, start), tokenText));
+                        tokens.add(new Token(tokenType, new Location(filePath, lineNumber, start), tokenText));
                     } else if (tokenType == TokenType.TRUE_KEYWORD) {
-                        tokens.add(new Token(tokenType, new Location(lineNumber, start), true));
+                        tokens.add(new Token(tokenType, new Location(filePath, lineNumber, start), true));
                     } else if (tokenType == TokenType.FALSE_KEYWORD) {
-                        tokens.add(new Token(tokenType, new Location(lineNumber, start), false));
+                        tokens.add(new Token(tokenType, new Location(filePath, lineNumber, start), false));
                     } else {
-                        tokens.add(new Token(tokenType, new Location(lineNumber, start)));
+                        tokens.add(new Token(tokenType, new Location(filePath, lineNumber, start)));
                     }
 
                 } else {
@@ -63,31 +63,31 @@ public class Lexer {
                         case '+':
 
                             if (lookAhead(line) == '+') {
-                                tokens.add(new Token(TokenType.INCREMENT, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.INCREMENT, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else {
-                                tokens.add(new Token(TokenType.PLUS, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.PLUS, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                             break;
                         case '-':
                             if (lookAhead(line) == '-') {
-                                tokens.add(new Token(TokenType.DECREMENT, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.DECREMENT, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else if (lookAhead(line) == '>') {
-                                tokens.add(new Token(TokenType.ARROW, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.ARROW, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else if (Character.isDigit(lookAhead(line))) {
-                                tokens.add(new Token(TokenType.INT_LITERAL, new Location(lineNumber, cursor), parseNum(line)));
+                                tokens.add(new Token(TokenType.INT_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
                                 break;
                             } else {
-                                tokens.add(new Token(TokenType.MINUS, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.MINUS, new Location(filePath, lineNumber, cursor)));
                                 next();
                             }
                             next();
                             break;
                         case '*':
-                            tokens.add(new Token(TokenType.STAR, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.STAR, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '/':
@@ -95,100 +95,100 @@ public class Lexer {
                                 int start = cursor;
                                 cursor = line.length();
                                 String comment = line.substring(start, cursor);
-                                tokens.add(new Token(TokenType.COMMENT, new Location(lineNumber, cursor), comment));
+                                tokens.add(new Token(TokenType.COMMENT, new Location(filePath, lineNumber, cursor), comment));
                             } else {
-                                tokens.add(new Token(TokenType.SLASH, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.SLASH, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                             break;
                         case '%':
-                            tokens.add(new Token(TokenType.PERCENT, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.PERCENT, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '|':
-                            tokens.add(new Token(TokenType.BAR, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.BAR, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '>':
                             if (lookAhead(line) == '=') {
-                                tokens.add(new Token(TokenType.GTEQ, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.GTEQ, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else {
-                                tokens.add(new Token(TokenType.GT, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.GT, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                             break;
                         case '<':
                             if (lookAhead(line) == '=') {
-                                tokens.add(new Token(TokenType.LTEQ, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.LTEQ, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else {
-                                tokens.add(new Token(TokenType.LT, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.LT, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                             break;
                         case '=':
                             if (lookAhead(line) == '=') {
-                                tokens.add(new Token(TokenType.EQUALS_EQUALS, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.EQUALS_EQUALS, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else {
-                                tokens.add(new Token(TokenType.EQUALS, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.EQUALS, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                         case '!':
                             if (lookAhead(line) == '=') {
-                                tokens.add(new Token(TokenType.BANG_EQUALS, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.BANG_EQUALS, new Location(filePath, lineNumber, cursor)));
                                 cursor += 2;
                             } else {
                                 cursor++;
                             }
                             break;
                         case '(':
-                            tokens.add(new Token(TokenType.OPEN_PARENTHESIS, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.OPEN_PARENTHESIS, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case ')':
-                            tokens.add(new Token(TokenType.CLOSE_PARENTHESIS, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.CLOSE_PARENTHESIS, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '{':
-                            tokens.add(new Token(TokenType.OPEN_CURLY_BRACE, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.OPEN_CURLY_BRACE, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '}':
-                            tokens.add(new Token(TokenType.CLOSE_CURLY_BRACE, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.CLOSE_CURLY_BRACE, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '[':
-                            tokens.add(new Token(TokenType.OPEN_SQUARE_BRACE, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.OPEN_SQUARE_BRACE, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case ']':
-                            tokens.add(new Token(TokenType.CLOSE_SQUARE_BRACE, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.CLOSE_SQUARE_BRACE, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case ',':
-                            tokens.add(new Token(TokenType.COMMA, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.COMMA, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case '"':
-                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(lineNumber, cursor), parseString(line)));
+                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor), parseString(line)));
                             break;
                         case '.':
-                            tokens.add(new Token(TokenType.DOT, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));
                             next();
                             break;
                         case ':':
                             if (lookAhead(line) == ':') {
-                                tokens.add(new Token(TokenType.COLON_COLON, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.COLON_COLON, new Location(filePath, lineNumber, cursor)));
                                 cursor += 2;
                             } else {
-                                tokens.add(new Token(TokenType.COLON, new Location(lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.COLON, new Location(filePath, lineNumber, cursor)));
                                 next();
                             }
                             break;
                         default:
-                            tokens.add(new Token(TokenType.BAD_TOKEN, new Location(lineNumber, cursor)));
+                            tokens.add(new Token(TokenType.BAD_TOKEN, new Location(filePath, lineNumber, cursor)));
                             next();
                     }
                 }
@@ -196,7 +196,7 @@ public class Lexer {
 
             lineNumber++;
         }
-        tokens.add(new Token(TokenType.EOF_TOKEN, new Location(lineNumber + 1, 0)));
+        tokens.add(new Token(TokenType.EOF_TOKEN, new Location(filePath, lineNumber + 1, 0)));
         return tokens;
     }
 

@@ -3,7 +3,8 @@ package com.skennedy.lazuli.diagnostics;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.lexing.model.Location;
 import com.skennedy.lazuli.lexing.model.Token;
-import com.skennedy.lazuli.typebinding.TypeSymbol;
+
+import java.nio.file.Path;
 
 public class Error {
 
@@ -19,6 +20,10 @@ public class Error {
 
     public static Error raiseUnexpectedToken(TokenType expected, Token actual) {
         return new Error("Expected " + expected + " but got " + actual.getTokenType(), actual, actual.getLocation());
+    }
+
+    public static Error raiseImportError(Path path, Token token) {
+        return new Error("Cannot resolve import " + path, token, token.getLocation());
     }
 
     public String getMessage() {

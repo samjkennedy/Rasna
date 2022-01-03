@@ -17,16 +17,16 @@ class LexerUnitTest {
 
         Lexer lexer = new Lexer();
 
-        List<Token> tokens = lexer.lex(program);
+        List<Token> tokens = lexer.lex("test.lzl", program);
 
         assertEquals(6, tokens.size());
 
-        assertEquals(TokenType.INT_LITERAL,        tokens.get(0).getTokenType());
+        assertEquals(TokenType.INT_LITERAL, tokens.get(0).getTokenType());
         assertEquals(TokenType.WHITESPACE, tokens.get(1).getTokenType());
-        assertEquals(TokenType.MINUS,      tokens.get(2).getTokenType());
+        assertEquals(TokenType.MINUS, tokens.get(2).getTokenType());
         assertEquals(TokenType.WHITESPACE, tokens.get(3).getTokenType());
-        assertEquals(TokenType.INT_LITERAL,        tokens.get(4).getTokenType());
-        assertEquals(TokenType.EOF_TOKEN,  tokens.get(5).getTokenType());
+        assertEquals(TokenType.INT_LITERAL, tokens.get(4).getTokenType());
+        assertEquals(TokenType.EOF_TOKEN, tokens.get(5).getTokenType());
     }
 
 }

@@ -11,6 +11,7 @@ import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
+import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.parsing.*;
 import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
@@ -144,6 +145,8 @@ public class Binder {
             for (Expression expression : namespaceExpression.getBody().getExpressions()) {
                 boundExpressions.add(bind(expression));
             }
+            currentScope.declareNamespace((String)namespaceExpression.getNamespace().getValue(), currentScope);
+
             return new BoundBlockExpression(boundExpressions);
         }
 

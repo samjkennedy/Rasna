@@ -1,10 +1,11 @@
-import inline "std/la.lzl"
+struct A {
+    i: Int
+}
 
-v1: V2R = V2R(0.9, 2.3)
-v2: V2R = V2R(3.5, 2.1)
+fn square(a: A): A {
+    return A(a.i * a.i)
+}
 
-print(dot2(v1, v2))
-
-v3: V3R = V3R(0.5, 1.0, 1.5)
-
-print(mag3(v3))
+a: A = A(5)
+b: A = square(a)
+print(b.i)
