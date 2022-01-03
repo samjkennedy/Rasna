@@ -44,6 +44,7 @@ public enum TokenType {
     ARROW("->"),
     DOT("."),
     COLON(":"),
+    COLON_COLON("::"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -65,6 +66,9 @@ public enum TokenType {
     VAR_KEYWORD("var"),
     STRUCT_KEYWORD("struct"),
     FN_KEYWORD("fn"),
+    IMPORT_KEYWORD("import"),
+    NAMESPACE_KEYWORD("namespace"),
+    AS_KEYWORD("as"),
 
     //Types
     VOID_KEYWORD("Void"),

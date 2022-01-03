@@ -109,9 +109,49 @@ public class Binder {
                 return bindStructDeclarationExpression((StructDeclarationExpression) expression);
             case MEMBER_ACCESSOR_EXPR:
                 return bindMemberAccessorExpression((MemberAccessorExpression) expression);
+            case NAMESPACE:
+                return bindNamespace((NamespaceExpression) expression);
+            case NAMESPACE_ACCESSOR_EXPR:
+                return bindNamespaceAccessorExpression((NamespaceAccessorExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindNamespaceAccessorExpression(NamespaceAccessorExpression namespaceAccessorExpression) {
+        IdentifierExpression namespace = namespaceAccessorExpression.getNamespace();
+
+        Optional<BoundScope> namespaceScope = currentScope.tryLookupNamespace((String) namespace.getValue());
+        if (namespaceScope.isEmpty()) {
+            errors.add(BindingError.raiseUnknownNamespace((String) namespace.getValue(), namespaceAccessorExpression.getSpan()));
+            throw new IllegalStateException("Unknown namespace: `" + namespace.getValue() + "`"); //TODO: Return a BoundExceptionExpression in future
+        }
+        BoundScope previous = currentScope;
+        currentScope = BoundScope.merge(previous, namespaceScope.get());
+
+        BoundExpression boundExpression = bind(namespaceAccessorExpression.getExpression());
+
+        currentScope = previous;
+
+        return boundExpression;
+    }
+
+    private BoundExpression bindNamespace(NamespaceExpression namespaceExpression) {
+
+        currentScope = new BoundScope(currentScope);
+
+        List<BoundExpression> boundExpressions = new ArrayList<>();
+
+        for (Expression expression : namespaceExpression.getBody().getExpressions()) {
+            boundExpressions.add(bind(expression));
+        }
+        BoundScope namespaceScope = currentScope;
+
+        currentScope = currentScope.getParentScope();
+
+        currentScope.declareNamespace((String)namespaceExpression.getNamespace().getValue(), namespaceScope);
+
+        return new BoundBlockExpression(boundExpressions);
     }
 
     private BoundMemberAccessorExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
@@ -371,11 +411,12 @@ public class Binder {
                 break;
             default:
                 Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getIdentifier().getValue());
-                if (type.isPresent()) {
-                    return type.get();
+                if (type.isEmpty()) {
+                    errors.add(BindingError.raiseUnknownType((String) typeExpression.getIdentifier().getValue(), typeExpression.getIdentifier().getSpan()));
+                    typeSymbol = null;
+                } else {
+                    typeSymbol = type.get();
                 }
-                errors.add(BindingError.raiseUnknownType((String)typeExpression.getIdentifier().getValue(), typeExpression.getIdentifier().getSpan()));
-                typeSymbol = null;
         }
         //TODO: This doesn't do N-Dimensional arrays yet
         if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {

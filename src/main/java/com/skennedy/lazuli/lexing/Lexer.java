@@ -179,8 +179,13 @@ public class Lexer {
                             next();
                             break;
                         case ':':
-                            tokens.add(new Token(TokenType.COLON, new Location(lineNumber, cursor)));
-                            next();
+                            if (lookAhead(line) == ':') {
+                                tokens.add(new Token(TokenType.COLON_COLON, new Location(lineNumber, cursor)));
+                                cursor += 2;
+                            } else {
+                                tokens.add(new Token(TokenType.COLON, new Location(lineNumber, cursor)));
+                                next();
+                            }
                             break;
                         default:
                             tokens.add(new Token(TokenType.BAD_TOKEN, new Location(lineNumber, cursor)));

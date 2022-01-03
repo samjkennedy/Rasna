@@ -28,7 +28,7 @@ import java.time.Instant;
 
 public class Lazuli {
 
-    private static final String LZL_EXT = "lzl";
+    public static final String LZL_EXT = "lzl";
 
     private static final Logger log = LogManager.getLogger(Lazuli.class);
 

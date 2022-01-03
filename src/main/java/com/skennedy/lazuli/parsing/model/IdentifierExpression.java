@@ -47,4 +47,9 @@ public class IdentifierExpression extends Expression {
     public TextSpan getSpan() {
         return new TextSpan(token.getLocation(), token.getLocation());
     }
+
+    @Override
+    public String toString() {
+        return "IdentifierExpression<" + getValue() + ">";
+    }
 }

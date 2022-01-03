@@ -1,0 +1,31 @@
+namespace math {
+    fn sqrt(S: Real): Real {
+        iterations: Int = 100
+        x0: Real = (S / 10.0)
+        x1: Real = (x0 + (S / x0)) / 2.0
+        for (i: Int = 1 to iterations) {
+            tmp: Real = x0
+            x0 = (x1 + (S / x1)) / 2.0
+            x1 = tmp
+        }
+        return x0
+    }
+}
+
+struct V2R {
+    x: Real
+    y: Real
+}
+
+fn mag(v: V2R): Real {
+    return math::sqrt(v.x * v.x + v.y * v.y)
+}
+
+fn dot(v1: V2R, v2: V2R): Real {
+    return v1.x * v2.x + v1.y * v2.y
+}
+
+v1: V2R = V2R(0.9, 2.3)
+v2: V2R = V2R(3.5, 2.1)
+
+print(dot(v1, v2))

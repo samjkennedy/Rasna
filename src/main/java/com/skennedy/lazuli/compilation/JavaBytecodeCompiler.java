@@ -523,9 +523,12 @@ public class JavaBytecodeCompiler implements Compiler {
         } else if (arrayDeclarationExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
             methodVisitor.visitIntInsn(NEWARRAY, T_DOUBLE);
             textifierVisitor.visitIntInsn(NEWARRAY, T_DOUBLE);
-        } else {
+        } else if (arrayDeclarationExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
             methodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/String");
             textifierVisitor.visitTypeInsn(ANEWARRAY, "java/lang/String");
+        } else {
+            methodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+            textifierVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
         }
     }
 
@@ -880,9 +883,12 @@ public class JavaBytecodeCompiler implements Compiler {
         } else if (arrayLiteralExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
             methodVisitor.visitIntInsn(NEWARRAY, T_DOUBLE);
             textifierVisitor.visitIntInsn(NEWARRAY, T_DOUBLE);
-        } else {
+        } else if (arrayLiteralExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
             methodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/String");
             textifierVisitor.visitTypeInsn(ANEWARRAY, "java/lang/String");
+        } else {
+            methodVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+            textifierVisitor.visitTypeInsn(ANEWARRAY, "java/lang/Object");
         }
 
         int index = 0;

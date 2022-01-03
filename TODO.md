@@ -10,9 +10,8 @@
 - Be more consistent with `const`
 - Longs
 - Include files - standard library
-- Fix Tuples
 - Non-scuffed control flow analysis
-- Multidimensional arrays
+- Multidimensional arrays (And arrays of structs)
 - Generics/Templates
-- Pythonish data structures: Dict, Tuple, ~~Struct~~
+- Pythonish data structures: Dict, ~~Tuple, Struct~~
 - REPL

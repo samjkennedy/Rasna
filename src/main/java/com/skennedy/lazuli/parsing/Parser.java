@@ -1,5 +1,6 @@
 package com.skennedy.lazuli.parsing;
 
+import com.skennedy.lazuli.Lazuli;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.lexing.Lexer;
 import com.skennedy.lazuli.lexing.model.Token;
@@ -7,10 +8,16 @@ import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 import com.skennedy.lazuli.parsing.model.OpType;
 import com.skennedy.lazuli.parsing.model.OperatorPrecedence;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Parser {
@@ -18,26 +25,26 @@ public class Parser {
     private static final Logger log = LogManager.getLogger(Parser.class);
 
     private int position;
-    private List<Token> parsedTokens;
+    private List<Token> tokensToParse;
 
     private List<Error> errors;
 
     public Program parse(String program) {
 
         errors = new ArrayList<>();
+        List<Expression> expressions = new ArrayList<>();
 
         Lexer lexer = new Lexer();
         this.position = 0;
-        this.parsedTokens = new ArrayList<>();
+        this.tokensToParse = new ArrayList<>();
         for (Token token : lexer.lex(program)) {
             if (token.getTokenType() != TokenType.WHITESPACE && token.getTokenType() != TokenType.COMMENT) {
-                parsedTokens.add(token);
+                tokensToParse.add(token);
             }
         }
 
-        //System.out.println(parsedTokens.stream().map(Token::toString).collect(Collectors.joining(", ")));
+        //System.out.println(tokensToParse.stream().map(Token::toString).collect(Collectors.joining(", ")));
 
-        List<Expression> expressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.EOF_TOKEN) {
             if (current().getTokenType() == TokenType.WHITESPACE) {
                 position++;
@@ -98,6 +105,9 @@ public class Parser {
                 if (nextToken().getTokenType() == TokenType.COLON) {
                     return parseVariableDeclarationExpression();
                 }
+                if (nextToken().getTokenType() == TokenType.COLON_COLON) {
+                    return parseNamespaceAccessorExpression();
+                }
                 return parseAssignmentExpression();
             case RETURN_KEYWORD:
                 return parseReturnExpression();
@@ -107,9 +117,78 @@ public class Parser {
                 return parseYieldExpression();
             case FN_KEYWORD:
                 return parseFunctionDeclarationExpression();
+            case IMPORT_KEYWORD:
+                return parseImportStatement();
+            case NAMESPACE_KEYWORD:
+                return parseNamespaceExpression();
             default:
-                throw new IllegalStateException("Unexpected value: " + current().getTokenType() + ", token text: " + current().getValue());
+                throw new IllegalStateException("Unexpected value: " + current().getTokenType() + ", token text: " + current().getTokenType().getText());
         }
+    }
+
+    private Expression parseNamespaceAccessorExpression() {
+
+        IdentifierExpression namespace = matchToken(TokenType.IDENTIFIER);
+        IdentifierExpression namespaceAccessor = matchToken(TokenType.COLON_COLON);
+        Expression expression = parseExpression();
+
+        return new NamespaceAccessorExpression(namespace, namespaceAccessor, expression);
+    }
+
+    /**
+     * Parses a block of code within a given namespace
+     *
+     * @return A namespace expression
+     */
+    //Kind of dubious as to whether this is truly an `expression`
+    private Expression parseNamespaceExpression() {
+
+        IdentifierExpression namespaceKeyword = matchToken(TokenType.NAMESPACE_KEYWORD);
+        IdentifierExpression namespace = matchToken(TokenType.IDENTIFIER);
+        BlockExpression blockExpression = parseBlockExpression();
+
+        return new NamespaceExpression(namespaceKeyword, namespace, blockExpression);
+    }
+
+    /**
+     * This is kind of a special one, it loads in the imported file and parses it first, returning a namespace of the
+     * tokens in a block expression with the name of the file by default, or with the provided `as` namespace.
+     *
+     * @return
+     */
+    private Expression parseImportStatement() {
+        IdentifierExpression importKeyword = matchToken(TokenType.IMPORT_KEYWORD);
+        IdentifierExpression filePath = matchToken(TokenType.STRING_LITERAL);
+
+        String fileNameWithExt = ((String) filePath.getValue());
+        String[] fileParts = fileNameWithExt.split("\\.");
+        String fileExt = fileParts[1];
+
+        if (!Lazuli.LZL_EXT.equals(fileExt)) {
+            throw new IllegalArgumentException("File must be a ." + Lazuli.LZL_EXT + " file.");
+        }
+
+        Path path = Paths.get(fileNameWithExt);
+        try {
+            String code = String.join(StringUtils.LF, Files.readAllLines(path));
+
+            Parser parser = new Parser();
+            Program program = parser.parse(code);
+
+            if (program.hasErrors()) {
+                for (Error error : program.getErrors()) {
+                    System.err.println(error.getMessage() + " at " + error.getLocation() + " -> " + error.getToken());
+                }
+                System.exit(1);
+            }
+
+            return new BlockExpression(program.getExpressions());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        return new BlockExpression(Collections.emptyList());
     }
 
     private Expression parseMemberAccessorExpression() {
@@ -752,13 +831,13 @@ public class Parser {
     }
 
     private Token current() {
-        return parsedTokens.get(position);
+        return tokensToParse.get(position);
     }
 
     private Token nextToken() {
-        if (position >= parsedTokens.size()) {
-            return parsedTokens.get(parsedTokens.size() - 1); //EOF
+        if (position >= tokensToParse.size()) {
+            return tokensToParse.get(tokensToParse.size() - 1); //EOF
         }
-        return parsedTokens.get(position + 1);
+        return tokensToParse.get(position + 1);
     }
 }
