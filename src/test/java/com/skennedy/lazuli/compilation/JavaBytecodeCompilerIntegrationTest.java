@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -39,7 +40,7 @@ class JavaBytecodeCompilerIntegrationTest {
         String code = read("tests", filename);
 
         Parser parser = new Parser();
-        Program program = parser.parse(code);
+        Program program = parser.parse(Path.of(getFullPath("tests", filename)).toAbsolutePath(), code);
 
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);
@@ -74,9 +75,12 @@ class JavaBytecodeCompilerIntegrationTest {
 
 
     private String read(String folder, String filename) throws IOException {
-        String path = "src/test/resources/" + folder + "/" + filename;
-        File file = new File(path);
+        File file = new File(getFullPath(folder, filename));
         return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+    }
+
+    private String getFullPath(String folder, String filename) {
+        return "src/test/resources/" + folder + "/" + filename;
     }
 
     private static Stream<String> getFilesToTest() {

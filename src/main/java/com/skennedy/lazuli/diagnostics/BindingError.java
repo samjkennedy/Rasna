@@ -35,6 +35,10 @@ public class BindingError {
         return new BindingError("Type " + name + " is not declared in the scope", span);
     }
 
+    public static BindingError raiseUnknownNamespace(String name, TextSpan span) {
+        return new BindingError("Namespace " + name + " is not declared in the scope", span);
+    }
+
     public String getMessage() {
         return message;
     }

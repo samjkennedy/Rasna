@@ -15,12 +15,25 @@ public class BoundScope {
     private final Map<String, VariableSymbol> definedVariables;
     private final Map<String, FunctionSymbol> definedFunctions;
     private final Map<String, TypeSymbol> definedTypes;
+    private final Map<String, BoundScope> namespaces;
 
     public BoundScope(BoundScope parentScope) {
         this.parentScope = parentScope;
         this.definedVariables = new HashMap<>();
         this.definedFunctions = new HashMap<>();
         this.definedTypes = new HashMap<>();
+        this.namespaces = new HashMap<>();
+    }
+
+    public static BoundScope merge(BoundScope primary, BoundScope secondary) {
+        BoundScope merged = new BoundScope(primary);
+
+        secondary.definedVariables.forEach(merged::declareVariable);
+        secondary.definedFunctions.forEach(merged::declareFunction);
+        secondary.definedTypes.forEach(merged::declareType);
+        secondary.namespaces.forEach(merged::declareNamespace);
+
+        return merged;
     }
 
     public BoundScope getParentScope() {
@@ -60,6 +73,17 @@ public class BoundScope {
         return Optional.empty();
     }
 
+    public Optional<BoundScope> tryLookupNamespace(String name) {
+
+        if (namespaces.containsKey(name)) {
+            return Optional.of(namespaces.get(name));
+        }
+        if (parentScope != null) {
+            return parentScope.tryLookupNamespace(name);
+        }
+        return Optional.empty();
+    }
+
     public void declareVariable(String name, VariableSymbol variable) {
         if (tryLookupVariable(name).isPresent()) {
             throw new VariableAlreadyDeclaredException(name);
@@ -89,6 +113,22 @@ public class BoundScope {
             throw new TypeAlreadyDeclaredException(name);
         }
         definedTypes.put(name, type);
+    }
+
+    public void declareNamespace(String name, BoundScope scope) {
+        if (tryLookupNamespace(name).isPresent()) {
+            replaceNamespace(name, scope);
+        }
+        namespaces.put(name, scope);
+    }
+
+    private void replaceNamespace(String name, BoundScope scope) {
+        if (namespaces.containsKey(name)) {
+            namespaces.replace(name, scope);
+        }
+        if (parentScope != null) {
+            parentScope.replaceNamespace(name, scope);
+        }
     }
 
     public Map<String, FunctionSymbol> getDefinedFunctions() {

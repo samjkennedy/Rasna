@@ -1,0 +1,31 @@
+fn min(a: Int, b: Int): Int {
+    if (a < b) {
+        return a
+    } else {
+        return b
+    }
+}
+
+fn max(a: Int, b: Int): Int {
+    if (a > b) {
+        return a
+    } else {
+        return b
+    }
+}
+
+fn lerp(a: Real, b: Real, t: Real): Real {
+    return a + (b - a) * t
+}
+
+fn sqrt(S: Real): Real {
+    iterations: Int = 100
+    x0: Real = (S / 10.0)
+    x1: Real = (x0 + (S / x0)) / 2.0
+    for (i: Int = 1 to iterations) {
+        tmp: Real = x0
+        x0 = (x1 + (S / x1)) / 2.0
+        x1 = tmp
+    }
+    return x0
+}
