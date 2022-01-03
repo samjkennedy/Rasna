@@ -1,3 +1,0 @@
-import "std/math.lzl"
-
-print(math::sqrt(1.2))

@@ -14,6 +14,10 @@ fn max(a: Int, b: Int): Int {
     }
 }
 
+fn lerp(a: Real, b: Real, t: Real): Real {
+    return a + (b - a) * t
+}
+
 fn sqrt(S: Real): Real {
     iterations: Int = 100
     x0: Real = (S / 10.0)

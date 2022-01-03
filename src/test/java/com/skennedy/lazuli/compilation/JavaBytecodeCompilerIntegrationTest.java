@@ -84,12 +84,11 @@ class JavaBytecodeCompilerIntegrationTest {
     }
 
     private static Stream<String> getFilesToTest() {
-        return Stream.of("imports.lzl");
-//        File folder = new File("src/test/resources/tests/");
-//        File[] listOfFiles = folder.listFiles();
-//
-//        return Arrays.stream(listOfFiles)
-//                .filter(file -> file.getName().endsWith(".lzl"))
-//                .map(File::getName);
+        File folder = new File("src/test/resources/tests/");
+        File[] listOfFiles = folder.listFiles();
+
+        return Arrays.stream(listOfFiles)
+                .filter(file -> file.getName().endsWith(".lzl"))
+                .map(File::getName);
     }
 }
