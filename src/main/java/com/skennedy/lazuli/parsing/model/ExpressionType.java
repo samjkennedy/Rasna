@@ -17,6 +17,7 @@ public enum ExpressionType {
     FUNC_DECLARATION_EXPR,
     IDENTIFIER_EXPR,
     IF_EXPR,
+    IMPORT,
     INCREMENT_EXPR,
     LAMBDA_EXPRESSION,
     LITERAL_EXPR,

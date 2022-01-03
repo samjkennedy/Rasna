@@ -3,6 +3,7 @@ package com.skennedy.lazuli.parsing;
 import com.skennedy.lazuli.Lazuli;
 import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.lexing.Lexer;
+import com.skennedy.lazuli.lexing.model.Location;
 import com.skennedy.lazuli.lexing.model.Token;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
@@ -150,19 +151,21 @@ public class Parser {
         return new NamespaceExpression(namespaceKeyword, namespace, blockExpression);
     }
 
-    /**
-     * This is kind of a special one, it loads in the imported file and parses it first, returning a namespace of the
-     * tokens in a block expression with the name of the file by default, or with the provided `as` namespace.
-     *
-     * @return
-     */
     private Expression parseImportStatement() {
-        IdentifierExpression importKeyword = matchToken(TokenType.IMPORT_KEYWORD);
+        matchToken(TokenType.IMPORT_KEYWORD);
         IdentifierExpression filePath = matchToken(TokenType.STRING_LITERAL);
 
         String fileNameWithExt = ((String) filePath.getValue());
         String[] fileParts = fileNameWithExt.split("\\.");
+        String fileName = fileParts[0];
         String fileExt = fileParts[1];
+
+        if (current().getTokenType() == TokenType.AS_KEYWORD) {
+            matchToken(TokenType.AS_KEYWORD);
+            IdentifierExpression name = matchToken(TokenType.IDENTIFIER);
+
+            fileName = (String)name.getValue();
+        }
 
         if (!Lazuli.LZL_EXT.equals(fileExt)) {
             throw new IllegalArgumentException("File must be a ." + Lazuli.LZL_EXT + " file.");
@@ -182,7 +185,12 @@ public class Parser {
                 System.exit(1);
             }
 
-            return new BlockExpression(program.getExpressions());
+            //This is real scuffed
+            return new NamespaceExpression(
+                    new IdentifierExpression(new Token(TokenType.NAMESPACE_KEYWORD, new Location(-1, -1)), TokenType.NAMESPACE_KEYWORD, TokenType.NAMESPACE_KEYWORD.getText()),
+                    new IdentifierExpression(new Token(TokenType.IDENTIFIER, new Location(-1, -1), fileName), TokenType.IDENTIFIER, fileName),
+                    new BlockExpression(program.getExpressions())
+            );
 
         } catch (IOException e) {
             e.printStackTrace();
