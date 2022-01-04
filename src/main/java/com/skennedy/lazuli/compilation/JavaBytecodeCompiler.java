@@ -45,6 +45,7 @@ import static org.objectweb.asm.Opcodes.BALOAD;
 import static org.objectweb.asm.Opcodes.BASTORE;
 import static org.objectweb.asm.Opcodes.BIPUSH;
 import static org.objectweb.asm.Opcodes.CHECKCAST;
+import static org.objectweb.asm.Opcodes.D2I;
 import static org.objectweb.asm.Opcodes.DADD;
 import static org.objectweb.asm.Opcodes.DALOAD;
 import static org.objectweb.asm.Opcodes.DASTORE;
@@ -61,6 +62,7 @@ import static org.objectweb.asm.Opcodes.DSUB;
 import static org.objectweb.asm.Opcodes.DUP;
 import static org.objectweb.asm.Opcodes.GETSTATIC;
 import static org.objectweb.asm.Opcodes.GOTO;
+import static org.objectweb.asm.Opcodes.I2D;
 import static org.objectweb.asm.Opcodes.IADD;
 import static org.objectweb.asm.Opcodes.IALOAD;
 import static org.objectweb.asm.Opcodes.IAND;
@@ -193,7 +195,8 @@ public class JavaBytecodeCompiler implements Compiler {
 
         textifierVisitor.visitMaxs(1000, 1000);
         textifierVisitor.visitMethodEnd();
-        textifierVisitor.visitClassEnd();File bytecodeFile = new File(outputFileName + "_bytecode.txt");
+        textifierVisitor.visitClassEnd();
+        File bytecodeFile = new File(outputFileName + "_bytecode.txt");
         bytecodeFile.createNewFile();
         PrintWriter fileWriter = new PrintWriter(bytecodeFile);
         textifierVisitor.print(fileWriter);
@@ -209,8 +212,6 @@ public class JavaBytecodeCompiler implements Compiler {
         classWriter.visitEnd();
 
         byte[] code = classWriter.toByteArray();
-
-
 
         File outputFile = new File(outputFileName + ".class");
         outputFile.createNewFile();
@@ -336,8 +337,59 @@ public class JavaBytecodeCompiler implements Compiler {
             case MEMBER_ACCESSOR:
                 visit((BoundMemberAccessorExpression) expression, methodVisitor);
                 break;
+            case CAST_EXPRESSION:
+                visit((BoundCastExpression) expression, methodVisitor);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
+        }
+    }
+
+    //TODO: NAH this should be done at the Lazuli typesymbol level
+    private void visit(BoundCastExpression castExpression, MethodVisitor methodVisitor) {
+
+        visit(castExpression.getExpression(), methodVisitor);
+
+        if (castExpression.getType().isAssignableFrom(TypeSymbol.INT)) {
+            if (castExpression.getExpression().getType() == TypeSymbol.REAL) {
+                methodVisitor.visitInsn(D2I);
+                textifierVisitor.visitInsn(D2I);
+            } else {
+                methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+                textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+                textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+            }
+        } else if (castExpression.getType() == (TypeSymbol.BOOL)) {
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+
+        } else if (castExpression.getType().isAssignableFrom(TypeSymbol.REAL)) {
+
+            if (castExpression.getExpression().getType() == (TypeSymbol.INT)) {
+                methodVisitor.visitInsn(I2D);
+                textifierVisitor.visitInsn(I2D);
+                variableIndex++;
+
+            } else {
+                methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
+                textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Double");
+
+                methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+                textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+            }
+        } else if (castExpression.getType().isAssignableFrom(TypeSymbol.STRING)) {
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
+        } else {
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Object");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Object");
         }
     }
 
@@ -824,6 +876,9 @@ public class JavaBytecodeCompiler implements Compiler {
             } else if (TypeSymbol.BOOL.equals(element.getType())) {
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
                 textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+            } else if (TypeSymbol.REAL.equals(element.getType())) {
+                methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+                textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
             }
             methodVisitor.visitInsn(AASTORE);
             textifierVisitor.visitInsn(AASTORE);
@@ -978,12 +1033,34 @@ public class JavaBytecodeCompiler implements Compiler {
 
     private void visit(BoundBinaryExpression binaryExpression, MethodVisitor methodVisitor) {
 
-        visit(binaryExpression.getLeft(), methodVisitor);
-        visit(binaryExpression.getRight(), methodVisitor);
+        TypeSymbol leftType = binaryExpression.getLeft().getType();
+        TypeSymbol rightType = binaryExpression.getRight().getType();
 
-        if (binaryExpression.getLeft().getType() == TypeSymbol.INT || binaryExpression.getLeft().getType() == TypeSymbol.BOOL) {
-            visitIntBinaryExpression(binaryExpression, methodVisitor);
-        } else if (binaryExpression.getLeft().getType() == TypeSymbol.REAL) {
+        if (leftType == TypeSymbol.INT || leftType == TypeSymbol.BOOL) {
+            if (rightType == TypeSymbol.INT || rightType == TypeSymbol.BOOL) {
+
+                visit(binaryExpression.getLeft(), methodVisitor);
+                visit(binaryExpression.getRight(), methodVisitor);
+
+                visitIntBinaryExpression(binaryExpression, methodVisitor);
+            } else {
+
+                visit(binaryExpression.getLeft(), methodVisitor);
+                methodVisitor.visitInsn(I2D);
+                textifierVisitor.visitInsn(I2D);
+                visit(binaryExpression.getRight(), methodVisitor);
+
+                visitRealBinaryExpression(binaryExpression, methodVisitor);
+            }
+        } else if (leftType == TypeSymbol.REAL) {
+
+            visit(binaryExpression.getLeft(), methodVisitor);
+            visit(binaryExpression.getRight(), methodVisitor);
+
+            if (rightType == TypeSymbol.INT || rightType == TypeSymbol.BOOL) {
+                methodVisitor.visitInsn(I2D);
+                textifierVisitor.visitInsn(I2D);
+            }
             visitRealBinaryExpression(binaryExpression, methodVisitor);
         }
     }

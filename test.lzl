@@ -1,0 +1,5 @@
+t: Tuple = (2.5,3.)
+for (el: Any in t) {
+     x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
+     print(x)
+}

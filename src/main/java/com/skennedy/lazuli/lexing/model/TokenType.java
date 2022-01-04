@@ -63,7 +63,6 @@ public enum TokenType {
     RETURN_KEYWORD("return"),
     MATCH_KEYWORD("match"),
     CONST_KEYWORD("const"),
-    VAR_KEYWORD("var"),
     STRUCT_KEYWORD("struct"),
     FN_KEYWORD("fn"),
     IMPORT_KEYWORD("import"),
@@ -72,6 +71,7 @@ public enum TokenType {
     AS_KEYWORD("as"),
 
     //Types
+    ANY_KEYWORD("Any"),
     VOID_KEYWORD("Void"),
     BOOL_KEYWORD("Bool"),
     INT_KEYWORD("Int"),

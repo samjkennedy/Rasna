@@ -10,6 +10,7 @@ public enum ExpressionType {
     ASSIGNMENT_EXPR,
     BINARY_EXPR,
     BLOCK_EXPR,
+    CAST_EXPR,
     FOR_EXPR,
     FOR_IN_EXPR,
     FUNC_ARG_EXPR,

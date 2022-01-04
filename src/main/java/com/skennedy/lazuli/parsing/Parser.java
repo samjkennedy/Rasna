@@ -553,8 +553,8 @@ public class Parser {
             case FUNCTION_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
                 break;
-            case VAR_KEYWORD:
-                typeKeyword = matchToken(TokenType.VAR_KEYWORD);
+            case ANY_KEYWORD:
+                typeKeyword = matchToken(TokenType.ANY_KEYWORD);
                 break;
             default:
                 throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
@@ -635,6 +635,18 @@ public class Parser {
         if (current().getTokenType() == TokenType.IDENTIFIER && nextToken().getTokenType() == TokenType.COLON_COLON) {
             namespaceExpression = parseNamespaceAccessorExpression();
         }
+        typeKeyword = parseTypeKeyword();
+        IdentifierExpression openSquareBrace = null;
+        IdentifierExpression closeSquareBrace = null;
+        if (current().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
+            openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
+            closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+        }
+        return new TypeExpression(colon, typeKeyword, openSquareBrace, closeSquareBrace);
+    }
+
+    private IdentifierExpression parseTypeKeyword() {
+        IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
             case VOID_KEYWORD:
                 typeKeyword = matchToken(TokenType.VOID_KEYWORD);
@@ -657,20 +669,14 @@ public class Parser {
             case FUNCTION_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
                 break;
-            case VAR_KEYWORD:
-                typeKeyword = matchToken(TokenType.VAR_KEYWORD);
+            case ANY_KEYWORD:
+                typeKeyword = matchToken(TokenType.ANY_KEYWORD);
                 break;
             default:
                 typeKeyword = matchToken(TokenType.IDENTIFIER);
                 break;
         }
-        IdentifierExpression openSquareBrace = null;
-        IdentifierExpression closeSquareBrace = null;
-        if (current().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
-            openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
-            closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
-        }
-        return new TypeExpression(colon, typeKeyword, openSquareBrace, closeSquareBrace);
+        return typeKeyword;
     }
 
     private FunctionArgumentExpression parseFunctionArgumentExpression() {
@@ -717,7 +723,57 @@ public class Parser {
 
     private Expression parseExpression() {
 
-        return parseBinaryExpression(0);
+        return parseAhead(parseBinaryExpression(0));
+    }
+
+    /**
+     * Looks ahead to see if there's more to the expression on the right, e.g. method accessor, cast, namespace accessor etc
+     * @param parsed what has already been parsed to the left
+     * @return
+     */
+    private Expression parseAhead(Expression parsed) {
+
+        switch (current().getTokenType()) {
+            case COLON_COLON:
+
+                IdentifierExpression namespaceAccessor = matchToken(TokenType.COLON_COLON);
+                Expression expression = parseExpression();
+
+                throw new UnsupportedOperationException("Nested namespace accessors are not yet supported");
+                //return parseAhead(new NamespaceAccessorExpression(parsed, namespaceAccessor, expression));
+            case DOT:
+                IdentifierExpression dot = matchToken(TokenType.DOT);
+
+                if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+                    throw new UnsupportedOperationException("Member method calls are not yet supported");
+                }
+
+                IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
+
+                return parseAhead(new MemberAccessorExpression(parsed, dot, member));
+            case AS_KEYWORD:
+                IdentifierExpression asKeyword = matchToken(TokenType.AS_KEYWORD);
+
+                IdentifierExpression typeKeyword;
+
+                Expression namespaceExpression = null;
+                if (current().getTokenType() == TokenType.IDENTIFIER && nextToken().getTokenType() == TokenType.COLON_COLON) {
+                    namespaceExpression = parseNamespaceAccessorExpression();
+                }
+                typeKeyword = parseTypeKeyword();
+                IdentifierExpression openSquareBrace = null;
+                IdentifierExpression closeSquareBrace = null;
+                if (current().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
+                    openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
+                    closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+                }
+                TypeExpression typeExpression = new TypeExpression(asKeyword, typeKeyword, openSquareBrace, closeSquareBrace);
+
+                return parseAhead(new CastExpression(parsed, typeExpression));
+            default:
+                return parsed;
+        }
+
     }
 
     //<left> <op> <right>

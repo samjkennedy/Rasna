@@ -121,9 +121,20 @@ public abstract class BoundProgramRewriter {
                 return rewriteStructLiteralExpression((BoundStructLiteralExpression) expression);
             case MEMBER_ACCESSOR:
                 return rewriteMemberAccessorExpression((BoundMemberAccessorExpression) expression);
+            case CAST_EXPRESSION:
+                return rewriteCastExpression((BoundCastExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundExpression rewriteCastExpression(BoundCastExpression castExpression) {
+        BoundExpression rewrittenExpression = rewriteExpression(castExpression.getExpression());
+
+        if (rewrittenExpression == castExpression.getExpression()) {
+            return castExpression;
+        }
+        return new BoundCastExpression(rewrittenExpression, castExpression.getType());
     }
 
     private BoundExpression rewriteMemberAccessorExpression(BoundMemberAccessorExpression memberAccessorExpression) {

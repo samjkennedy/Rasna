@@ -2,10 +2,10 @@ t: Tuple = ("Hello", 1, true)
 
 print(len(t))
 
-//TODO: This will require runtime casting
-//s: String = t[0]
+s: String = t[0] as String
+print(s)
 
-for (v: var in t) {
+for (v: Any in t) {
     print(v)
 }
 
@@ -25,9 +25,8 @@ t = multiReturn(1)
 print(len(t))
 
 //Tuples of only one element require a trailing comma:
-
 singleton: Tuple = (10,)
 print(len(singleton))
-for (v: var in singleton) {
+for (v: Any in singleton) {
     print(v)
 }

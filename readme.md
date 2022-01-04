@@ -164,7 +164,7 @@ Implemented:
  }
  ```
  
- ##Tuples
+ ## Tuples
 
 Tuples are immutable structures that contain a fixed number of values, each with their own type.
 
@@ -191,12 +191,12 @@ print(t[0]) //will print "Hello"
 or iterated through:
 
 ```julia
-for (v: var in t) {
+for (v: Any in t) {
     print(v)
 }
 ```
 
-As shown here, the return type for accessing a tuple is `var` as the exact type is unknown at runtime, hopefully in future this will be fixed
+As shown here, the return type for accessing a tuple is `Any` as the exact type is unknown at runtime, hopefully in future this will be fixed
 
 For more see the examples and tests directory.
    
