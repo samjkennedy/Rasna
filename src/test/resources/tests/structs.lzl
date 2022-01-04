@@ -45,3 +45,33 @@ print(v3.x)
 print(v3.y)
 print(v3.z)
 print(mag3(v3))
+
+struct S {
+    s: String
+}
+struct I {
+    i: Int
+}
+struct B {
+    b: Bool
+}
+struct R {
+    r: Real
+}
+
+s: S = S("Hello")
+print(s.s)
+s.s = "Goodbye"
+print(s.s)
+i: I = I(7)
+print(i.i)
+i.i = 8
+print(i.i)
+b: B = B(false)
+print(b.b)
+b.b = true
+print(b.b)
+r: R = R(1.141)
+print(r.r)
+r.r = 3.1415
+print(r.r)

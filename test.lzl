@@ -1,9 +1,29 @@
-struct V2S {
-    x: String
-    y: String
+struct S {
+    s: String
+}
+struct I {
+    i: Int
+}
+struct B {
+    b: Bool
+}
+struct R {
+    r: Real
 }
 
-v: V2S = V2S("Hello", "World!")
-v.x = "Goodbye"
-print(v.x)
-print(v.y)
+s: S = S("Hello")
+print(s.s)
+s.s = "Goodbye"
+print(s.s)
+i: I = I(7)
+print(i.i)
+i.i = 8
+print(i.i)
+b: B = B(false)
+print(b.b)
+b.b = true
+print(b.b)
+r: R = R(1.141)
+print(r.r)
+r.r = 3.1415
+print(r.r)
