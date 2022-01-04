@@ -1,29 +1,11 @@
-struct S {
-    s: String
-}
-struct I {
-    i: Int
-}
-struct B {
-    b: Bool
-}
-struct R {
-    r: Real
+struct V {
+    x: Int
+    y: Real
+    z: Int
 }
 
-s: S = S("Hello")
-print(s.s)
-s.s = "Goodbye"
-print(s.s)
-i: I = I(7)
-print(i.i)
-i.i = 8
-print(i.i)
-b: B = B(false)
-print(b.b)
-b.b = true
-print(b.b)
-r: R = R(1.141)
-print(r.r)
-r.r = 3.1415
-print(r.r)
+v: V = {1, 2 as Real, 1}
+
+print(v.x)
+print(v.y)
+print(v.z)

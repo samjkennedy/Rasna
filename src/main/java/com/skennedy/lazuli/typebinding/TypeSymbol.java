@@ -13,7 +13,7 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol STRING = new TypeSymbol("String", Collections.emptyMap(), Collections.emptyMap());
     public static final TypeSymbol TYPE = new TypeSymbol("Type", Collections.emptyMap(), Collections.emptyMap());
     public static final TypeSymbol TUPLE = new TypeSymbol("Tuple", Collections.emptyMap(), Collections.emptyMap());
-    public static final TypeSymbol VAR = new TypeSymbol("Var", Collections.emptyMap(), Collections.emptyMap());
+    public static final TypeSymbol ANY = new TypeSymbol("Any", Collections.emptyMap(), Collections.emptyMap());
     public static final TypeSymbol FUNCTION = new TypeSymbol("Function", Collections.emptyMap(), Collections.emptyMap()); //TODO: Should be similar to ArrayTypeSymbol
 
     private final Map<String, FunctionSymbol> functions;
@@ -44,7 +44,7 @@ public class TypeSymbol extends Symbol {
             return true;
         }
         //TODO: More sophisticated casting -> all INTs are REALs
-        return this == VAR;
+        return this == ANY;
     }
 
     @Override

@@ -1,7 +1,12 @@
 package com.skennedy.lazuli.diagnostics;
 
-import com.skennedy.lazuli.lexing.model.Token;
+import com.skennedy.lazuli.parsing.Expression;
+import com.skennedy.lazuli.typebinding.BoundExpression;
+import com.skennedy.lazuli.typebinding.BoundFunctionArgumentExpression;
 import com.skennedy.lazuli.typebinding.TypeSymbol;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class BindingError {
 
@@ -44,9 +49,9 @@ public class BindingError {
         return new BindingError("Namespace " + name + " is not declared in the scope", span);
     }
 
-    public static BindingError raiseUnknownFunction(String function, TextSpan span) {
+    public static BindingError raiseUnknownFunction(String function, List<BoundExpression> arguments, TextSpan span) {
 
-        return new BindingError("Function " + function + " is not declared in the scope", span);
+        return new BindingError("Function " + function + " is not declared in the scope for arguments (" + arguments.stream().map(BoundExpression::getType).map(TypeSymbol::toString).collect(Collectors.joining(", ")) + ")", span);
     }
 
     public String getMessage() {

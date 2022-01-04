@@ -24,9 +24,9 @@ public enum TokenType {
     EQUALS("="),
     EQUALS_EQUALS("=="),
     BANG_EQUALS("!="),
-    GT(">"),
+    CLOSE_ANGLE_BRACE(">"),
     GTEQ(">="),
-    LT("<"),
+    OPEN_ANGLE_BRACE("<"),
     LTEQ("<="),
     INCREMENT("++"),
     DECREMENT("--"),
@@ -72,7 +72,6 @@ public enum TokenType {
 
     //Types
     ANY_KEYWORD("Any"),
-    VOID_KEYWORD("Void"),
     BOOL_KEYWORD("Bool"),
     INT_KEYWORD("Int"),
     REAL_KEYWORD("Real"),

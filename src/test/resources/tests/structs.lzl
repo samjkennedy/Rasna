@@ -1,4 +1,3 @@
-//TODO: This should be imported through a math.lzl file, one day
 fn sqrt(S: Real): Real {
     iterations: Int = 100
     x0: Real = (S / 10.0)
@@ -59,19 +58,19 @@ struct R {
     r: Real
 }
 
-s: S = S("Hello")
+s: S = {"Hello"}
 print(s.s)
 s.s = "Goodbye"
 print(s.s)
-i: I = I(7)
+i: I = {7}
 print(i.i)
 i.i = 8
 print(i.i)
-b: B = B(false)
+b: B = {false}
 print(b.b)
 b.b = true
 print(b.b)
-r: R = R(1.141)
+r: R = {1.141}
 print(r.r)
 r.r = 3.1415
 print(r.r)

@@ -6,9 +6,11 @@ import java.util.List;
 //TODO: Allow these to be made literally e.g. {1, 2}
 public class BoundStructLiteralExpression implements BoundExpression {
 
+    private TypeSymbol type;
     private List<BoundExpression> elements;
 
-    public BoundStructLiteralExpression(List<BoundExpression> elements) {
+    public BoundStructLiteralExpression(TypeSymbol type, List<BoundExpression> elements) {
+        this.type = type;
         this.elements = elements;
     }
 
@@ -19,7 +21,7 @@ public class BoundStructLiteralExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return new ArrayTypeSymbol(TypeSymbol.VAR);
+        return type;
     }
 
     @Override

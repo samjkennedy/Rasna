@@ -5,7 +5,6 @@ import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
 import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.TypeMismatchException;
-import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
@@ -116,9 +115,51 @@ public class Binder {
                 return bindNamespaceAccessorExpression((NamespaceAccessorExpression) expression);
             case CAST_EXPR:
                 return bindCastExpression((CastExpression) expression);
+            case STRUCT_LITERAL_EXPRESSION:
+                return bindStructLiteralExpression((StructLiteralExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindStructLiteralExpression(StructLiteralExpression structLiteralExpression) {
+
+        Optional<TypeSymbol> type = currentScope.tryLookupType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
+        if (type.isEmpty()) {
+            //This should never happen
+            errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+        Optional<FunctionSymbol> constructor = currentScope.tryLookupFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
+        if (constructor.isEmpty()) {
+            //This should never happen
+            errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+        List<BoundExpression> members = new ArrayList<>();
+        List<Expression> structLiteralExpressionMembers = structLiteralExpression.getMembers();
+        for (int i = 0; i < structLiteralExpressionMembers.size(); i++) {
+            Expression member = structLiteralExpressionMembers.get(i);
+            BoundExpression boundMember = bind(member);
+            TypeSymbol expectedType = constructor.get().getArguments().get(i).getType();
+            if (!expectedType.isAssignableFrom(boundMember.getType())) {
+
+                //TODO: Can be argType mismatch, e.g. expected type X in position Y of function Z
+                errors.add(BindingError.raiseTypeMismatch(expectedType, boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
+            }
+
+            members.add(boundMember);
+        }
+
+        if (constructor.get().getArguments().size() != members.size()) {
+            //This could be a little misleading, need signature info in the functionsymbol
+            errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+        return new BoundStructLiteralExpression(type.get(), members);
     }
 
     private BoundExpression bindCastExpression(CastExpression castExpression) {
@@ -441,7 +482,7 @@ public class Binder {
                 typeSymbol = TypeSymbol.TUPLE;
                 break;
             case ANY_KEYWORD:
-                typeSymbol = TypeSymbol.VAR;
+                typeSymbol = TypeSymbol.ANY;
                 break;
             default:
                 Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getIdentifier().getValue());
@@ -596,7 +637,7 @@ public class Binder {
                 .collect(Collectors.toList());
 
         BoundFunctionDeclarationExpression constructorExpression = new BoundFunctionDeclarationExpression(constructor, args,
-                new BoundBlockExpression(new BoundReturnExpression(new BoundStructLiteralExpression(variableExpressions)))
+                new BoundBlockExpression(new BoundReturnExpression(new BoundStructLiteralExpression(type, variableExpressions)))
         );
 
         currentScope.declareFunction((String) identifier.getValue(), constructor);
@@ -718,23 +759,31 @@ public class Binder {
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
 
+        List<BoundExpression> boundArguments = new ArrayList<>();
+        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+            BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
+            boundArguments.add(boundArgument);
+        }
+
         IdentifierExpression identifier = functionCallExpression.getIdentifier();
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
         if (scopedFunction.isEmpty()) {
-            errors.add(BindingError.raiseUnknownFunction((String)identifier.getValue(), functionCallExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownFunction((String)identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
             return new BoundNoOpExpression(); //TODO: Add BoundExceptionExpression
         }
         FunctionSymbol function = scopedFunction.get();
 
-        List<BoundExpression> boundArguments = new ArrayList<>();
+        if (function.getArguments().size() != functionCallExpression.getArguments().size()) {
+            throw new IllegalStateException("A");
+        }
+
         List<BoundFunctionArgumentExpression> arguments = function.getArguments();
-        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
         for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
-            BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
+            BoundExpression boundArgument = boundArguments.get(i);
             if (!arguments.get(i).getType().isAssignableFrom(boundArgument.getType())) {
                 errors.add(BindingError.raiseTypeMismatch(arguments.get(i).getType(), boundArgument.getType(), functionCallExpressionArguments.get(i).getSpan()));
             }
-            boundArguments.add(boundArgument);
         }
 
         return new BoundFunctionCallExpression(function, boundArguments);

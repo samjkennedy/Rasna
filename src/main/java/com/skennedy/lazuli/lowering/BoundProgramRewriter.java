@@ -304,7 +304,7 @@ public abstract class BoundProgramRewriter {
         }
 
         if (rewritten) {
-            return new BoundStructLiteralExpression(rewrittenElements);
+            return new BoundStructLiteralExpression(structLiteralExpression.getType(), rewrittenElements);
         }
         return structLiteralExpression;
     }

@@ -419,7 +419,7 @@ public class JavaBytecodeCompiler implements Compiler {
 
             scope.popStack(); //Array index
             scope.popStack(); //Array ref
-            scope.pushStack(TypeSymbol.VAR); //Value from array
+            scope.pushStack(TypeSymbol.ANY); //Value from array
             return;
         }
 
@@ -717,7 +717,7 @@ public class JavaBytecodeCompiler implements Compiler {
         } else if (TypeSymbol.STRING.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
-        } else if (TypeSymbol.VAR.isAssignableFrom(variable.getType())) {
+        } else if (TypeSymbol.ANY.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIndex);
             textifierVisitor.visitVarInsn(ASTORE, variableIndex);
         } else {
@@ -756,7 +756,7 @@ public class JavaBytecodeCompiler implements Compiler {
         if (TypeSymbol.STRING.getName().equals(type.getName())) {
             return "Ljava/lang/String;";
         }
-        if (TypeSymbol.VAR.getName().equals(type.getName())) {
+        if (TypeSymbol.ANY.getName().equals(type.getName())) {
             return "Ljava/lang/Object;";
         }
         return "Ljava/lang/Object;";
@@ -800,7 +800,7 @@ public class JavaBytecodeCompiler implements Compiler {
         } else if (TypeSymbol.STRING.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
-        } else if (TypeSymbol.VAR.isAssignableFrom(variable.getType())) {
+        } else if (TypeSymbol.ANY.isAssignableFrom(variable.getType())) {
             methodVisitor.visitVarInsn(ALOAD, variableIdx);
             textifierVisitor.visitVarInsn(ALOAD, variableIdx);
         } else {
@@ -837,7 +837,7 @@ public class JavaBytecodeCompiler implements Compiler {
         } else if (TypeSymbol.STRING.isAssignableFrom(assignmentExpression.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
-        } else if (TypeSymbol.VAR.isAssignableFrom(assignmentExpression.getType())) {
+        } else if (TypeSymbol.ANY.isAssignableFrom(assignmentExpression.getType())) {
             methodVisitor.visitVarInsn(ASTORE, variableIdx);
             textifierVisitor.visitVarInsn(ASTORE, variableIdx);
         } else {
@@ -1040,7 +1040,7 @@ public class JavaBytecodeCompiler implements Compiler {
 
             scope.popStack(); //Array index
             scope.popStack(); //Array ref
-            scope.pushStack(TypeSymbol.VAR); //Value from array
+            scope.pushStack(TypeSymbol.ANY); //Value from array
 
         } else {
             if (arrayAccessExpression.getArray().getType().getName().equals(TypeSymbol.INT.getName())) {
@@ -1449,7 +1449,7 @@ public class JavaBytecodeCompiler implements Compiler {
         if (name.equals(TypeSymbol.STRING.getName())) {
             return "Ljava/lang/String;";
         }
-        if (name.equals(TypeSymbol.VAR.getName())) {
+        if (name.equals(TypeSymbol.ANY.getName())) {
             return "Ljava/lang/Object;";
         }
         if (name.equals(TypeSymbol.TUPLE.getName())) {

@@ -114,7 +114,7 @@ public class Lexer {
                                 tokens.add(new Token(TokenType.GTEQ, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else {
-                                tokens.add(new Token(TokenType.GT, new Location(filePath, lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.CLOSE_ANGLE_BRACE, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                             break;
@@ -123,7 +123,7 @@ public class Lexer {
                                 tokens.add(new Token(TokenType.LTEQ, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else {
-                                tokens.add(new Token(TokenType.LT, new Location(filePath, lineNumber, cursor)));
+                                tokens.add(new Token(TokenType.OPEN_ANGLE_BRACE, new Location(filePath, lineNumber, cursor)));
                             }
                             next();
                             break;
