@@ -257,6 +257,9 @@ public class JavaBytecodeCompiler implements Compiler {
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 visit((BoundArrayAssignmentExpression) expression, methodVisitor);
                 break;
+            case MEMBER_ASSIGNMENT_EXPRESSION:
+                visit((BoundMemberAssignmentExpression) expression, methodVisitor);
+                break;
             case ARRAY_LENGTH_EXPRESSION:
 
                 visit((BoundArrayLengthExpression) expression, methodVisitor);
@@ -445,11 +448,11 @@ public class JavaBytecodeCompiler implements Compiler {
             methodVisitor.visitInsn(AALOAD);
             textifierVisitor.visitInsn(AALOAD);
 
-            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
-            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Integer");
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
 
-            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
-            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false);
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+            textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
 
             methodVisitor.visitVarInsn(ISTORE, variableIndex);
             textifierVisitor.visitVarInsn(ISTORE, variableIndex);
@@ -480,6 +483,22 @@ public class JavaBytecodeCompiler implements Compiler {
             scope.popStack(); //Array index
             scope.popStack(); //Array ref
             scope.pushStack(TypeSymbol.REAL); //Value from array
+        } else if (variable.getType().getName().equals(TypeSymbol.STRING.getName())) {
+            methodVisitor.visitInsn(AALOAD);
+            textifierVisitor.visitInsn(AALOAD);
+
+            methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
+            textifierVisitor.visitTypeInsn(CHECKCAST, "java/lang/String");
+
+            methodVisitor.visitVarInsn(ASTORE, variableIndex);
+            textifierVisitor.visitVarInsn(ASTORE, variableIndex);
+            methodVisitor.visitVarInsn(ALOAD, variableIndex);
+            textifierVisitor.visitVarInsn(ALOAD, variableIndex);
+            variableIndex++;
+
+            scope.popStack(); //Array index
+            scope.popStack(); //Array ref
+            scope.pushStack(TypeSymbol.STRING); //Value from array
         } else {
             methodVisitor.visitInsn(AALOAD);
             textifierVisitor.visitInsn(AALOAD);
@@ -855,6 +874,40 @@ public class JavaBytecodeCompiler implements Compiler {
         scope.popStack();
     }
 
+    private void visit(BoundMemberAssignmentExpression memberAssignmentExpression, MethodVisitor methodVisitor) {
+
+        BoundMemberAccessorExpression memberAccessorExpression = memberAssignmentExpression.getMemberAccessorExpression();
+        visit(memberAccessorExpression.getOwner(), methodVisitor);
+
+        if (memberAccessorExpression.getMember() instanceof BoundFunctionCallExpression) {
+            throw new UnsupportedOperationException("Method calls on structs are not yet supported");
+        }
+
+        //TODO: This is atrocious lmao
+        VariableSymbol variable = ((BoundVariableExpression) memberAccessorExpression.getMember()).getVariable();
+        int index = new ArrayList<>(memberAccessorExpression.getOwner().getType().getFields().values()).indexOf(variable);
+        visit(new BoundLiteralExpression(index), methodVisitor);
+
+        visit(memberAssignmentExpression.getAssignment(), methodVisitor);
+
+        if (TypeSymbol.INT.equals(memberAssignmentExpression.getAssignment().getType())) {
+            methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+            textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
+        } else if (TypeSymbol.REAL.equals(memberAssignmentExpression.getAssignment().getType())) {
+            methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+            textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+        } else if (TypeSymbol.BOOL.equals(memberAssignmentExpression.getAssignment().getType())) {
+            methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+            textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+        }
+        methodVisitor.visitInsn(AASTORE);
+        textifierVisitor.visitInsn(AASTORE);
+
+        scope.popStack();
+        scope.popStack();
+        scope.popStack();
+    }
+
     private void visit(BoundTupleLiteralExpression tupleLiteralExpression, MethodVisitor methodVisitor) {
 
         List<BoundExpression> elements = tupleLiteralExpression.getElements();
@@ -900,10 +953,12 @@ public class JavaBytecodeCompiler implements Compiler {
 
         int index = 0;
         for (BoundExpression element : elements) {
+
             methodVisitor.visitInsn(DUP);
             textifierVisitor.visitInsn(DUP);
             visit(new BoundLiteralExpression(index), methodVisitor);
             visit(element, methodVisitor);
+
             if (TypeSymbol.INT.equals(element.getType())) {
                 methodVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
                 textifierVisitor.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);

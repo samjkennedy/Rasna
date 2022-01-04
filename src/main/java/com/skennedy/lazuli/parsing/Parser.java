@@ -222,9 +222,18 @@ public class Parser {
 
         IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
 
+        MemberAccessorExpression memberAccessorExpression = new MemberAccessorExpression(identifier, dot, member);
+
+        if (current().getTokenType() == TokenType.EQUALS) {
+            IdentifierExpression equals = matchToken(TokenType.EQUALS);
+            Expression assignment = parseExpression();
+
+            return new MemberAssignmentExpression(memberAccessorExpression, equals, assignment);
+        }
+
         //TODO: This might be more than just an identifier, e.g. method call: getVal().x
         //      Eventually ditch the need for the identifier and use whatever was evaluated last
-        return new MemberAccessorExpression(identifier, dot, member);
+        return memberAccessorExpression;
     }
 
     private Expression parseYieldExpression() {
@@ -770,6 +779,14 @@ public class Parser {
                 TypeExpression typeExpression = new TypeExpression(asKeyword, typeKeyword, openSquareBrace, closeSquareBrace);
 
                 return parseAhead(new CastExpression(parsed, typeExpression));
+//            case EQUALS:
+//                if (parsed instanceof MemberAccessorExpression) {
+//                    IdentifierExpression equals = matchToken(TokenType.EQUALS);
+//                    Expression initialiser = parseExpression();
+//
+//                    return new AssignmentExpression(parsed, equals, initialiser);
+//                }
+//                throw new UnsupportedOperationException("Assignment to expressions is not supported");
             default:
                 return parsed;
         }

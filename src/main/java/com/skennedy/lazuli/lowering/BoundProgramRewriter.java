@@ -66,6 +66,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteArrayAccessExpression((BoundPositionalAccessExpression) expression);
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 return rewriteArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
+            case MEMBER_ASSIGNMENT_EXPRESSION:
+                return rewriteMemberAssignmentExpression((BoundMemberAssignmentExpression) expression);
             case ARRAY_LENGTH_EXPRESSION:
             case TUPLE_LITERAL_EXPRESSION:
             case LITERAL:
@@ -339,7 +341,7 @@ public abstract class BoundProgramRewriter {
 
     private BoundExpression rewriteArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
 
-        BoundExpression arrayAccessExpression = rewriteArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
+        BoundExpression arrayAccessExpression = rewriteExpression(arrayAssignmentExpression.getArrayAccessExpression());
         BoundExpression assignment = rewriteExpression(arrayAssignmentExpression.getAssignment());
 
         if (arrayAccessExpression == arrayAssignmentExpression.getArrayAccessExpression()
@@ -347,6 +349,16 @@ public abstract class BoundProgramRewriter {
             return arrayAssignmentExpression;
         }
         return new BoundArrayAssignmentExpression(arrayAssignmentExpression.getArrayAccessExpression(), arrayAssignmentExpression.getAssignment());
+    }
+
+    private BoundExpression rewriteMemberAssignmentExpression(BoundMemberAssignmentExpression memberAssignmentExpression) {
+
+        BoundExpression assignment = rewriteExpression(memberAssignmentExpression.getAssignment());
+
+        if (assignment == memberAssignmentExpression.getAssignment()) {
+            return memberAssignmentExpression;
+        }
+        return new BoundMemberAssignmentExpression(memberAssignmentExpression.getMemberAccessorExpression(), assignment);
     }
 
     private BoundExpression rewriteAssignmentExpression(BoundAssignmentExpression assignmentExpression) {

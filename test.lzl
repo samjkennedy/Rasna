@@ -1,5 +1,9 @@
-t: Tuple = (2.5,3.)
-for (el: Any in t) {
-     x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
-     print(x)
+struct V2S {
+    x: String
+    y: String
 }
+
+v: V2S = V2S("Hello", "World!")
+v.x = "Goodbye"
+print(v.x)
+print(v.y)

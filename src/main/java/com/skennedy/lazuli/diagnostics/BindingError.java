@@ -20,23 +20,33 @@ public class BindingError {
 
     //TODO: Have the location the variable already declared
     public static BindingError raiseVariableAlreadyDeclared(String name, TextSpan span) {
+
         return new BindingError("Variable " + name + " is already declared in the scope", span);
     }
 
     public static BindingError raiseFunctionAlreadyDeclared(String name, TextSpan span) {
+
         return new BindingError("Function " + name + " is already declared in the scope", span);
     }
 
     public static BindingError raiseTypeAlreadyDeclared(String name, TextSpan span) {
+
         return new BindingError("Type " + name + " is already declared in the scope", span);
     }
 
     public static BindingError raiseUnknownType(String name, TextSpan span) {
+
         return new BindingError("Type " + name + " is not declared in the scope", span);
     }
 
     public static BindingError raiseUnknownNamespace(String name, TextSpan span) {
+
         return new BindingError("Namespace " + name + " is not declared in the scope", span);
+    }
+
+    public static BindingError raiseUnknownFunction(String function, TextSpan span) {
+
+        return new BindingError("Function " + function + " is not declared in the scope", span);
     }
 
     public String getMessage() {

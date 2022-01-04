@@ -10,6 +10,7 @@ import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
+import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.parsing.*;
 import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
@@ -93,6 +94,8 @@ public class Binder {
                 return bindArrayLengthExpression((ArrayLengthExpression) expression);
             case ARRAY_ASSIGNMENT_EXPR:
                 return bindArrayAssignmentExpression((ArrayAssignmentExpression) expression);
+            case MEMBER_ASSIGNMENT_EXPR:
+                return bindMemberAssignmentExpression((MemberAssignmentExpression) expression);
             case TUPLE_LITERAL_EXPR:
                 return bindTupleLiteralExpression((TupleLiteralExpression) expression);
             case LAMBDA_EXPRESSION:
@@ -322,6 +325,18 @@ public class Binder {
         BoundExpression assignment = bind(expression.getAssignment());
 
         return new BoundArrayAssignmentExpression(boundArrayAccessExpression, assignment);
+    }
+
+    private BoundExpression bindMemberAssignmentExpression(MemberAssignmentExpression memberAssignmentExpression) {
+
+        BoundMemberAccessorExpression boundMemberAccessorExpression = bindMemberAccessorExpression(memberAssignmentExpression.getMemberAccessorExpression());
+        BoundExpression assignment = bind(memberAssignmentExpression.getAssignment());
+
+        if (!boundMemberAccessorExpression.getMember().getType().isAssignableFrom(assignment.getType())) {
+            errors.add(BindingError.raiseTypeMismatch(boundMemberAccessorExpression.getMember().getType(), assignment.getType(), memberAssignmentExpression.getAssignment().getSpan()));
+        }
+
+        return new BoundMemberAssignmentExpression(boundMemberAccessorExpression, assignment);
     }
 
     private BoundExpression bindForExpression(ForExpression forExpression) {
@@ -706,7 +721,8 @@ public class Binder {
         IdentifierExpression identifier = functionCallExpression.getIdentifier();
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
         if (scopedFunction.isEmpty()) {
-            throw new UndefinedFunctionException((String) identifier.getValue());
+            errors.add(BindingError.raiseUnknownFunction((String)identifier.getValue(), functionCallExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: Add BoundExceptionExpression
         }
         FunctionSymbol function = scopedFunction.get();
 
@@ -716,7 +732,7 @@ public class Binder {
         for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
             BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
             if (!arguments.get(i).getType().isAssignableFrom(boundArgument.getType())) {
-                throw new TypeMismatchException(arguments.get(i).getType(), boundArgument.getType());
+                errors.add(BindingError.raiseTypeMismatch(arguments.get(i).getType(), boundArgument.getType(), functionCallExpressionArguments.get(i).getSpan()));
             }
             boundArguments.add(boundArgument);
         }
