@@ -553,8 +553,8 @@ public class Parser {
             case FUNCTION_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
                 break;
-            case VAR_KEYWORD:
-                typeKeyword = matchToken(TokenType.VAR_KEYWORD);
+            case ANY_KEYWORD:
+                typeKeyword = matchToken(TokenType.ANY_KEYWORD);
                 break;
             default:
                 throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
@@ -669,8 +669,8 @@ public class Parser {
             case FUNCTION_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
                 break;
-            case VAR_KEYWORD:
-                typeKeyword = matchToken(TokenType.VAR_KEYWORD);
+            case ANY_KEYWORD:
+                typeKeyword = matchToken(TokenType.ANY_KEYWORD);
                 break;
             default:
                 typeKeyword = matchToken(TokenType.IDENTIFIER);
@@ -751,8 +751,23 @@ public class Parser {
                 IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
 
                 return parseAhead(new MemberAccessorExpression(parsed, dot, member));
-            case COLON:
-                TypeExpression typeExpression = parseTypeExpression();
+            case AS_KEYWORD:
+                IdentifierExpression asKeyword = matchToken(TokenType.AS_KEYWORD);
+
+                IdentifierExpression typeKeyword;
+
+                Expression namespaceExpression = null;
+                if (current().getTokenType() == TokenType.IDENTIFIER && nextToken().getTokenType() == TokenType.COLON_COLON) {
+                    namespaceExpression = parseNamespaceAccessorExpression();
+                }
+                typeKeyword = parseTypeKeyword();
+                IdentifierExpression openSquareBrace = null;
+                IdentifierExpression closeSquareBrace = null;
+                if (current().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
+                    openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
+                    closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+                }
+                TypeExpression typeExpression = new TypeExpression(asKeyword, typeKeyword, openSquareBrace, closeSquareBrace);
 
                 return parseAhead(new CastExpression(parsed, typeExpression));
             default:

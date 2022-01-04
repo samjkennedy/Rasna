@@ -1,7 +1,6 @@
 package com.skennedy.lazuli.typebinding;
 
 import com.skennedy.lazuli.diagnostics.BindingError;
-import com.skennedy.lazuli.diagnostics.Error;
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
 import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
@@ -11,12 +10,10 @@ import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
-import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.parsing.*;
 import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
-import javax.naming.Binding;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -428,7 +425,7 @@ public class Binder {
             case TUPLE_KEYWORD:
                 typeSymbol = TypeSymbol.TUPLE;
                 break;
-            case VAR_KEYWORD:
+            case ANY_KEYWORD:
                 typeSymbol = TypeSymbol.VAR;
                 break;
             default:
