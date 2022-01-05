@@ -581,7 +581,7 @@ public abstract class BoundProgramRewriter {
             case FOR_IN: {
                 BoundForInExpression forInExpression = (BoundForInExpression) boundVariableDeclarationExpression.getInitialiser();
 
-                VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                 BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
                 new BoundPositionalAccessExpression(forInExpression.getIterable(), iterationCounterExpression);
@@ -605,10 +605,10 @@ public abstract class BoundProgramRewriter {
 
                 if (forInExpression.getGuard() != null) {
 
-                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                     BoundVariableExpression copyIndexExpression = new BoundVariableExpression(copyIndex);
 
-                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false);
+                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false, null);
                     BoundVariableExpression filteredArrayVariable = new BoundVariableExpression(filteredArray);
                     BoundVariableExpression arrayVariableExpression = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
 
@@ -658,7 +658,7 @@ public abstract class BoundProgramRewriter {
 
                 //TODO: This can be optimised in the case where there is no guard or step - just use the in built array index
 
-                VariableSymbol indexVariable = new VariableSymbol("index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                VariableSymbol indexVariable = new VariableSymbol("index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                 BoundVariableExpression indexExpression = new BoundVariableExpression(indexVariable);
 
                 BoundExpression index;
@@ -686,10 +686,10 @@ public abstract class BoundProgramRewriter {
 
                 if (forExpression.getGuard() != null || rangeExpression.getStep() != null) {
 
-                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                     BoundVariableExpression copyIndexExpression = new BoundVariableExpression(copyIndex);
 
-                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false);
+                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false, null);
                     BoundVariableExpression filteredArrayVariable = new BoundVariableExpression(filteredArray);
                     BoundVariableExpression arrayVariableExpression = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
 

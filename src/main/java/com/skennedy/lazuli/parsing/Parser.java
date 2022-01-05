@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Parser {
@@ -124,7 +125,9 @@ public class Parser {
             case NAMESPACE_KEYWORD:
                 return parseNamespaceExpression();
             default:
-                throw new IllegalStateException("Unexpected token at " + current().getLocation() + ", token value: " + current().getTokenType() + ", token text: " + current().getTokenType().getText());
+                errors.add(Error.raiseUnexpectedToken(current()));
+                matchToken(current().getTokenType());
+                return new BlockExpression(Collections.emptyList());
         }
     }
 
@@ -152,6 +155,7 @@ public class Parser {
         return new NamespaceExpression(namespaceKeyword, namespace, blockExpression, false);
     }
 
+    //TODO: This should all be done as part of the binder to allow better error reporting
     private Expression parseImportStatement() {
         matchToken(TokenType.IMPORT_KEYWORD);
 
@@ -208,7 +212,7 @@ public class Parser {
         } catch (IOException e) {
             errors.add(Error.raiseImportError(path, importPath.getToken()));
         }
-        throw new IllegalStateException("Cannot resolve import: " + path);
+        return new BlockExpression(Collections.emptyList());
     }
 
     private Expression parseMemberAccessorExpression() {
@@ -304,7 +308,13 @@ public class Parser {
                 && current().getTokenType() != TokenType.EOF_TOKEN
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
 
-            arguments.add(parseExpression());
+            if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
+                StructLiteralExpression structLiteralExpression = parseStructLiteralExpression(null);
+                errors.add(Error.raise("Struct literals are not allowed in function calls, use the constructor form instead.", current()));
+                arguments.add(new BlockExpression(Collections.emptyList()));
+            } else {
+                arguments.add(parseExpression());
+            }
 
             if (current().getTokenType() == TokenType.CLOSE_PARENTHESIS) {
                 break;
@@ -863,7 +873,7 @@ public class Parser {
     }
 
     private StructLiteralExpression parseStructLiteralExpression(TypeExpression typeExpression) {
-        matchToken(TokenType.OPEN_CURLY_BRACE);
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<Expression> expressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE) {
@@ -873,9 +883,9 @@ public class Parser {
                 matchToken(TokenType.COMMA);
             }
         }
-        matchToken(TokenType.CLOSE_CURLY_BRACE);
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
-        return new StructLiteralExpression(typeExpression, expressions);
+        return new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
     }
 
     private BlockExpression parseBlockExpression() {

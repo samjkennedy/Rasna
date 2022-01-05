@@ -20,4 +20,9 @@ public final class TextSpan {
     public Location getEnd() {
         return end;
     }
+
+    @Override
+    public String toString() {
+        return start + " to " + end;
+    }
 }

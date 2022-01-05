@@ -1,7 +1,7 @@
 package com.skennedy.lazuli.typebinding;
 
 import java.util.Collections;
-import java.util.Map;
+import java.util.LinkedHashMap;
 
 import static com.skennedy.lazuli.typebinding.SymbolType.VARIABLE;
 
@@ -12,16 +12,16 @@ public class ArrayTypeSymbol extends TypeSymbol {
     public ArrayTypeSymbol(TypeSymbol type) {
         super(type.getName(),
                 Collections.emptyMap(),    //TODO: split, reduce, etc etc
-                intrinsicMemberVariables
+                new LinkedHashMap<>()
         );
         this.type = type;
     }
 
-    private static final VariableSymbol arrayLen = new VariableSymbol("size", TypeSymbol.INT, null, false);
+    //private static final VariableSymbol arrayLen = new VariableSymbol("size", TypeSymbol.INT, null, false, declaration);
 
-    private static final Map<String, VariableSymbol> intrinsicMemberVariables = Map.of(
-            "size", arrayLen
-    );
+//    private static final TreeMap<String, VariableSymbol> intrinsicMemberVariables = TreeMap.of(
+//            "size", arrayLen
+//    );
 
     public TypeSymbol getType() {
         return type;

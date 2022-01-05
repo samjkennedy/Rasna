@@ -74,3 +74,22 @@ r: R = {1.141}
 print(r.r)
 r.r = 3.1415
 print(r.r)
+
+struct foo {
+    int: Int
+    real: Real
+    bool: Bool
+    str: String
+}
+
+f1: foo = {1, 1.0, true, "Hi"}
+f2: foo = foo(1, 1.0, true, "Hi")
+
+print(f1.int)
+print(f1.real)
+print(f1.bool)
+print(f1.str)
+print(f2.int)
+print(f2.real)
+print(f2.bool)
+print(f2.str)

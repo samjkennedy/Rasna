@@ -172,7 +172,7 @@ public class Lexer {
                             next();
                             break;
                         case '"':
-                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor), parseString(line)));
+                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor+1), parseString(line)));
                             break;
                         case '.':
                             tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));

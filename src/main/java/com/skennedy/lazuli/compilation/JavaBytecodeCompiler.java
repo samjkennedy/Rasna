@@ -403,12 +403,9 @@ public class JavaBytecodeCompiler implements Compiler {
 
         if (memberAccessorExpression.getMember() instanceof BoundFunctionCallExpression) {
             throw new UnsupportedOperationException("Method calls on structs are not yet supported");
-//            BoundFunctionCallExpression functionCallExpression = (BoundFunctionCallExpression) memberAccessorExpression.getMember();
-//
-//            visit(functionCallExpression, methodVisitor);
         }
 
-        //TODO: This is atrocious lmao
+        //TODO: This is atrocious and very error prone - prder has to be preserved to it breaks
         VariableSymbol variable = ((BoundVariableExpression) memberAccessorExpression.getMember()).getVariable();
         int index = new ArrayList<>(memberAccessorExpression.getOwner().getType().getFields().values()).indexOf(variable);
         visit(new BoundLiteralExpression(index), methodVisitor);

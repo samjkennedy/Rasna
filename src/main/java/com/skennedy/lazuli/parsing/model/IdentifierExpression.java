@@ -1,6 +1,7 @@
 package com.skennedy.lazuli.parsing.model;
 
 import com.skennedy.lazuli.diagnostics.TextSpan;
+import com.skennedy.lazuli.lexing.model.Location;
 import com.skennedy.lazuli.lexing.model.Token;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.parsing.Expression;
@@ -45,7 +46,7 @@ public class IdentifierExpression extends Expression {
 
     @Override
     public TextSpan getSpan() {
-        return new TextSpan(token.getLocation(), token.getLocation());
+        return new TextSpan(token.getLocation(), Location.fromOffset(token.getLocation(), (String.valueOf(value)).length() - 1));
     }
 
     @Override

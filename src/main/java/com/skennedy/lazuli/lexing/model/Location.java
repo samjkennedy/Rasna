@@ -20,6 +20,10 @@ public class Location {
         return column;
     }
 
+    public static Location fromOffset(Location start, int offset) {
+        return new Location(start.filePath, start.row, start.column + offset);
+    }
+
     @Override
     public String toString() {
         return filePath + ":" + row + ":" + column;

@@ -7,7 +7,7 @@ public class Token {
     private final Object value;
 
     public Token(TokenType tokenType, Location location) {
-        this(tokenType, location, null);
+        this(tokenType, location, tokenType.getText());
     }
 
     public Token(TokenType tokenType, Location location, Object value) {
