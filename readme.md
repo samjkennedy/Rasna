@@ -108,7 +108,7 @@ Implemented:
    
  ## Functions
  
- Functions so far are pretty much like any other C-like language:
+ Functions so far are pretty much like rust or go:
  
  ```julia
  fn sum(a: Int, b: Int): Int {
@@ -154,6 +154,15 @@ Implemented:
  ```julia
  v3: V3R = V3R(1.0, 2.0, 3.0)
  ```
+ 
+ Alternatively for assignments only, a literal syntax can be used:
+ 
+ ```julia
+  v3: V3R = {1.0, 2.0, 3.0}
+  ```
+  
+ This is not yet supported elsewhere due to there being no type information, 
+ hopefully this can be improved in future to allow literals to be passed as function arguments.
  
  Unlike languages like c++ and Rust, structs cannot contain member functions. 
  Once defined, a struct can be used in the return types and arguments of functions just like any other type:
