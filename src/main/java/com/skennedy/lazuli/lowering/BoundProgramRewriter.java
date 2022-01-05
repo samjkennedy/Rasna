@@ -415,11 +415,10 @@ public abstract class BoundProgramRewriter {
         BoundExpression left = rewriteExpression(boundBinaryExpression.getLeft());
         BoundExpression right = rewriteExpression(boundBinaryExpression.getRight());
 
-        //Both sides are constant, can do constant folding
+        //if both sides are constant, can do constant folding
         if (left instanceof BoundLiteralExpression && right instanceof BoundLiteralExpression) {
 
-            //TODO: Constant folding
-            return boundBinaryExpression;//calculateConstant(((BoundLiteralExpression) left).getValue(), ((BoundLiteralExpression) right).getValue(), boundBinaryExpression.getOperator());
+            return new BoundLiteralExpression(calculateConstant(boundBinaryExpression));
         }
 
         if (left == boundBinaryExpression.getLeft() && right == boundBinaryExpression.getRight()) {
@@ -769,6 +768,31 @@ public abstract class BoundProgramRewriter {
                 return expression;
             case BINARY_EXPRESSION:
                 BoundBinaryExpression boundBinaryExpression = (BoundBinaryExpression) expression;
+
+                Object left = calculateConstant(boundBinaryExpression.getLeft());
+                Object right = calculateConstant(boundBinaryExpression.getRight());
+
+                switch (boundBinaryExpression.getOperator().getOpType()) {
+
+                    case ADD:
+                        return (int)left + (int)right;
+                    case SUB:
+                        return (int)left - (int)right;
+                    case MUL:
+                    case DIV:
+                    case MOD:
+                    case INC:
+                    case EQ:
+                    case NEQ:
+                    case GT:
+                    case LT:
+                    case GTEQ:
+                    case LTEQ:
+                    case LAND:
+                    case LOR:
+                        break;
+                }
+
                 return expression; //TODO: Constant folding
             //return calculateConstant(calculateConstant(boundBinaryExpression.getLeft()), calculateConstant(boundBinaryExpression.getRight()), boundBinaryExpression.getOperator());
             default:

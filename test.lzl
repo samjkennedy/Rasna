@@ -1,0 +1,5 @@
+const i: Int = 3 + 2
+print(i)
+
+j: Int = i + 3
+print(j)
