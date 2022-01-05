@@ -22,8 +22,8 @@ public class OperatorPrecedence {
             case EQUALS_EQUALS:
             case BANG_EQUALS:
                 return 4;
-            case GT:
-            case LT:
+            case CLOSE_ANGLE_BRACE:
+            case OPEN_ANGLE_BRACE:
             case GTEQ:
             case LTEQ:
                 return 3;

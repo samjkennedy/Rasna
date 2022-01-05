@@ -66,6 +66,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteArrayAccessExpression((BoundPositionalAccessExpression) expression);
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 return rewriteArrayAssignmentExpression((BoundArrayAssignmentExpression) expression);
+            case MEMBER_ASSIGNMENT_EXPRESSION:
+                return rewriteMemberAssignmentExpression((BoundMemberAssignmentExpression) expression);
             case ARRAY_LENGTH_EXPRESSION:
             case TUPLE_LITERAL_EXPRESSION:
             case LITERAL:
@@ -302,7 +304,7 @@ public abstract class BoundProgramRewriter {
         }
 
         if (rewritten) {
-            return new BoundStructLiteralExpression(rewrittenElements);
+            return new BoundStructLiteralExpression(structLiteralExpression.getType(), rewrittenElements);
         }
         return structLiteralExpression;
     }
@@ -339,7 +341,7 @@ public abstract class BoundProgramRewriter {
 
     private BoundExpression rewriteArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
 
-        BoundExpression arrayAccessExpression = rewriteArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
+        BoundExpression arrayAccessExpression = rewriteExpression(arrayAssignmentExpression.getArrayAccessExpression());
         BoundExpression assignment = rewriteExpression(arrayAssignmentExpression.getAssignment());
 
         if (arrayAccessExpression == arrayAssignmentExpression.getArrayAccessExpression()
@@ -347,6 +349,16 @@ public abstract class BoundProgramRewriter {
             return arrayAssignmentExpression;
         }
         return new BoundArrayAssignmentExpression(arrayAssignmentExpression.getArrayAccessExpression(), arrayAssignmentExpression.getAssignment());
+    }
+
+    private BoundExpression rewriteMemberAssignmentExpression(BoundMemberAssignmentExpression memberAssignmentExpression) {
+
+        BoundExpression assignment = rewriteExpression(memberAssignmentExpression.getAssignment());
+
+        if (assignment == memberAssignmentExpression.getAssignment()) {
+            return memberAssignmentExpression;
+        }
+        return new BoundMemberAssignmentExpression(memberAssignmentExpression.getMemberAccessorExpression(), assignment);
     }
 
     private BoundExpression rewriteAssignmentExpression(BoundAssignmentExpression assignmentExpression) {
@@ -569,7 +581,7 @@ public abstract class BoundProgramRewriter {
             case FOR_IN: {
                 BoundForInExpression forInExpression = (BoundForInExpression) boundVariableDeclarationExpression.getInitialiser();
 
-                VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                 BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
                 new BoundPositionalAccessExpression(forInExpression.getIterable(), iterationCounterExpression);
@@ -593,10 +605,10 @@ public abstract class BoundProgramRewriter {
 
                 if (forInExpression.getGuard() != null) {
 
-                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                     BoundVariableExpression copyIndexExpression = new BoundVariableExpression(copyIndex);
 
-                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false);
+                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false, null);
                     BoundVariableExpression filteredArrayVariable = new BoundVariableExpression(filteredArray);
                     BoundVariableExpression arrayVariableExpression = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
 
@@ -646,7 +658,7 @@ public abstract class BoundProgramRewriter {
 
                 //TODO: This can be optimised in the case where there is no guard or step - just use the in built array index
 
-                VariableSymbol indexVariable = new VariableSymbol("index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                VariableSymbol indexVariable = new VariableSymbol("index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                 BoundVariableExpression indexExpression = new BoundVariableExpression(indexVariable);
 
                 BoundExpression index;
@@ -674,10 +686,10 @@ public abstract class BoundProgramRewriter {
 
                 if (forExpression.getGuard() != null || rangeExpression.getStep() != null) {
 
-                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false);
+                    VariableSymbol copyIndex = new VariableSymbol("copy-index-" + UUID.randomUUID().toString(), TypeSymbol.INT, null, false, null);
                     BoundVariableExpression copyIndexExpression = new BoundVariableExpression(copyIndex);
 
-                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false);
+                    VariableSymbol filteredArray = new VariableSymbol("filtered-array-" + UUID.randomUUID().toString(), boundVariableDeclarationExpression.getVariable().getType(), null, false, null);
                     BoundVariableExpression filteredArrayVariable = new BoundVariableExpression(filteredArray);
                     BoundVariableExpression arrayVariableExpression = new BoundVariableExpression(boundVariableDeclarationExpression.getVariable());
 

@@ -5,19 +5,19 @@ import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
 import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.TypeMismatchException;
-import com.skennedy.lazuli.exceptions.UndefinedFunctionException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.lowering.BoundArrayLengthExpression;
+import com.skennedy.lazuli.lowering.BoundNoOpExpression;
 import com.skennedy.lazuli.parsing.*;
 import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -93,6 +93,8 @@ public class Binder {
                 return bindArrayLengthExpression((ArrayLengthExpression) expression);
             case ARRAY_ASSIGNMENT_EXPR:
                 return bindArrayAssignmentExpression((ArrayAssignmentExpression) expression);
+            case MEMBER_ASSIGNMENT_EXPR:
+                return bindMemberAssignmentExpression((MemberAssignmentExpression) expression);
             case TUPLE_LITERAL_EXPR:
                 return bindTupleLiteralExpression((TupleLiteralExpression) expression);
             case LAMBDA_EXPRESSION:
@@ -113,9 +115,59 @@ public class Binder {
                 return bindNamespaceAccessorExpression((NamespaceAccessorExpression) expression);
             case CAST_EXPR:
                 return bindCastExpression((CastExpression) expression);
+            case STRUCT_LITERAL_EXPRESSION:
+                return bindStructLiteralExpression((StructLiteralExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindStructLiteralExpression(StructLiteralExpression structLiteralExpression) {
+
+        Optional<TypeSymbol> type = currentScope.tryLookupType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
+        if (type.isEmpty()) {
+            //This should never happen
+            errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+        Optional<FunctionSymbol> constructor = currentScope.tryLookupFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
+        if (constructor.isEmpty()) {
+            //This should never happen
+            errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+        List<BoundExpression> members = new ArrayList<>();
+        List<Expression> structLiteralExpressionMembers = structLiteralExpression.getMembers();
+        for (Expression member : structLiteralExpressionMembers) {
+            members.add(bind(member));
+        }
+
+        if (constructor.get().getArguments().size() != structLiteralExpression.getMembers().size()) {
+            //This could be a little misleading, need signature info in the functionsymbol
+            errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+
+        for (int i = 0; i < structLiteralExpressionMembers.size(); i++) {
+            BoundExpression boundMember = members.get(i);
+            TypeSymbol expectedType = constructor.get().getArguments().get(i).getType();
+            if (!expectedType.isAssignableFrom(boundMember.getType())) {
+
+                //TODO: Can be argType mismatch, e.g. expected type X in position Y of function Z
+                errors.add(BindingError.raiseTypeMismatch(expectedType, boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
+            }
+        }
+
+        if (constructor.get().getArguments().size() != members.size()) {
+            //This could be a little misleading, need signature info in the functionsymbol
+            errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+        }
+
+        return new BoundStructLiteralExpression(type.get(), members);
     }
 
     private BoundExpression bindCastExpression(CastExpression castExpression) {
@@ -152,7 +204,7 @@ public class Binder {
             for (Expression expression : namespaceExpression.getBody().getExpressions()) {
                 boundExpressions.add(bind(expression));
             }
-            currentScope.declareNamespace((String)namespaceExpression.getNamespace().getValue(), currentScope);
+            currentScope.declareNamespace((String) namespaceExpression.getNamespace().getValue(), currentScope);
 
             return new BoundBlockExpression(boundExpressions);
         }
@@ -168,7 +220,7 @@ public class Binder {
 
         currentScope = currentScope.getParentScope();
 
-        currentScope.declareNamespace((String)namespaceExpression.getNamespace().getValue(), namespaceScope);
+        currentScope.declareNamespace((String) namespaceExpression.getNamespace().getValue(), namespaceScope);
 
         return new BoundBlockExpression(boundExpressions);
     }
@@ -191,7 +243,7 @@ public class Binder {
 
         if (!type.getFields().containsKey(member.getValue())) {
             //TODO: Better error reporting
-            throw new IllegalStateException("No such member " + member.getValue());
+            errors.add(BindingError.raiseUnknownMember((String) member.getValue(), type, memberAccessorExpression.getMember().getSpan()));
         }
 
         VariableSymbol variable = type.getFields().get(member.getValue());
@@ -324,6 +376,18 @@ public class Binder {
         return new BoundArrayAssignmentExpression(boundArrayAccessExpression, assignment);
     }
 
+    private BoundExpression bindMemberAssignmentExpression(MemberAssignmentExpression memberAssignmentExpression) {
+
+        BoundMemberAccessorExpression boundMemberAccessorExpression = bindMemberAccessorExpression(memberAssignmentExpression.getMemberAccessorExpression());
+        BoundExpression assignment = bind(memberAssignmentExpression.getAssignment());
+
+        if (!boundMemberAccessorExpression.getMember().getType().isAssignableFrom(assignment.getType())) {
+            errors.add(BindingError.raiseTypeMismatch(boundMemberAccessorExpression.getMember().getType(), assignment.getType(), memberAssignmentExpression.getAssignment().getSpan()));
+        }
+
+        return new BoundMemberAssignmentExpression(boundMemberAccessorExpression, assignment);
+    }
+
     private BoundExpression bindForExpression(ForExpression forExpression) {
 
         currentScope = new BoundScope(currentScope);
@@ -335,12 +399,13 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(type, range.getType(), forExpression.getRangeExpression().getSpan()));
         }
 
-        VariableSymbol variable = getVariableSymbol(type, forExpression.getIdentifier(), null, true);
+        VariableSymbol variable = buildVariableSymbol(type, forExpression.getIdentifier(), null, true, forExpression);
 
         try {
             currentScope.declareVariable((String) forExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue(), forExpression.getIdentifier().getSpan()));
+            VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) forExpression.getIdentifier().getValue()).get();
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue(), forExpression.getIdentifier().getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
         BoundExpression guard = null;
         if (forExpression.getGuard() != null) {
@@ -379,12 +444,13 @@ public class Binder {
         if (!type.isAssignableFrom(iterable.getType())) {
             errors.add(BindingError.raiseTypeMismatch(type, iterable.getType(), forInExpression.getIterable().getSpan()));
         }
-        VariableSymbol variable = getVariableSymbol(type, forInExpression.getIdentifier(), null, false);
+        VariableSymbol variable = buildVariableSymbol(type, forInExpression.getIdentifier(), null, false, forInExpression);
 
         try {
             currentScope.declareVariable((String) forInExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forInExpression.getIdentifier().getValue(), forInExpression.getIdentifier().getSpan()));
+            VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) forInExpression.getIdentifier().getValue()).get();
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forInExpression.getIdentifier().getValue(), forInExpression.getIdentifier().getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         BoundExpression guard = null;
@@ -426,7 +492,7 @@ public class Binder {
                 typeSymbol = TypeSymbol.TUPLE;
                 break;
             case ANY_KEYWORD:
-                typeSymbol = TypeSymbol.VAR;
+                typeSymbol = TypeSymbol.ANY;
                 break;
             default:
                 Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getIdentifier().getValue());
@@ -444,8 +510,8 @@ public class Binder {
         return typeSymbol;
     }
 
-    private VariableSymbol getVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression guard, boolean readOnly) {
-        return new VariableSymbol((String) identifier.getValue(), type, guard, readOnly);
+    private VariableSymbol buildVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression guard, boolean readOnly, Expression declaration) {
+        return new VariableSymbol((String) identifier.getValue(), type, guard, readOnly, declaration);
     }
 
     private BoundExpression bindIfExpression(IfExpression ifExpression) {
@@ -560,29 +626,36 @@ public class Binder {
             members.add(bind(member));
         }
 
-        Map<String, FunctionSymbol> definedFunctions = currentScope.getDefinedFunctions();
-        Map<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
-
-        currentScope = currentScope.getParentScope();
+        LinkedHashMap<String, FunctionSymbol> definedFunctions = currentScope.getDefinedFunctions();
+        LinkedHashMap<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
 
         //TODO: The defined functions and variables have no knowledge of their owner, two types with the same method may cause issues
         TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedFunctions, definedVariables);
 
         //Define constructor as a function
         List<BoundFunctionArgumentExpression> args = new ArrayList<>();
-        for (VariableSymbol variable : definedVariables.values()) {
-            args.add(new BoundFunctionArgumentExpression(variable, null));
+        for (Expression member : structDeclarationExpression.getMembers()) {
+            IdentifierExpression memberIdentifier = ((VariableDeclarationExpression) member).getIdentifier();
+
+            VariableSymbol variable = currentScope.tryLookupVariable((String) memberIdentifier.getValue())
+                    .orElseThrow(() -> new IllegalStateException("Only variable members allowed in structs"));
+
+            args.add(new BoundFunctionArgumentExpression(variable, variable.getGuard()));
         }
+
         FunctionSymbol constructor = new FunctionSymbol((String) identifier.getValue(), type, args, null);
 
         //Generate constructor
-        List<BoundExpression> variableExpressions = definedVariables.values().stream()
+        List<BoundExpression> variableExpressions = args.stream()
+                .map(BoundFunctionArgumentExpression::getArgument)
                 .map(BoundVariableExpression::new)
                 .collect(Collectors.toList());
 
         BoundFunctionDeclarationExpression constructorExpression = new BoundFunctionDeclarationExpression(constructor, args,
-                new BoundBlockExpression(new BoundReturnExpression(new BoundStructLiteralExpression(variableExpressions)))
+                new BoundBlockExpression(new BoundReturnExpression(new BoundStructLiteralExpression(type, variableExpressions)))
         );
+
+        currentScope = currentScope.getParentScope();
 
         currentScope.declareFunction((String) identifier.getValue(), constructor);
 
@@ -652,7 +725,8 @@ public class Binder {
             //Declare the function in the parent scope
             currentScope.getParentScope().declareFunction(anonymousFunctionIdentifier, functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
-            errors.add(BindingError.raiseVariableAlreadyDeclared(anonymousFunctionIdentifier, lambdaExpression.getSpan()));
+            VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable(anonymousFunctionIdentifier).get();
+            errors.add(BindingError.raiseVariableAlreadyDeclared(anonymousFunctionIdentifier, lambdaExpression.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         currentScope = currentScope.getParentScope();
@@ -684,9 +758,10 @@ public class Binder {
 
         //Create placeholder
         try {
-            currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false));
+            currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false, argumentExpression));
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
+            VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) identifier.getValue()).get();
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         BoundExpression guard = null;
@@ -694,7 +769,7 @@ public class Binder {
             guard = bind(argumentExpression.getGuard());
         }
 
-        VariableSymbol argument = getVariableSymbol(type, identifier, guard, argumentExpression.getConstKeyword() != null);
+        VariableSymbol argument = buildVariableSymbol(type, identifier, guard, argumentExpression.getConstKeyword() != null, argumentExpression);
 
         currentScope.reassignVariable((String) identifier.getValue(), argument);
 
@@ -703,22 +778,32 @@ public class Binder {
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
 
-        IdentifierExpression identifier = functionCallExpression.getIdentifier();
-        Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
-        if (scopedFunction.isEmpty()) {
-            throw new UndefinedFunctionException((String) identifier.getValue());
-        }
-        FunctionSymbol function = scopedFunction.get();
-
         List<BoundExpression> boundArguments = new ArrayList<>();
-        List<BoundFunctionArgumentExpression> arguments = function.getArguments();
         List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
         for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
             BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
-            if (!arguments.get(i).getType().isAssignableFrom(boundArgument.getType())) {
-                throw new TypeMismatchException(arguments.get(i).getType(), boundArgument.getType());
-            }
             boundArguments.add(boundArgument);
+        }
+
+        IdentifierExpression identifier = functionCallExpression.getIdentifier();
+        Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
+        if (scopedFunction.isEmpty()) {
+            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+            return new BoundNoOpExpression(); //TODO: Add BoundExceptionExpression
+        }
+        FunctionSymbol function = scopedFunction.get();
+
+        if (function.getArguments().size() != functionCallExpression.getArguments().size()) {
+            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+            return new BoundFunctionCallExpression(function, boundArguments); //TODO: Add BoundExceptionExpression
+        }
+
+        List<BoundFunctionArgumentExpression> arguments = function.getArguments();
+        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+            BoundExpression boundArgument = boundArguments.get(i);
+            if (!arguments.get(i).getType().isAssignableFrom(boundArgument.getType())) {
+                errors.add(BindingError.raiseTypeMismatch(arguments.get(i).getType(), boundArgument.getType(), functionCallExpressionArguments.get(i).getSpan()));
+            }
         }
 
         return new BoundFunctionCallExpression(function, boundArguments);
@@ -736,9 +821,10 @@ public class Binder {
         //Create placeholder
         try {
             TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
-            currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false));
+            currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false, variableDeclarationExpression));
         } catch (VariableAlreadyDeclaredException vade) {
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
+            VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) identifier.getValue()).get();
+            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         BoundExpression guard = null;
@@ -763,13 +849,12 @@ public class Binder {
             //TODO: guarded lambdas
             FunctionSymbol function = new FunctionSymbol((String) variableDeclarationExpression.getIdentifier().getValue(), lambdaExpression.getBody().getType(), lambdaExpression.getArguments(), null);
             currentScope.declareFunction(function.getName(), function);
-            VariableSymbol variable = getVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null);
             return new BoundFunctionDeclarationExpression(function, lambdaExpression.getArguments(), new BoundBlockExpression(
                     new BoundReturnExpression(lambdaExpression.getBody())
             ));
         }
 
-        VariableSymbol variable = getVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null);
+        VariableSymbol variable = buildVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null, variableDeclarationExpression);
 
         currentScope.reassignVariable((String) identifier.getValue(), variable);
         return new BoundVariableDeclarationExpression(variable, guard, initialiser, variableDeclarationExpression.getConstKeyword() != null);

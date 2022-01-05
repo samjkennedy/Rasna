@@ -1,16 +1,20 @@
 package com.skennedy.lazuli.typebinding;
 
+import com.skennedy.lazuli.parsing.Expression;
+
 public class VariableSymbol extends Symbol {
 
     private final TypeSymbol type;
     private final BoundExpression guard;
     private final boolean readOnly;
+    private final Expression declaration;
 
-    public VariableSymbol(String name, TypeSymbol type, BoundExpression guard, boolean readOnly) {
+    public VariableSymbol(String name, TypeSymbol type, BoundExpression guard, boolean readOnly, Expression declaration) {
         super(name);
         this.type = type;
         this.guard = guard;
         this.readOnly = readOnly;
+        this.declaration = declaration;
     }
 
     @Override
@@ -28,6 +32,10 @@ public class VariableSymbol extends Symbol {
 
     public boolean isReadOnly() {
         return readOnly;
+    }
+
+    public Expression getDeclaration() {
+        return declaration;
     }
 
     @Override

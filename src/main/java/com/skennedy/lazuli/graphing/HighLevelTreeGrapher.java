@@ -118,7 +118,7 @@ public class HighLevelTreeGrapher {
         if (variableDeclarationExpression.isReadOnly()) {
             root = mutNode(nextId()).add(Label.of("CONST")).add(Shape.BOX);
         } else {
-            root = mutNode(nextId()).add(Label.of("VAR")).add(Shape.BOX);
+            root = mutNode(nextId()).add(Label.of("ANY")).add(Shape.BOX);
         }
 
         MutableNode identifier = mutNode(nextId()).add(Label.of(variableDeclarationExpression.getVariable().getType() + ": " + variableDeclarationExpression.getVariable().getName()));

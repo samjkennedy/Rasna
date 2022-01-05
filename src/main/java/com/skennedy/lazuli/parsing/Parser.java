@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Parser {
@@ -124,7 +125,9 @@ public class Parser {
             case NAMESPACE_KEYWORD:
                 return parseNamespaceExpression();
             default:
-                throw new IllegalStateException("Unexpected token at " + current().getLocation() + ", token value: " + current().getTokenType() + ", token text: " + current().getTokenType().getText());
+                errors.add(Error.raiseUnexpectedToken(current()));
+                matchToken(current().getTokenType());
+                return new BlockExpression(Collections.emptyList());
         }
     }
 
@@ -152,6 +155,7 @@ public class Parser {
         return new NamespaceExpression(namespaceKeyword, namespace, blockExpression, false);
     }
 
+    //TODO: This should all be done as part of the binder to allow better error reporting
     private Expression parseImportStatement() {
         matchToken(TokenType.IMPORT_KEYWORD);
 
@@ -208,7 +212,7 @@ public class Parser {
         } catch (IOException e) {
             errors.add(Error.raiseImportError(path, importPath.getToken()));
         }
-        throw new IllegalStateException("Cannot resolve import: " + path);
+        return new BlockExpression(Collections.emptyList());
     }
 
     private Expression parseMemberAccessorExpression() {
@@ -222,9 +226,18 @@ public class Parser {
 
         IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
 
+        MemberAccessorExpression memberAccessorExpression = new MemberAccessorExpression(identifier, dot, member);
+
+        if (current().getTokenType() == TokenType.EQUALS) {
+            IdentifierExpression equals = matchToken(TokenType.EQUALS);
+            Expression assignment = parseExpression();
+
+            return new MemberAssignmentExpression(memberAccessorExpression, equals, assignment);
+        }
+
         //TODO: This might be more than just an identifier, e.g. method call: getVal().x
         //      Eventually ditch the need for the identifier and use whatever was evaluated last
-        return new MemberAccessorExpression(identifier, dot, member);
+        return memberAccessorExpression;
     }
 
     private Expression parseYieldExpression() {
@@ -295,7 +308,13 @@ public class Parser {
                 && current().getTokenType() != TokenType.EOF_TOKEN
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
 
-            arguments.add(parseExpression());
+            if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
+                StructLiteralExpression structLiteralExpression = parseStructLiteralExpression(null);
+                errors.add(Error.raise("Struct literals are not allowed in function calls, use the constructor form instead.", current()));
+                arguments.add(new BlockExpression(Collections.emptyList()));
+            } else {
+                arguments.add(parseExpression());
+            }
 
             if (current().getTokenType() == TokenType.CLOSE_PARENTHESIS) {
                 break;
@@ -500,10 +519,6 @@ public class Parser {
 
         TypeExpression typeExpression = parseTypeExpression();
 
-        if (typeExpression.getIdentifier().getTokenType() == TokenType.VOID_KEYWORD) {
-            throw new IllegalStateException("Variables cannot be of type Void");
-        }
-
         IdentifierExpression equals = null;
         Expression initialiser = null;
         if (current().getTokenType() == TokenType.EQUALS) {
@@ -514,6 +529,8 @@ public class Parser {
                 initialiser = parseLambdaExpression();
             } else if (TokenType.typeTokens.contains(current().getTokenType())) {
                 initialiser = parseArrayDeclarationExpression();
+            } else if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
+                initialiser = parseStructLiteralExpression(typeExpression);
             } else {
                 initialiser = parseExpression();
             }
@@ -532,9 +549,6 @@ public class Parser {
         IdentifierExpression colon = matchToken(TokenType.COLON);
         IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
-            case VOID_KEYWORD:
-                typeKeyword = matchToken(TokenType.VOID_KEYWORD);
-                break;
             case INT_KEYWORD:
                 typeKeyword = matchToken(TokenType.INT_KEYWORD);
                 break;
@@ -648,9 +662,6 @@ public class Parser {
     private IdentifierExpression parseTypeKeyword() {
         IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
-            case VOID_KEYWORD:
-                typeKeyword = matchToken(TokenType.VOID_KEYWORD);
-                break;
             case INT_KEYWORD:
                 typeKeyword = matchToken(TokenType.INT_KEYWORD);
                 break;
@@ -770,6 +781,14 @@ public class Parser {
                 TypeExpression typeExpression = new TypeExpression(asKeyword, typeKeyword, openSquareBrace, closeSquareBrace);
 
                 return parseAhead(new CastExpression(parsed, typeExpression));
+//            case EQUALS:
+//                if (parsed instanceof MemberAccessorExpression) {
+//                    IdentifierExpression equals = matchToken(TokenType.EQUALS);
+//                    Expression initialiser = parseExpression();
+//
+//                    return new AssignmentExpression(parsed, equals, initialiser);
+//                }
+//                throw new UnsupportedOperationException("Assignment to expressions is not supported");
             default:
                 return parsed;
         }
@@ -853,6 +872,22 @@ public class Parser {
         return new TypeofExpression(typeofKeyword, openParen, expression, closeParen);
     }
 
+    private StructLiteralExpression parseStructLiteralExpression(TypeExpression typeExpression) {
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
+
+        List<Expression> expressions = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE) {
+            expressions.add(parseExpression());
+
+            if (current().getTokenType() == TokenType.COMMA) {
+                matchToken(TokenType.COMMA);
+            }
+        }
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
+
+        return new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
+    }
+
     private BlockExpression parseBlockExpression() {
         matchToken(TokenType.OPEN_CURLY_BRACE);
 
@@ -884,9 +919,9 @@ public class Parser {
                 return OpType.EQ;
             case BANG_EQUALS:
                 return OpType.NEQ;
-            case GT:
+            case CLOSE_ANGLE_BRACE:
                 return OpType.GT;
-            case LT:
+            case OPEN_ANGLE_BRACE:
                 return OpType.LT;
             case GTEQ:
                 return OpType.GTEQ;

@@ -171,7 +171,7 @@ public class LowLevelTreeGrapher {
         if (variableDeclarationExpression.isReadOnly()) {
             root = mutNode(String.valueOf(ip)).add(Label.of("CONST")).add(Shape.BOX);
         } else {
-            root = mutNode(String.valueOf(ip)).add(Label.of("VAR")).add(Shape.BOX);
+            root = mutNode(String.valueOf(ip)).add(Label.of("ANY")).add(Shape.BOX);
         }
 
         MutableNode identifier = mutNode("id_" + ip).add(Label.of(variableDeclarationExpression.getType().getName() + ": " + variableDeclarationExpression.getVariable().getName()));

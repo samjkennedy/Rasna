@@ -19,11 +19,19 @@ public class Error {
     }
 
     public static Error raiseUnexpectedToken(TokenType expected, Token actual) {
-        return new Error("Expected " + expected + " but got " + actual.getTokenType(), actual, actual.getLocation());
+        return new Error("Expected " + expected + " but got " + actual.getTokenType() + " ", actual, actual.getLocation());
+    }
+
+    public static Error raiseUnexpectedToken(Token token) {
+        return new Error("Unexpected token: " + token.getTokenType() + " ", token, token.getLocation());
     }
 
     public static Error raiseImportError(Path path, Token token) {
-        return new Error("Cannot resolve import " + path, token, token.getLocation());
+        return new Error("Cannot resolve import " + path.getFileName() + " ", token, token.getLocation());
+    }
+
+    public static Error raise(String message, Token token) {
+        return new Error(message, token, token.getLocation());
     }
 
     public String getMessage() {

@@ -29,7 +29,7 @@ public class BoundPositionalAccessExpression implements BoundExpression {
     @Override
     public TypeSymbol getType() {
         if (array.getType() == TypeSymbol.TUPLE) {
-            return TypeSymbol.VAR;
+            return TypeSymbol.ANY;
         }
         return ((ArrayTypeSymbol)array.getType()).getType();
     }

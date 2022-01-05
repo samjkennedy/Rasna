@@ -6,8 +6,10 @@ import com.skennedy.flags.Flags;
 import com.skennedy.lazuli.compilation.JavaBytecodeCompiler;
 import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.diagnostics.Error;
+import com.skennedy.lazuli.diagnostics.TextSpan;
 import com.skennedy.lazuli.graphing.HighLevelTreeGrapher;
 import com.skennedy.lazuli.graphing.LowLevelTreeGrapher;
+import com.skennedy.lazuli.lexing.model.Location;
 import com.skennedy.lazuli.lowering.BoundProgramRewriter;
 import com.skennedy.lazuli.lowering.Lowerer;
 import com.skennedy.lazuli.parsing.Parser;
@@ -25,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.List;
 
 public class Lazuli {
 
@@ -69,14 +72,16 @@ public class Lazuli {
         Path path = Paths.get(fileNameWithExt).toAbsolutePath();
         try {
             Instant start = Instant.now();
-            String code = String.join(StringUtils.LF, Files.readAllLines(path));
+            List<String> lines = Files.readAllLines(path);
+            String code = String.join(StringUtils.LF, lines);
 
             Parser parser = new Parser();
             Program program = parser.parse(path, code);
 
             if (program.hasErrors()) {
                 for (Error error : program.getErrors()) {
-                    System.err.println(error.getMessage() + " at " + error.getLocation() + " -> " + error.getToken());
+                    System.err.println(error.getMessage() + "at " + error.getLocation() + " -> " + error.getToken());
+                    highlightError(error, lines);
                 }
                 return;
             }
@@ -85,11 +90,18 @@ public class Lazuli {
             BoundProgram boundProgram = binder.bind(program);
 
             if (boundProgram.hasErrors()) {
+                System.err.println("Compilation failed with " + boundProgram.getErrors().size() + " errors:\n");
                 for (BindingError error : boundProgram.getErrors()) {
                     if (error.getSpan().getStart() == error.getSpan().getEnd()) {
                         System.err.println(error.getMessage() + " at " + error.getSpan().getStart());
                     } else {
                         System.err.println(error.getMessage() + " from " + error.getSpan().getStart() + " to " + error.getSpan().getEnd());
+                    }
+                    highlightBindingError(error, lines);
+                    try {
+                        Thread.sleep(50); //For some reason without this the printing goes out of order...
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
                 }
                 return;
@@ -159,6 +171,84 @@ public class Lazuli {
             log.error("Error reading input file", ioe);
             throw ioe;
         }
+    }
+
+    private static void highlightError(Error error, List<String> lines) {
+        Location location = error.getLocation();
+        int row = location.getRow();
+        String line = lines.get(row);
+
+        if (row > 0) {
+            System.out.print(row - 1 + ": ");
+            System.out.print(ConsoleColors.CYAN_BOLD);
+            System.out.print(lines.get(row - 1));
+            System.out.print(ConsoleColors.RESET);
+            System.out.println();
+        }
+        System.out.print(ConsoleColors.RESET);
+
+        System.out.print(row + ": ");
+
+        char[] charArray = line.toCharArray();
+        for (int i = 0; i < charArray.length; i++) {
+            char c = charArray[i];
+            if (i < location.getColumn() || i > location.getColumn()) {
+                System.out.print(ConsoleColors.CYAN_BOLD);
+            } else {
+                System.out.print(ConsoleColors.RED_BOLD);
+            }
+            System.out.print(c);
+            System.out.print(ConsoleColors.RESET);
+        }
+        System.out.println();
+
+        if (row < lines.size()) {
+            System.out.print(row + 1 + ": ");
+            System.out.print(ConsoleColors.CYAN_BOLD);
+            System.out.print(lines.get(row + 1));
+            System.out.print(ConsoleColors.RESET);
+            System.out.println();
+        }
+        System.out.print(ConsoleColors.RESET);
+        System.out.println();
+    }
+
+    private static void highlightBindingError(BindingError error, List<String> lines) {
+        TextSpan span = error.getSpan();
+        int row = span.getStart().getRow();
+        String line = lines.get(row);
+
+        System.out.print(ConsoleColors.RESET);
+        if (row > 0) {
+            System.out.print(row - 1 + ": ");
+            System.out.print(ConsoleColors.CYAN_BOLD);
+            System.out.print(lines.get(row - 1));
+            System.out.println();
+        }
+        System.out.print(ConsoleColors.RESET);
+        System.out.print(row + ": ");
+
+        char[] charArray = line.toCharArray();
+        for (int i = 0; i < charArray.length; i++) {
+            char c = charArray[i];
+            if (i < span.getStart().getColumn() || i > span.getEnd().getColumn()) {
+                System.out.print(ConsoleColors.CYAN_BOLD);
+            } else {
+                System.out.print(ConsoleColors.RED_BOLD);
+            }
+            System.out.print(c);
+            System.out.print(ConsoleColors.RESET);
+        }
+        System.out.println();
+
+        if (row < lines.size()-1) {
+            System.out.print(row + 1 + ": ");
+            System.out.print(ConsoleColors.CYAN_BOLD);
+            System.out.print(lines.get(row + 1));
+            System.out.println();
+        }
+        System.out.print(ConsoleColors.RESET);
+        System.out.println();
     }
 
     private enum Mode {

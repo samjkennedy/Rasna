@@ -20,7 +20,7 @@ public class Lowerer extends BoundProgramRewriter {
             return expression;
         }
 
-        VariableSymbol iterator = new VariableSymbol("iterator-" + generateInternalVariableName(), TypeSymbol.INT, null, false);
+        VariableSymbol iterator = new VariableSymbol("iterator-" + generateInternalVariableName(), TypeSymbol.INT, null, false, null);
 
         BoundBlockExpression body = new BoundBlockExpression(
                 new BoundArrayAssignmentExpression(
@@ -132,9 +132,9 @@ public class Lowerer extends BoundProgramRewriter {
         if (rewrittenForInExpression.getBody() instanceof BoundNoOpExpression) {
             return new BoundNoOpExpression();
         }
-        VariableSymbol arrayLength = new VariableSymbol("array-length-" + generateInternalVariableName(), TypeSymbol.INT, null, false);
+        VariableSymbol arrayLength = new VariableSymbol("array-length-" + generateInternalVariableName(), TypeSymbol.INT, null, false, null);
         BoundVariableExpression arrayLengthExpression = new BoundVariableExpression(arrayLength);
-        VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + generateInternalVariableName(), TypeSymbol.INT, null, false);
+        VariableSymbol iterationCounter = new VariableSymbol("iteration-counter-" + generateInternalVariableName(), TypeSymbol.INT, null, false, null);
         BoundVariableExpression iterationCounterExpression = new BoundVariableExpression(iterationCounter);
 
         BoundBlockExpression preLoop = new BoundBlockExpression(

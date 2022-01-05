@@ -12,7 +12,11 @@ public abstract class Expression implements SyntaxNode {
     @Override
     public TextSpan getSpan() {
         List<SyntaxNode> children = new ArrayList<>();
-        getChildren().forEachRemaining(children::add);
+        getChildren().forEachRemaining(child -> {
+                if (child != null) {
+                    children.add(child);
+                }
+        });
         Location start = children.get(0).getSpan().getStart();
         Location end = children.get(children.size() - 1).getSpan().getEnd();
 

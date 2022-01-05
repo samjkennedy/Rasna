@@ -6,21 +6,23 @@ import com.skennedy.lazuli.exceptions.UndefinedVariableException;
 import com.skennedy.lazuli.exceptions.VariableAlreadyDeclaredException;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 public class BoundScope {
 
     private final BoundScope parentScope;
-    private final Map<String, VariableSymbol> definedVariables;
-    private final Map<String, FunctionSymbol> definedFunctions;
+    private final LinkedHashMap<String, VariableSymbol> definedVariables;
+    private final LinkedHashMap<String, FunctionSymbol> definedFunctions;
     private final Map<String, TypeSymbol> definedTypes;
     private final Map<String, BoundScope> namespaces;
 
     public BoundScope(BoundScope parentScope) {
         this.parentScope = parentScope;
-        this.definedVariables = new HashMap<>();
-        this.definedFunctions = new HashMap<>();
+        this.definedVariables = new LinkedHashMap<>();
+        this.definedFunctions = new LinkedHashMap<>();
         this.definedTypes = new HashMap<>();
         this.namespaces = new HashMap<>();
     }
@@ -131,11 +133,11 @@ public class BoundScope {
         }
     }
 
-    public Map<String, FunctionSymbol> getDefinedFunctions() {
+    public LinkedHashMap<String, FunctionSymbol> getDefinedFunctions() {
         return definedFunctions;
     }
 
-    public Map<String, VariableSymbol> getDefinedVariables() {
+    public LinkedHashMap<String, VariableSymbol> getDefinedVariables() {
         return definedVariables;
     }
 }
