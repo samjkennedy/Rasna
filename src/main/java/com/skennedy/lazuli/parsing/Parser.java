@@ -102,7 +102,9 @@ public class Parser {
                     return parseFunctionCallExpression();
                 }
                 if (nextToken().getTokenType() == TokenType.IDENTIFIER) {
-                    return parseVariableDeclarationExpression();
+                    if (lookAhead(2).getTokenType() == TokenType.COLON) {
+                        return parseVariableDeclarationExpression();
+                    }
                 }
                 if (nextToken().getTokenType() == TokenType.DOT) {
                     return parseMemberAccessorExpression();
@@ -389,7 +391,7 @@ public class Parser {
             }
 
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-            Expression body = parseExpression();
+            Expression body = parseBlockExpression();
 
             return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, guard, closeParen, body);
 
@@ -966,9 +968,13 @@ public class Parser {
     }
 
     private Token nextToken() {
-        if (position >= tokensToParse.size()) {
+        return lookAhead(1);
+    }
+
+    private Token lookAhead(int offset) {
+        if (position + offset >= tokensToParse.size()) {
             return tokensToParse.get(tokensToParse.size() - 1); //EOF
         }
-        return tokensToParse.get(position + 1);
+        return tokensToParse.get(position + offset);
     }
 }
