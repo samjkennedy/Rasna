@@ -13,6 +13,7 @@ public enum BoundExpressionType {
     BLOCK,
     CAST_EXPRESSION,
     CONDITIONAL_GOTO,
+    CONST_DECLARATION,
     FOR,
     FOR_IN,
     FUNCTION_ARGUMENT,

@@ -62,6 +62,8 @@ public class Parser {
     private Expression parsePrimaryExpression() {
 
         switch (current().getTokenType()) {
+            case CONST_KEYWORD:
+                return parseVariableDeclarationExpression();
             case INT_LITERAL:
                 return matchToken(TokenType.INT_LITERAL);
             case STRING_LITERAL:
@@ -166,7 +168,7 @@ public class Parser {
         }
         IdentifierExpression importPath = matchToken(TokenType.STRING_LITERAL);
 
-        Path path = filePath.getParent().resolve((String)importPath.getValue());
+        Path path = filePath.getParent().resolve((String) importPath.getValue());
 
         String fileNameWithExt = path.getFileName().toString();
         String[] fileParts = fileNameWithExt.split("\\.");
@@ -254,7 +256,9 @@ public class Parser {
         IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<MatchCaseExpression> caseExpressions = new ArrayList<>();
-        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE && current().getTokenType() != TokenType.ELSE_KEYWORD) {
+        while (
+                current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+                        && current().getTokenType() != TokenType.ELSE_KEYWORD) {
 
             Expression caseExpression = parseExpression();
 
@@ -486,7 +490,9 @@ public class Parser {
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
         List<FunctionArgumentExpression> argumentExpressions = new ArrayList<>();
-        while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
+        while (current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN
+                && current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
             argumentExpressions.add(parseFunctionArgumentExpression());
 
             if (current().getTokenType() == TokenType.COMMA) {
@@ -505,17 +511,13 @@ public class Parser {
         return new FunctionDeclarationExpression(fnKeyword, identifier, openParen, argumentExpressions, closeParen, typeExpression, body);
     }
 
-    private Expression parseVariableDeclarationExpression() {
+    private VariableDeclarationExpression parseVariableDeclarationExpression() {
         IdentifierExpression constKeyword = null;
         if (current().getTokenType() == TokenType.CONST_KEYWORD) {
             constKeyword = matchToken(TokenType.CONST_KEYWORD);
         }
 
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
-
-        if (current().getTokenType() != TokenType.COLON) {
-            return identifier;
-        }
 
         TypeExpression typeExpression = parseTypeExpression();
 
@@ -586,7 +588,9 @@ public class Parser {
         //Multi-variable lambda, TODO:
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
             IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-            while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
+            while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
+                    && current().getTokenType() != TokenType.EOF_TOKEN
+                    && current().getTokenType() != TokenType.BAD_TOKEN) {
                 functionArgumentExpressions.add(parseFunctionArgumentExpression());
 
                 if (current().getTokenType() == TokenType.COMMA) {
@@ -691,17 +695,20 @@ public class Parser {
     }
 
     private FunctionArgumentExpression parseFunctionArgumentExpression() {
-        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
-        TypeExpression typeExpression = parseTypeExpression();
 
-        IdentifierExpression bar = null;
-        Expression guard = null;
-        if (current().getTokenType() == TokenType.BAR) {
-            guard = parseGuardExpression();
+        VariableDeclarationExpression variableDeclarationExpression = parseVariableDeclarationExpression();
+
+        if (variableDeclarationExpression.getInitialiser() != null) {
+            errors.add(Error.raise("Default values for function arguments are not yet supported", variableDeclarationExpression.getEquals().getToken()));
         }
 
-        //TODO: make const be a part of typeExpression
-        return new FunctionArgumentExpression(null, typeExpression, identifier, bar, guard);
+        return new FunctionArgumentExpression(
+                variableDeclarationExpression.getConstKeyword(),
+                variableDeclarationExpression.getTypeExpression(),
+                variableDeclarationExpression.getIdentifier(),
+                variableDeclarationExpression.getBar(),
+                variableDeclarationExpression.getGuard()
+        );
     }
 
     private Expression parseWhileExpression() {
@@ -739,6 +746,7 @@ public class Parser {
 
     /**
      * Looks ahead to see if there's more to the expression on the right, e.g. method accessor, cast, namespace accessor etc
+     *
      * @param parsed what has already been parsed to the left
      * @return
      */
@@ -876,7 +884,9 @@ public class Parser {
         IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<Expression> expressions = new ArrayList<>();
-        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE) {
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN) {
             expressions.add(parseExpression());
 
             if (current().getTokenType() == TokenType.COMMA) {
@@ -892,7 +902,9 @@ public class Parser {
         matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<Expression> expressions = new ArrayList<>();
-        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE) {
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN) {
             expressions.add(parseExpression());
         }
         matchToken(TokenType.CLOSE_CURLY_BRACE);
@@ -947,6 +959,9 @@ public class Parser {
     }
 
     private Token current() {
+        if (position >= tokensToParse.size()) {
+            return new Token(TokenType.EOF_TOKEN, null);
+        }
         return tokensToParse.get(position);
     }
 

@@ -544,9 +544,11 @@ public abstract class BoundProgramRewriter {
                 ? null
                 : rewriteExpression(boundVariableDeclarationExpression.getGuard());
 
-        if (boundVariableDeclarationExpression.isReadOnly()) {
+        if (boundVariableDeclarationExpression.isReadOnly() && boundVariableDeclarationExpression.getInitialiser() != null) {
             return new BoundConstDeclarationExpression(
                     boundVariableDeclarationExpression.getVariable(),
+                    boundVariableDeclarationExpression.getGuard(),
+                    boundVariableDeclarationExpression.getInitialiser(),
                     new BoundLiteralExpression(calculateConstant(boundVariableDeclarationExpression.getInitialiser()))
             );
         }

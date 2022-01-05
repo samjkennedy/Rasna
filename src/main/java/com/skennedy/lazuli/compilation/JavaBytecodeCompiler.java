@@ -293,6 +293,9 @@ public class JavaBytecodeCompiler implements Compiler {
             case CONDITIONAL_GOTO:
                 visit((BoundConditionalGotoExpression) expression, methodVisitor);
                 break;
+            case CONST_DECLARATION:
+                visit((BoundConstDeclarationExpression) expression, methodVisitor);
+                break;
             case GOTO:
                 visit((BoundGotoExpression) expression, methodVisitor);
                 break;

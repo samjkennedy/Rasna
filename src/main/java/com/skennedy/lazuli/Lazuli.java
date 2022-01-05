@@ -79,8 +79,10 @@ public class Lazuli {
             Program program = parser.parse(path, code);
 
             if (program.hasErrors()) {
+                int errorSize = program.getErrors().size();
+                System.err.println("Parsing failed with " + errorSize + (errorSize > 1 ? " errors:\n" : " error:\n"));
                 for (Error error : program.getErrors()) {
-                    System.err.println(error.getMessage() + "at " + error.getLocation() + " -> " + error.getToken());
+                    System.err.println(error.getMessage());
                     highlightError(error, lines);
                 }
                 return;
@@ -90,12 +92,13 @@ public class Lazuli {
             BoundProgram boundProgram = binder.bind(program);
 
             if (boundProgram.hasErrors()) {
-                System.err.println("Compilation failed with " + boundProgram.getErrors().size() + " errors:\n");
+                int errorSize = boundProgram.getErrors().size();
+                System.err.println("Compilation failed with " + errorSize + (errorSize > 1 ? " errors:\n" : " error:\n"));
                 for (BindingError error : boundProgram.getErrors()) {
                     if (error.getSpan().getStart() == error.getSpan().getEnd()) {
-                        System.err.println(error.getMessage() + " at " + error.getSpan().getStart());
+                        System.err.println(error.getMessage());
                     } else {
-                        System.err.println(error.getMessage() + " from " + error.getSpan().getStart() + " to " + error.getSpan().getEnd());
+                        System.err.println(error.getMessage());
                     }
                     highlightBindingError(error, lines);
                     try {
@@ -176,6 +179,9 @@ public class Lazuli {
     private static void highlightError(Error error, List<String> lines) {
         Location location = error.getLocation();
         int row = location.getRow();
+        if (row > lines.size()) {
+            return;
+        }
         String line = lines.get(row);
 
         if (row > 0) {
@@ -192,7 +198,7 @@ public class Lazuli {
         char[] charArray = line.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             char c = charArray[i];
-            if (i < location.getColumn() || i > location.getColumn()) {
+            if (i < location.getColumn() || i > location.getColumn() + ((String)error.getToken().getValue()).length()) {
                 System.out.print(ConsoleColors.CYAN_BOLD);
             } else {
                 System.out.print(ConsoleColors.RED_BOLD);
@@ -202,7 +208,7 @@ public class Lazuli {
         }
         System.out.println();
 
-        if (row < lines.size()) {
+        if (row < lines.size() - 1) {
             System.out.print(row + 1 + ": ");
             System.out.print(ConsoleColors.CYAN_BOLD);
             System.out.print(lines.get(row + 1));

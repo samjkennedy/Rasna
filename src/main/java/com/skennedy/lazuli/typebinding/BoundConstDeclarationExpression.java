@@ -1,17 +1,17 @@
 package com.skennedy.lazuli.typebinding;
 
-public class BoundConstDeclarationExpression extends BoundVariableExpression {
+public class BoundConstDeclarationExpression extends BoundVariableDeclarationExpression {
 
     private final BoundLiteralExpression constValue;
 
-    public BoundConstDeclarationExpression(VariableSymbol variableSymbol, BoundLiteralExpression constValue) {
-        super(variableSymbol);
+    public BoundConstDeclarationExpression(VariableSymbol variableSymbol, BoundExpression guard, BoundExpression initialiser, BoundLiteralExpression constValue) {
+        super(variableSymbol, guard, initialiser, true);
         this.constValue = constValue;
     }
 
     @Override
     public BoundExpressionType getBoundExpressionType() {
-        return BoundExpressionType.VARIABLE_DECLARATION;
+        return BoundExpressionType.CONST_DECLARATION;
     }
 
     public BoundLiteralExpression getConstValue() {

@@ -2,6 +2,7 @@ package com.skennedy.lazuli.typebinding;
 
 import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
+import com.skennedy.lazuli.exceptions.InvalidOperationException;
 import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
 import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.TypeMismatchException;
@@ -385,6 +386,14 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(boundMemberAccessorExpression.getMember().getType(), assignment.getType(), memberAssignmentExpression.getAssignment().getSpan()));
         }
 
+        if (boundMemberAccessorExpression.getMember() instanceof BoundVariableExpression) { //Always true right now
+            BoundVariableExpression variableExpression = (BoundVariableExpression) boundMemberAccessorExpression.getMember();
+            if (variableExpression.getVariable().isReadOnly()) {
+                errors.add(BindingError.raiseConstReassignmentError(variableExpression.getVariable(), memberAssignmentExpression.getSpan()));
+                return new BoundMemberAssignmentExpression(boundMemberAccessorExpression, assignment);
+            }
+        }
+
         return new BoundMemberAssignmentExpression(boundMemberAccessorExpression, assignment);
     }
 
@@ -405,7 +414,7 @@ public class Binder {
             currentScope.declareVariable((String) forExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
             VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) forExpression.getIdentifier().getValue()).get();
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forExpression.getIdentifier().getValue(), forExpression.getIdentifier().getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, forExpression.getIdentifier().getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
         BoundExpression guard = null;
         if (forExpression.getGuard() != null) {
@@ -450,7 +459,7 @@ public class Binder {
             currentScope.declareVariable((String) forInExpression.getIdentifier().getValue(), variable);
         } catch (VariableAlreadyDeclaredException vade) {
             VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) forInExpression.getIdentifier().getValue()).get();
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) forInExpression.getIdentifier().getValue(), forInExpression.getIdentifier().getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, forInExpression.getIdentifier().getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         BoundExpression guard = null;
@@ -534,9 +543,13 @@ public class Binder {
 
         BoundExpression left = bind(binaryExpression.getLeft());
         BoundExpression right = bind(binaryExpression.getRight());
-        BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
-
-        return new BoundBinaryExpression(left, operator, right);
+        try {
+            BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
+            return new BoundBinaryExpression(left, operator, right);
+        } catch (InvalidOperationException ioe) {
+            errors.add(BindingError.raiseInvalidOperationException(binaryExpression.getOperation(), left.getType(), right.getType(), binaryExpression.getSpan()));
+            return new BoundBinaryExpression(left, null, right);
+        }
     }
 
     private BoundExpression bindIdentifierExpression(IdentifierExpression identifierExpression) {
@@ -605,7 +618,8 @@ public class Binder {
         }
         VariableSymbol variable = scopedVariable.get();
         if (variable.isReadOnly()) {
-            throw new ReadOnlyVariableException(variable.getName());
+            errors.add(BindingError.raiseConstReassignmentError(variable, assignmentExpression.getSpan()));
+            return new BoundAssignmentExpression(variable, variable.getGuard(), initialiser);
         }
 
         if (!variable.getType().isAssignableFrom(initialiser.getType())) {
@@ -726,7 +740,7 @@ public class Binder {
             currentScope.getParentScope().declareFunction(anonymousFunctionIdentifier, functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
             VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable(anonymousFunctionIdentifier).get();
-            errors.add(BindingError.raiseVariableAlreadyDeclared(anonymousFunctionIdentifier, lambdaExpression.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, lambdaExpression.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         currentScope = currentScope.getParentScope();
@@ -761,7 +775,7 @@ public class Binder {
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false, argumentExpression));
         } catch (VariableAlreadyDeclaredException vade) {
             VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) identifier.getValue()).get();
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, identifier.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         BoundExpression guard = null;
@@ -824,7 +838,7 @@ public class Binder {
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false, variableDeclarationExpression));
         } catch (VariableAlreadyDeclaredException vade) {
             VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) identifier.getValue()).get();
-            errors.add(BindingError.raiseVariableAlreadyDeclared((String) identifier.getValue(), identifier.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
+            errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, identifier.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
         }
 
         BoundExpression guard = null;
