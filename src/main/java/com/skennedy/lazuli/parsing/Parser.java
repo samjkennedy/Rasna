@@ -802,7 +802,7 @@ public class Parser {
                 IdentifierExpression isKeyword = matchToken(TokenType.IS_KEYWORD);
                 IdentifierExpression typeIdentifier = matchToken(current().getTokenType());
 
-                return new TypeTestExpression(parsed, isKeyword, typeIdentifier);
+                return parseAhead(new TypeTestExpression(parsed, isKeyword, typeIdentifier));
             default:
                 return parsed;
         }
