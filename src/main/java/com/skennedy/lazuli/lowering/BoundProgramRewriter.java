@@ -229,11 +229,6 @@ public abstract class BoundProgramRewriter {
         }
         BoundExpression rewrittenThenExpression = rewriteExpression(matchCaseExpression.getThenExpression());
 
-        if (rewrittenCaseExpression != matchCaseExpression.getCaseExpression()
-                || rewrittenThenExpression != matchCaseExpression.getThenExpression()) {
-            return new BoundMatchCaseExpression(rewrittenCaseExpression, rewrittenThenExpression);
-        }
-
         if (rewrittenCaseExpression != null && rewrittenCaseExpression.getBoundExpressionType() == BoundExpressionType.VARIABLE_DECLARATION) {
 
             /*
@@ -264,12 +259,17 @@ public abstract class BoundProgramRewriter {
                             variableDeclarationExpression.getVariable(),
                             variableDeclarationExpression.getGuard(),
                             new BoundCastExpression(operand, variableDeclarationExpression.getType()),
-                            true
+                            variableDeclarationExpression.isReadOnly()
                     ),
-                    matchCaseExpression.getThenExpression()
+                    rewrittenThenExpression
             );
 
             return new BoundMatchCaseExpression(new BoundTypeTestExpression(operand, variableDeclarationExpression.getType()), thenExpression);
+        }
+
+        if (rewrittenCaseExpression != matchCaseExpression.getCaseExpression()
+                || rewrittenThenExpression != matchCaseExpression.getThenExpression()) {
+            return new BoundMatchCaseExpression(rewrittenCaseExpression, rewrittenThenExpression);
         }
 
         return matchCaseExpression;
