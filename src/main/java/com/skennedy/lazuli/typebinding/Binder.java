@@ -3,7 +3,6 @@ package com.skennedy.lazuli.typebinding;
 import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.InvalidOperationException;
-import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
 import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.TypeMismatchException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
@@ -16,6 +15,7 @@ import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -118,9 +118,18 @@ public class Binder {
                 return bindCastExpression((CastExpression) expression);
             case STRUCT_LITERAL_EXPRESSION:
                 return bindStructLiteralExpression((StructLiteralExpression) expression);
+            case TYPE_TEST_EXPR:
+                return bindTypeTestExpression((TypeTestExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindTypeTestExpression(TypeTestExpression typeTestExpression) {
+        BoundExpression expression = bind(typeTestExpression.getExpression());
+        IdentifierExpression typeLiteral = typeTestExpression.getTypeLiteral();
+
+        return new BoundTypeTestExpression(expression, getTypeSymbol(typeLiteral));
     }
 
     private BoundExpression bindStructLiteralExpression(StructLiteralExpression structLiteralExpression) {
@@ -305,8 +314,10 @@ public class Binder {
                 throw new TypeMismatchException(type, boundMatchCaseExpression.getType());
             }
             type = boundMatchCaseExpression.getType();
-            if (boundMatchCaseExpression.getCaseExpression() != null && boundMatchCaseExpression.getCaseExpression().getType() != operand.getType()) {
-                throw new TypeMismatchException(operand.getType(), boundMatchCaseExpression.getCaseExpression().getType());
+            if (boundMatchCaseExpression.getCaseExpression() != null
+                    && !operand.getType().isAssignableFrom(boundMatchCaseExpression.getCaseExpression().getType())
+                    && boundMatchCaseExpression.getCaseExpression().getType() != TypeSymbol.BOOL) {
+                errors.add(BindingError.raiseTypeMismatch(operand.getType(), boundMatchCaseExpression.getCaseExpression().getType(), caseExpression.getCaseExpression().getSpan()));
             }
             boundMatchCaseExpressions.add(boundMatchCaseExpression);
         }
@@ -481,13 +492,24 @@ public class Binder {
     }
 
     private TypeSymbol parseType(TypeExpression typeExpression) {
-        TypeSymbol typeSymbol;
 
         if (typeExpression == null) {
             return TypeSymbol.VOID;
         }
+        IdentifierExpression identifier = typeExpression.getIdentifier();
 
-        switch (typeExpression.getIdentifier().getTokenType()) {
+        TypeSymbol typeSymbol = getTypeSymbol(identifier);
+
+        //TODO: This doesn't do N-Dimensional arrays yet
+        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
+            return new ArrayTypeSymbol(typeSymbol);
+        }
+        return typeSymbol;
+    }
+
+    private TypeSymbol getTypeSymbol(IdentifierExpression identifier) {
+        TypeSymbol typeSymbol;
+        switch (identifier.getTokenType()) {
             case INT_KEYWORD:
                 typeSymbol = TypeSymbol.INT;
                 break;
@@ -510,17 +532,13 @@ public class Binder {
                 typeSymbol = TypeSymbol.ANY;
                 break;
             default:
-                Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getIdentifier().getValue());
+                Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifier.getValue());
                 if (type.isEmpty()) {
-                    errors.add(BindingError.raiseUnknownType((String) typeExpression.getIdentifier().getValue(), typeExpression.getIdentifier().getSpan()));
+                    errors.add(BindingError.raiseUnknownType((String) identifier.getValue(), identifier.getSpan()));
                     typeSymbol = null;
                 } else {
                     typeSymbol = type.get();
                 }
-        }
-        //TODO: This doesn't do N-Dimensional arrays yet
-        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
-            return new ArrayTypeSymbol(typeSymbol);
         }
         return typeSymbol;
     }
@@ -798,20 +816,35 @@ public class Binder {
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
 
-        List<BoundExpression> boundArguments = new ArrayList<>();
-        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
-        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
-            BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
-            boundArguments.add(boundArgument);
-        }
-
         IdentifierExpression identifier = functionCallExpression.getIdentifier();
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
         if (scopedFunction.isEmpty()) {
-            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+            //TODO: Get arguments somehow
+            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), Collections.emptyList(), functionCallExpression.getSpan()));
             return new BoundNoOpExpression(); //TODO: Add BoundExceptionExpression
         }
         FunctionSymbol function = scopedFunction.get();
+
+        List<BoundExpression> boundArguments = new ArrayList<>();
+        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+            if (functionCallExpressionArguments.get(i).getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
+
+                //TODO: This is permissible for now since there is only one possible method for the name, once overloading is possible (if overloading will be possible) this will no longer work
+                //errors.add(BindingError.raise("Struct literals are not allowed in function calls, please use the full constructor form instead", functionCallExpressionArguments.get(i).getSpan()));
+
+                List<BoundExpression> boundMembers = new ArrayList<>();
+                for (Expression member : ((StructLiteralExpression) functionCallExpressionArguments.get(i)).getMembers()) {
+                    boundMembers.add(bind(member));
+                }
+                BoundStructLiteralExpression boundStructLiteralExpression = new BoundStructLiteralExpression(function.getArguments().get(i).getType(), boundMembers);
+
+                boundArguments.add(boundStructLiteralExpression);
+            } else {
+                BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
+                boundArguments.add(boundArgument);
+            }
+        }
 
         if (function.getArguments().size() != functionCallExpression.getArguments().size()) {
             errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));

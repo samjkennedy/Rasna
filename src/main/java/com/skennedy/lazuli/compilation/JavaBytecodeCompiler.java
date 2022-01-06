@@ -84,6 +84,7 @@ import static org.objectweb.asm.Opcodes.IF_ICMPLT;
 import static org.objectweb.asm.Opcodes.IF_ICMPNE;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
+import static org.objectweb.asm.Opcodes.INSTANCEOF;
 import static org.objectweb.asm.Opcodes.INTEGER;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
@@ -346,12 +347,48 @@ public class JavaBytecodeCompiler implements Compiler {
             case CAST_EXPRESSION:
                 visit((BoundCastExpression) expression, methodVisitor);
                 break;
+            case TYPE_TEST_EXPRESSION:
+                visit((BoundTypeTestExpression) expression, methodVisitor);
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
     }
 
-    //TODO: NAH this should be done at the Lazuli typesymbol level
+    private void visit(BoundTypeTestExpression typeTestExpression, MethodVisitor methodVisitor) {
+
+        visit(typeTestExpression.getExpression(), methodVisitor);
+
+        if (typeTestExpression.getExpression().getType() == TypeSymbol.INT) {
+            visit(new BoundLiteralExpression(typeTestExpression.getTypeLiteral() == TypeSymbol.INT), methodVisitor);
+        } else if (typeTestExpression.getExpression().getType() == TypeSymbol.STRING) {
+            visit(new BoundLiteralExpression(typeTestExpression.getTypeLiteral() == TypeSymbol.STRING), methodVisitor);
+        } else if (typeTestExpression.getExpression().getType() == TypeSymbol.REAL) {
+            visit(new BoundLiteralExpression(typeTestExpression.getTypeLiteral() == TypeSymbol.REAL), methodVisitor);
+        } else if (typeTestExpression.getExpression().getType() == TypeSymbol.BOOL) {
+            visit(new BoundLiteralExpression(typeTestExpression.getTypeLiteral() == TypeSymbol.BOOL), methodVisitor);
+        } else {
+            Object top = scope.getStack().peek();
+
+            if (typeTestExpression.getTypeLiteral() == TypeSymbol.STRING) {
+                methodVisitor.visitTypeInsn(INSTANCEOF, "java/lang/String");
+                textifierVisitor.visitTypeInsn(INSTANCEOF, "java/lang/String");
+            } else if (typeTestExpression.getTypeLiteral() == TypeSymbol.INT) {
+                methodVisitor.visitTypeInsn(INSTANCEOF, "java/lang/Integer");
+                textifierVisitor.visitTypeInsn(INSTANCEOF, "java/lang/Integer");
+            } else if (typeTestExpression.getTypeLiteral() == TypeSymbol.BOOL) {
+                methodVisitor.visitTypeInsn(INSTANCEOF, "java/lang/Boolean");
+                textifierVisitor.visitTypeInsn(INSTANCEOF, "java/lang/Boolean");
+            } else if (typeTestExpression.getTypeLiteral() == TypeSymbol.REAL) {
+                methodVisitor.visitTypeInsn(INSTANCEOF, "java/lang/Double");
+                textifierVisitor.visitTypeInsn(INSTANCEOF, "java/lang/Double");
+            } else {
+                throw new UnsupportedOperationException("Type test expressions are not yet implemented for type " + typeTestExpression.getTypeLiteral().getName());
+            }
+        }
+    }
+
+    //TODO: should this be done at the Lazuli typesymbol level?
     private void visit(BoundCastExpression castExpression, MethodVisitor methodVisitor) {
 
         visit(castExpression.getExpression(), methodVisitor);

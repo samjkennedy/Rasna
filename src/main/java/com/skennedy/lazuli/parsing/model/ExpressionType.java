@@ -38,6 +38,7 @@ public enum ExpressionType {
     TUPLE_LITERAL_EXPR,
     TYPEOF_EXPR,
     TYPE_EXPR,
+    TYPE_TEST_EXPR,
     UNARY_EXPR,
     VAR_DECLARATION_EXPR,
     WHILE_EXPR,

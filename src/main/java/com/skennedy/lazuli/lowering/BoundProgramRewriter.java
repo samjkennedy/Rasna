@@ -1,6 +1,5 @@
 package com.skennedy.lazuli.lowering;
 
-import com.skennedy.lazuli.exceptions.InfiniteLoopException;
 import com.skennedy.lazuli.parsing.model.OpType;
 import com.skennedy.lazuli.typebinding.*;
 
@@ -76,6 +75,7 @@ public abstract class BoundProgramRewriter {
             case LABEL:
             case NOOP:
             case INCREMENT:
+            case TYPE_TEST_EXPRESSION:
                 return expression;
             case ASSIGNMENT_EXPRESSION:
                 return rewriteAssignmentExpression((BoundAssignmentExpression) expression);
@@ -212,7 +212,7 @@ public abstract class BoundProgramRewriter {
 
         List<BoundMatchCaseExpression> rewrittenCaseExpressions = new ArrayList<>();
         for (BoundMatchCaseExpression caseExpression : matchExpression.getMatchCaseExpressions()) {
-            rewrittenCaseExpressions.add(rewriteMatchCaseExpression(caseExpression));
+            rewrittenCaseExpressions.add(rewriteMatchCaseExpression(caseExpression, matchExpression.getOperand()));
         }
 
         if (rewrittenCaseExpressions != matchExpression.getMatchCaseExpressions()
@@ -222,7 +222,7 @@ public abstract class BoundProgramRewriter {
         return matchExpression;
     }
 
-    protected BoundMatchCaseExpression rewriteMatchCaseExpression(BoundMatchCaseExpression matchCaseExpression) {
+    protected BoundMatchCaseExpression rewriteMatchCaseExpression(BoundMatchCaseExpression matchCaseExpression, BoundExpression operand) {
         BoundExpression rewrittenCaseExpression = null;
         if (matchCaseExpression.getCaseExpression() != null) {
             rewrittenCaseExpression = rewriteExpression(matchCaseExpression.getCaseExpression());
@@ -232,6 +232,44 @@ public abstract class BoundProgramRewriter {
         if (rewrittenCaseExpression != matchCaseExpression.getCaseExpression()
                 || rewrittenThenExpression != matchCaseExpression.getThenExpression()) {
             return new BoundMatchCaseExpression(rewrittenCaseExpression, rewrittenThenExpression);
+        }
+
+        if (rewrittenCaseExpression != null && rewrittenCaseExpression.getBoundExpressionType() == BoundExpressionType.VARIABLE_DECLARATION) {
+
+            /*
+            match v {
+                s: String -> print(s),
+                i: Int -> print(i),
+                ...
+            }
+
+            becomes:
+
+            match v {
+                typeof(v) == String -> {
+                    s: String = v as String
+                    print(s)
+                },
+                typeof(v) == Int -> {
+                    i: Int = v as Int
+                    print(i)
+                },
+                ...
+            }
+             */
+            BoundVariableDeclarationExpression variableDeclarationExpression = (BoundVariableDeclarationExpression) rewrittenCaseExpression;
+
+            BoundExpression thenExpression = new BoundBlockExpression(
+                    new BoundVariableDeclarationExpression(
+                            variableDeclarationExpression.getVariable(),
+                            variableDeclarationExpression.getGuard(),
+                            new BoundCastExpression(operand, variableDeclarationExpression.getType()),
+                            true
+                    ),
+                    matchCaseExpression.getThenExpression()
+            );
+
+            return new BoundMatchCaseExpression(new BoundTypeTestExpression(operand, variableDeclarationExpression.getType()), thenExpression);
         }
 
         return matchCaseExpression;
@@ -503,8 +541,8 @@ public abstract class BoundProgramRewriter {
         }
 
         if (lowerBound == rangeExpression.getLowerBound()
-            && upperBound == rangeExpression.getUpperBound()
-            && step == rangeExpression.getStep()
+                && upperBound == rangeExpression.getUpperBound()
+                && step == rangeExpression.getStep()
         ) {
             return rangeExpression;
         }
@@ -639,7 +677,7 @@ public abstract class BoundProgramRewriter {
 
                 BoundExpression elementCount;
                 BoundRangeExpression rangeExpression = forExpression.getRangeExpression();
-                if (!(rangeExpression.getLowerBound() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression) rangeExpression.getLowerBound()).getValue() != 0) {
+                if (!(rangeExpression.getLowerBound() instanceof BoundLiteralExpression) || (int) ((BoundLiteralExpression) rangeExpression.getLowerBound()).getValue() != 0) {
                     elementCount = new BoundBinaryExpression(
                             rangeExpression.getUpperBound(),
                             BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),
@@ -663,7 +701,7 @@ public abstract class BoundProgramRewriter {
                 BoundVariableExpression indexExpression = new BoundVariableExpression(indexVariable);
 
                 BoundExpression index;
-                if (!(rangeExpression.getLowerBound() instanceof BoundLiteralExpression) || (int)((BoundLiteralExpression)rangeExpression.getLowerBound()).getValue() != 0) {
+                if (!(rangeExpression.getLowerBound() instanceof BoundLiteralExpression) || (int) ((BoundLiteralExpression) rangeExpression.getLowerBound()).getValue() != 0) {
                     index = new BoundBinaryExpression(
                             indexExpression,
                             BoundBinaryOperator.bind(OpType.SUB, TypeSymbol.INT, TypeSymbol.INT),

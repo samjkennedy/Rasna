@@ -289,7 +289,7 @@ public class Parser {
                     caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression, comma));
                     caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression, comma));
                 } else {
-                    throw new IllegalStateException("Binary operation " + ((BinaryExpression) caseExpression).getOperation() + " is not supported in Match Case Statements");
+                    caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
                 }
             } else {
                 caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
@@ -316,8 +316,7 @@ public class Parser {
 
             if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
                 StructLiteralExpression structLiteralExpression = parseStructLiteralExpression(null);
-                errors.add(Error.raise("Struct literals are not allowed in function calls, use the constructor form instead.", current()));
-                arguments.add(new BlockExpression(Collections.emptyList()));
+                arguments.add(structLiteralExpression);
             } else {
                 arguments.add(parseExpression());
             }
@@ -799,6 +798,11 @@ public class Parser {
 //                    return new AssignmentExpression(parsed, equals, initialiser);
 //                }
 //                throw new UnsupportedOperationException("Assignment to expressions is not supported");
+            case IS_KEYWORD:
+                IdentifierExpression isKeyword = matchToken(TokenType.IS_KEYWORD);
+                IdentifierExpression typeIdentifier = matchToken(current().getTokenType());
+
+                return parseAhead(new TypeTestExpression(parsed, isKeyword, typeIdentifier));
             default:
                 return parsed;
         }
