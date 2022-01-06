@@ -19,6 +19,7 @@ public class OperatorPrecedence {
             case PLUS:
             case MINUS:
                 return 5;
+            case IS_KEYWORD:
             case EQUALS_EQUALS:
             case BANG_EQUALS:
                 return 4;

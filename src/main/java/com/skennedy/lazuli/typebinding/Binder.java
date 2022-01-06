@@ -15,6 +15,7 @@ import com.skennedy.lazuli.parsing.model.ExpressionType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -799,20 +800,33 @@ public class Binder {
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
 
-        List<BoundExpression> boundArguments = new ArrayList<>();
-        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
-        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
-            BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
-            boundArguments.add(boundArgument);
-        }
-
         IdentifierExpression identifier = functionCallExpression.getIdentifier();
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
         if (scopedFunction.isEmpty()) {
-            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+            //TODO: Get arguments somehow
+            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), Collections.emptyList(), functionCallExpression.getSpan()));
             return new BoundNoOpExpression(); //TODO: Add BoundExceptionExpression
         }
         FunctionSymbol function = scopedFunction.get();
+
+        List<BoundExpression> boundArguments = new ArrayList<>();
+        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+            if (functionCallExpressionArguments.get(i).getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
+                //errors.add(BindingError.raise("Struct literals are not allowed in function calls, please use the full constructor form instead", functionCallExpressionArguments.get(i).getSpan()));
+
+                List<BoundExpression> boundMembers = new ArrayList<>();
+                for (Expression member : ((StructLiteralExpression) functionCallExpressionArguments.get(i)).getMembers()) {
+                    boundMembers.add(bind(member));
+                }
+                BoundStructLiteralExpression boundStructLiteralExpression = new BoundStructLiteralExpression(function.getArguments().get(i).getType(), boundMembers);
+
+                boundArguments.add(boundStructLiteralExpression);
+            } else {
+                BoundExpression boundArgument = bind(functionCallExpressionArguments.get(i));
+                boundArguments.add(boundArgument);
+            }
+        }
 
         if (function.getArguments().size() != functionCallExpression.getArguments().size()) {
             errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));

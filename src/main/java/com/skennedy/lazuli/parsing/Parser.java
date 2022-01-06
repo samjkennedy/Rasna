@@ -9,6 +9,7 @@ import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 import com.skennedy.lazuli.parsing.model.OpType;
 import com.skennedy.lazuli.parsing.model.OperatorPrecedence;
+import com.skennedy.lazuli.typebinding.TypeSymbol;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -316,8 +317,7 @@ public class Parser {
 
             if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
                 StructLiteralExpression structLiteralExpression = parseStructLiteralExpression(null);
-                errors.add(Error.raise("Struct literals are not allowed in function calls, use the constructor form instead.", current()));
-                arguments.add(new BlockExpression(Collections.emptyList()));
+                arguments.add(structLiteralExpression);
             } else {
                 arguments.add(parseExpression());
             }
@@ -945,6 +945,8 @@ public class Parser {
                 return OpType.LOR;
             case AND_KEYWORD:
                 return OpType.LAND;
+            case IS_KEYWORD:
+                return OpType.TYPE_EQ;
             default:
                 throw new IllegalStateException("Unexpected value: " + token.getTokenType());
         }

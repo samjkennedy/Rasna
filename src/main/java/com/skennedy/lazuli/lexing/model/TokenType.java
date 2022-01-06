@@ -69,6 +69,7 @@ public enum TokenType {
     INLINE_KEYWORD("inline"),
     NAMESPACE_KEYWORD("namespace"),
     AS_KEYWORD("as"),
+    IS_KEYWORD("is"),
 
     //Types
     ANY_KEYWORD("Any"),
