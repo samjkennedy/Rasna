@@ -269,9 +269,7 @@ public abstract class BoundProgramRewriter {
                     matchCaseExpression.getThenExpression()
             );
 
-            //return new BoundMatchCaseExpression(new BoundBinaryExpression(new BoundTypeofExpression(operand), BoundBinaryOperator.bind(OpType.EQ, TypeSymbol.TYPE, TypeSymbol.TYPE), new BoundTypeExpression()), thenExpression);
-
-            throw new UnsupportedOperationException("Type match expressions are not yet implemented");
+            return new BoundMatchCaseExpression(new BoundTypeTestExpression(operand, variableDeclarationExpression.getType()), thenExpression);
         }
 
         return matchCaseExpression;

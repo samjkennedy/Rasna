@@ -1,13 +1,13 @@
 t: Tuple = ("Hello", 1, true, 3.14)
-//
-//for (v: Any in t) {
-//    match v {
-//        s: String -> print("This element is a String"),
-//        i: Int -> print("This element is an Int"),
-//        b: Bool -> print("This element is a Bool"),
-//        else -> print("I don't know what type this is...")
-//    }
-//}
+
+for (v: Any in t) {
+    match v {
+        s: String -> print(s),
+        i: Int -> print(i),
+        b: Bool -> print(b),
+        else -> print("I don't know what type this is...")
+    }
+}
 
 //b: Bool = 1 is Int
 //b1: Bool = 1 is String
@@ -15,8 +15,3 @@ t: Tuple = ("Hello", 1, true, 3.14)
 //print(b)
 //print(b1)
 //print(b2)
-
-for (v: Any in t) {
-    b: Bool = v is Real
-    print(b)
-}
