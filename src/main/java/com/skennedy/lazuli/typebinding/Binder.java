@@ -369,10 +369,16 @@ public class Binder {
         return new BoundArrayLengthExpression(boundExpression);
     }
 
-    private BoundExpression bindArrayAssignmentExpression(ArrayAssignmentExpression expression) {
+    private BoundExpression bindArrayAssignmentExpression(ArrayAssignmentExpression arrayAssignmentExpression) {
 
-        BoundPositionalAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(expression.getArrayAccessExpression());
-        BoundExpression assignment = bind(expression.getAssignment());
+        BoundPositionalAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
+
+        BoundExpression array = boundArrayAccessExpression.getArray();
+        if (array.getType() == TypeSymbol.TUPLE) {
+            errors.add(BindingError.raise("Type `Tuple` is immutable and does not support member reassignment", arrayAssignmentExpression.getSpan()));
+        }
+
+        BoundExpression assignment = bind(arrayAssignmentExpression.getAssignment());
 
         return new BoundArrayAssignmentExpression(boundArrayAccessExpression, assignment);
     }
