@@ -17,12 +17,11 @@ public class VariableDeclarationExpression extends Expression {
     private final IdentifierExpression equals;
     private final Expression initialiser;
 
-    //TODO: roll const into typeExpression
-    public VariableDeclarationExpression(IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression colon, Expression guard, IdentifierExpression equals, Expression initialiser) {
+    public VariableDeclarationExpression(IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression bar, Expression guard, IdentifierExpression equals, Expression initialiser) {
         this.constKeyword = constKeyword;
         this.typeExpression = typeExpression;
         this.identifier = identifier;
-        this.bar = colon;
+        this.bar = bar;
         this.guard = guard;
         this.equals = equals;
         this.initialiser = initialiser;
@@ -35,7 +34,7 @@ public class VariableDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode) constKeyword, typeExpression, identifier, equals, initialiser).iterator();
+        return Arrays.asList((SyntaxNode) constKeyword, typeExpression, identifier, bar, guard, equals, initialiser).iterator();
     }
 
     public IdentifierExpression getConstKeyword() {

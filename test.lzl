@@ -1,0 +1,18 @@
+t: Tuple = ("Hello", 1, true, 3.14)
+
+for (i: Int = 0 to 10)  {
+    print(i)
+    match i {
+        i mod 2 == 0 -> print("even"),
+        else -> print("odd")
+    }
+}
+
+//for (v: Any in t) {
+//    match v {
+//        s: String -> print("This element is a String"),
+//        i: Int -> print("This element is an Int"),
+//        b: Bool -> print("This element is a Bool"),
+//        else -> print("I don't know what type this is...")
+//    }
+//}

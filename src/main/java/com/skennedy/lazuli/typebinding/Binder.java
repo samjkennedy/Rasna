@@ -3,7 +3,6 @@ package com.skennedy.lazuli.typebinding;
 import com.skennedy.lazuli.diagnostics.BindingError;
 import com.skennedy.lazuli.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.InvalidOperationException;
-import com.skennedy.lazuli.exceptions.ReadOnlyVariableException;
 import com.skennedy.lazuli.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.lazuli.exceptions.TypeMismatchException;
 import com.skennedy.lazuli.exceptions.UndefinedVariableException;
@@ -305,8 +304,10 @@ public class Binder {
                 throw new TypeMismatchException(type, boundMatchCaseExpression.getType());
             }
             type = boundMatchCaseExpression.getType();
-            if (boundMatchCaseExpression.getCaseExpression() != null && boundMatchCaseExpression.getCaseExpression().getType() != operand.getType()) {
-                throw new TypeMismatchException(operand.getType(), boundMatchCaseExpression.getCaseExpression().getType());
+            if (boundMatchCaseExpression.getCaseExpression() != null
+                    && !operand.getType().isAssignableFrom(boundMatchCaseExpression.getCaseExpression().getType())
+                    && boundMatchCaseExpression.getCaseExpression().getType() != TypeSymbol.BOOL) {
+                errors.add(BindingError.raiseTypeMismatch(operand.getType(), boundMatchCaseExpression.getCaseExpression().getType(), caseExpression.getCaseExpression().getSpan()));
             }
             boundMatchCaseExpressions.add(boundMatchCaseExpression);
         }

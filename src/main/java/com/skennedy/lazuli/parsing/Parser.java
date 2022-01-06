@@ -289,7 +289,7 @@ public class Parser {
                     caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression, comma));
                     caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression, comma));
                 } else {
-                    throw new IllegalStateException("Binary operation " + ((BinaryExpression) caseExpression).getOperation() + " is not supported in Match Case Statements");
+                    caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
                 }
             } else {
                 caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
