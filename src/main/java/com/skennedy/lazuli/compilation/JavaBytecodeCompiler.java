@@ -293,6 +293,9 @@ public class JavaBytecodeCompiler implements Compiler {
             case CONDITIONAL_GOTO:
                 visit((BoundConditionalGotoExpression) expression, methodVisitor);
                 break;
+            case CONST_DECLARATION:
+                visit((BoundConstDeclarationExpression) expression, methodVisitor);
+                break;
             case GOTO:
                 visit((BoundGotoExpression) expression, methodVisitor);
                 break;
@@ -696,7 +699,12 @@ public class JavaBytecodeCompiler implements Compiler {
         String identifer = variable.getName();
 
         //Evaluate the initialiser
-        visit(variableDeclarationExpression.getInitialiser(), methodVisitor);
+        if (variableDeclarationExpression instanceof BoundConstDeclarationExpression) {
+            BoundConstDeclarationExpression constDeclarationExpression = (BoundConstDeclarationExpression) variableDeclarationExpression;
+            visit(constDeclarationExpression.getConstValue(), methodVisitor);
+        } else {
+            visit(variableDeclarationExpression.getInitialiser(), methodVisitor);
+        }
 
         //Store that in memory at the current variable index
         if (variable.getType() instanceof ArrayTypeSymbol) {

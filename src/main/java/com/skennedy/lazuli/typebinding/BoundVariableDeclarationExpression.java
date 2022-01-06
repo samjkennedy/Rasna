@@ -24,7 +24,7 @@ public class BoundVariableDeclarationExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return initialiser.getType();
+        return variable.getType();
     }
 
     @Override

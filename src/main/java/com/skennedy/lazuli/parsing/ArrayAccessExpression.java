@@ -28,7 +28,7 @@ public class ArrayAccessExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)openBrace, index, closeBrace).iterator();
+        return Arrays.asList((SyntaxNode)identifier, openBrace, index, closeBrace).iterator();
     }
 
     public IdentifierExpression getIdentifier() {
