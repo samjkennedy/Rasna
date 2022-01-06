@@ -118,9 +118,18 @@ public class Binder {
                 return bindCastExpression((CastExpression) expression);
             case STRUCT_LITERAL_EXPRESSION:
                 return bindStructLiteralExpression((StructLiteralExpression) expression);
+            case TYPE_TEST_EXPR:
+                return bindTypeTestExpression((TypeTestExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindTypeTestExpression(TypeTestExpression typeTestExpression) {
+        BoundExpression expression = bind(typeTestExpression.getExpression());
+        IdentifierExpression typeLiteral = typeTestExpression.getTypeLiteral();
+
+        return new BoundTypeTestExpression(expression, getTypeSymbol(typeLiteral));
     }
 
     private BoundExpression bindStructLiteralExpression(StructLiteralExpression structLiteralExpression) {
@@ -483,13 +492,24 @@ public class Binder {
     }
 
     private TypeSymbol parseType(TypeExpression typeExpression) {
-        TypeSymbol typeSymbol;
 
         if (typeExpression == null) {
             return TypeSymbol.VOID;
         }
+        IdentifierExpression identifier = typeExpression.getIdentifier();
 
-        switch (typeExpression.getIdentifier().getTokenType()) {
+        TypeSymbol typeSymbol = getTypeSymbol(identifier);
+
+        //TODO: This doesn't do N-Dimensional arrays yet
+        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
+            return new ArrayTypeSymbol(typeSymbol);
+        }
+        return typeSymbol;
+    }
+
+    private TypeSymbol getTypeSymbol(IdentifierExpression identifier) {
+        TypeSymbol typeSymbol;
+        switch (identifier.getTokenType()) {
             case INT_KEYWORD:
                 typeSymbol = TypeSymbol.INT;
                 break;
@@ -512,17 +532,13 @@ public class Binder {
                 typeSymbol = TypeSymbol.ANY;
                 break;
             default:
-                Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getIdentifier().getValue());
+                Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifier.getValue());
                 if (type.isEmpty()) {
-                    errors.add(BindingError.raiseUnknownType((String) typeExpression.getIdentifier().getValue(), typeExpression.getIdentifier().getSpan()));
+                    errors.add(BindingError.raiseUnknownType((String) identifier.getValue(), identifier.getSpan()));
                     typeSymbol = null;
                 } else {
                     typeSymbol = type.get();
                 }
-        }
-        //TODO: This doesn't do N-Dimensional arrays yet
-        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
-            return new ArrayTypeSymbol(typeSymbol);
         }
         return typeSymbol;
     }
@@ -813,6 +829,8 @@ public class Binder {
         List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
         for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
             if (functionCallExpressionArguments.get(i).getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
+
+                //TODO: This is permissible for now since there is only one possible method for the name, once overloading is possible (if overloading will be possible) this will no longer work
                 //errors.add(BindingError.raise("Struct literals are not allowed in function calls, please use the full constructor form instead", functionCallExpressionArguments.get(i).getSpan()));
 
                 List<BoundExpression> boundMembers = new ArrayList<>();

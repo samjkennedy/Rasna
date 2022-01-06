@@ -9,7 +9,6 @@ import com.skennedy.lazuli.lexing.model.TokenType;
 import com.skennedy.lazuli.parsing.model.IdentifierExpression;
 import com.skennedy.lazuli.parsing.model.OpType;
 import com.skennedy.lazuli.parsing.model.OperatorPrecedence;
-import com.skennedy.lazuli.typebinding.TypeSymbol;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -799,6 +798,11 @@ public class Parser {
 //                    return new AssignmentExpression(parsed, equals, initialiser);
 //                }
 //                throw new UnsupportedOperationException("Assignment to expressions is not supported");
+            case IS_KEYWORD:
+                IdentifierExpression isKeyword = matchToken(TokenType.IS_KEYWORD);
+                IdentifierExpression typeIdentifier = matchToken(current().getTokenType());
+
+                return new TypeTestExpression(parsed, isKeyword, typeIdentifier);
             default:
                 return parsed;
         }
@@ -945,8 +949,6 @@ public class Parser {
                 return OpType.LOR;
             case AND_KEYWORD:
                 return OpType.LAND;
-            case IS_KEYWORD:
-                return OpType.TYPE_EQ;
             default:
                 throw new IllegalStateException("Unexpected value: " + token.getTokenType());
         }

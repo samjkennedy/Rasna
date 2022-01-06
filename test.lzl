@@ -1,4 +1,4 @@
-//t: Tuple = ("Hello", 1, true, 3.14)
+t: Tuple = ("Hello", 1, true, 3.14)
 //
 //for (v: Any in t) {
 //    match v {
@@ -9,7 +9,14 @@
 //    }
 //}
 
+//b: Bool = 1 is Int
+//b1: Bool = 1 is String
+//b2: Bool = 1. is Real
+//print(b)
+//print(b1)
+//print(b2)
 
-//s: String = "Hello"
-//
-//isString: Bool = s is String
+for (v: Any in t) {
+    b: Bool = v is Real
+    print(b)
+}

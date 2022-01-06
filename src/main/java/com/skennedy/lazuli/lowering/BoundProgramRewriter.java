@@ -75,6 +75,7 @@ public abstract class BoundProgramRewriter {
             case LABEL:
             case NOOP:
             case INCREMENT:
+            case TYPE_TEST_EXPRESSION:
                 return expression;
             case ASSIGNMENT_EXPRESSION:
                 return rewriteAssignmentExpression((BoundAssignmentExpression) expression);

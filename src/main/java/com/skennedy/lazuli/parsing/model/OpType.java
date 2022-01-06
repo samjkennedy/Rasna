@@ -14,6 +14,5 @@ public enum OpType {
     GTEQ,
     LTEQ,
     LAND,
-    LOR,
-    TYPE_EQ
+    LOR
 }
