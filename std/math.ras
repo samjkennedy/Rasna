@@ -1,0 +1,107 @@
+const INT_MAX: Int = 2147483647 //TODO: Java bytecode can't store this number, but can store 2^31 - 2
+const PI: Real = 3.14159265359 //TODO: the functions can't access this - make a `global` keyword or let them have it
+//
+//TODO: These two should be intrinsics on Real
+fn getInt(r: Real): Real {
+     return r as Int as Real
+ }
+
+fn getDec(r: Real): Real {
+    return r - getInt(r)
+}
+
+fn pow(n: Int, p: Int | p >= 0): Int {
+
+    //This should be done with ifs but sequential ifs break things for some reason
+    match n {
+        0 or 1 -> return n,
+        else -> {
+            res: Int = n
+            for (i: Int = 0 to p - 1) {
+                res = res * n
+            }
+            return res
+        }
+    }
+}
+
+//TODO: Need method overloading for stuff like this
+fn rpow(n: Real, p: Int | p >= 0): Real {
+
+    res: Real = n
+    for (i: Int = 0 to p - 1) {
+        res = res * n
+    }
+    return res
+}
+
+fn deg2rad(deg: Real): Real {
+    const _PI: Real = 3.14159265359
+
+    return _PI * (deg / 180.0)
+}
+
+fn rad2deg(rad: Real): Real {
+    const _PI: Real = 3.14159265359
+
+    return (rad * 180.0) / _PI
+}
+
+fn sin(x: Real): Real {
+
+    const _PI: Real = 3.14159265359
+    precision: Int = 60
+
+    sign: Int = -1
+    x = x mod (2 * _PI)
+
+    term: Real = 1.0
+    sum: Real = 0.0
+
+    for (iter: Int = 1 to precision) {
+        term = term * (x / (iter as Real))
+        if (iter mod 4 == 1) {
+            sum = sum + term
+        } else if (iter mod 4 == 3) {
+            sum = sum - term
+        }
+    }
+    return sum
+}
+
+fn cos(x: Real): Real {
+    const _PI: Real = 3.14159265359
+    return sin(x + _PI)
+}
+
+fn min(a: Int, b: Int): Int {
+    if (a < b) {
+        return a
+    } else {
+        return b
+    }
+}
+
+fn max(a: Int, b: Int): Int {
+    if (a > b) {
+        return a
+    } else {
+        return b
+    }
+}
+
+fn lerp(a: Real, b: Real, t: Real): Real {
+    return a + (b - a) * t
+}
+
+fn sqrt(S: Real | S >= 0.0): Real {
+    iterations: Int = 100
+    x0: Real = (S / 10.0)
+    x1: Real = (x0 + (S / x0)) / 2.0
+    for (i: Int = 1 to iterations) {
+        tmp: Real = x0
+        x0 = (x1 + (S / x1)) / 2.0
+        x1 = tmp
+    }
+    return x0
+}
