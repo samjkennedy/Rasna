@@ -1194,34 +1194,25 @@ public class JavaBytecodeCompiler implements Compiler {
                 scope.popStack();
                 break;
             case LESS_THAN:
-                visitComparison(methodVisitor, IF_ICMPLT);
+                //visitComparison(methodVisitor, IF_ICMPLT);
                 break;
             case GREATER_THAN:
-                visitComparison(methodVisitor, IF_ICMPGT);
+                //visitComparison(methodVisitor, IF_ICMPGT);
                 break;
             case LESS_THAN_OR_EQUAL:
-                visitComparison(methodVisitor, IF_ICMPLE);
+               // visitComparison(methodVisitor, IF_ICMPLE);
                 break;
             case GREATER_THAN_OR_EQUAL:
-                visitComparison(methodVisitor, IF_ICMPGE);
+                //visitComparison(methodVisitor, IF_ICMPGE);
                 break;
             case EQUALS:
-                visitComparison(methodVisitor, IF_ICMPEQ);
+                //visitComparison(methodVisitor, IF_ICMPEQ);
                 break;
             case NOT_EQUALS:
-                visitComparison(methodVisitor, IF_ICMPNE);
+                //visitComparison(methodVisitor, IF_ICMPNE);
                 break;
             case BOOLEAN_OR:
-                methodVisitor.visitInsn(IOR);
-                textifierVisitor.visitInsn(IOR);
-
-                scope.popStack();
-                break;
             case BOOLEAN_AND:
-                methodVisitor.visitInsn(IAND);
-                textifierVisitor.visitInsn(IAND);
-
-                scope.popStack();
                 break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
@@ -1306,30 +1297,40 @@ public class JavaBytecodeCompiler implements Compiler {
         if (condition instanceof BoundBinaryExpression) {
             BoundBinaryExpression binaryCondition = (BoundBinaryExpression) condition;
             BoundBinaryOperator operator = binaryCondition.getOperator();
-            visit(binaryCondition.getLeft(), methodVisitor);
-            visit(binaryCondition.getRight(), methodVisitor);
             switch (operator.getBoundOpType()) {
                 case GREATER_THAN:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
                     break;
                 case LESS_THAN:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
                     break;
                 case GREATER_THAN_OR_EQUAL:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
                     break;
                 case LESS_THAN_OR_EQUAL:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
                     break;
                 case EQUALS:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
                     break;
                 case NOT_EQUALS:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     break;

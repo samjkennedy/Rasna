@@ -930,7 +930,6 @@ public class Parser {
                 return OpType.MUL;
             case SLASH:
                 return OpType.DIV;
-            case PERCENT:
             case MOD_KEYWORD:
                 return OpType.MOD; //TODO: Should `mod` be the modulo operator?
             case EQUALS_EQUALS:

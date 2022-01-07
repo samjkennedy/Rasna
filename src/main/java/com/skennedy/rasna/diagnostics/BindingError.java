@@ -79,7 +79,7 @@ public class BindingError {
 
     public static BindingError raiseInvalidOperationException(OpType operation, TypeSymbol leftType, TypeSymbol rightType, TextSpan span) {
 
-        return new BindingError("Operation `" + operation + "` is not defined for types `" + leftType + "` and `" + rightType + "`:", span);
+        return new BindingError("Operation `" + operation.getName() + "` is not defined for types `" + leftType + "` and `" + rightType + "`:", span);
     }
 
     public static BindingError raise(String message, TextSpan span) {

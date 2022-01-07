@@ -15,6 +15,7 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol TYPE = new TypeSymbol("Type", Collections.emptyMap(), new LinkedHashMap<>());
     public static final TypeSymbol TUPLE = new TypeSymbol("Tuple", Collections.emptyMap(), new LinkedHashMap<>());
     public static final TypeSymbol ANY = new TypeSymbol("Any", Collections.emptyMap(), new LinkedHashMap<>());
+    public static final TypeSymbol ERROR = new TypeSymbol("Error", Collections.emptyMap(), new LinkedHashMap<>());
     public static final TypeSymbol FUNCTION = new TypeSymbol("Function", Collections.emptyMap(), new LinkedHashMap<>()); //TODO: Should be similar to ArrayTypeSymbol
 
     private final Map<String, FunctionSymbol> functions;

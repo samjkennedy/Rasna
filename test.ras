@@ -1,2 +1,5 @@
-import inline "std/math.ras"
+i: Int = 3
 
+if (i < 3 or i > 3) {
+    print("Not 3")
+}

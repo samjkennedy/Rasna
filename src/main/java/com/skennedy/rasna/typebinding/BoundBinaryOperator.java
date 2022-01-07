@@ -28,7 +28,11 @@ public class BoundBinaryOperator implements BoundExpression {
                 return operator;
             }
         }
-        throw new InvalidOperationException(); //TODO: Better error handling
+        throw new InvalidOperationException();
+    }
+
+    public static BoundBinaryOperator error(OpType type, TypeSymbol leftType, TypeSymbol rightType) {
+        return new BoundBinaryOperator(type, BoundBinaryOperation.ERROR, leftType, rightType, TypeSymbol.ERROR);
     }
 
     public OpType getOpType() {
@@ -118,6 +122,7 @@ public class BoundBinaryOperator implements BoundExpression {
         EQUALS,
         NOT_EQUALS,
         BOOLEAN_OR,
-        BOOLEAN_AND
+        BOOLEAN_AND,
+        ERROR,
     }
 }

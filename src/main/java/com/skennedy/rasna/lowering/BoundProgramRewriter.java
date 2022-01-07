@@ -502,7 +502,9 @@ public abstract class BoundProgramRewriter {
 //            }
 //        }
 
-        if (condition == boundIfExpression.getCondition() && body == boundIfExpression.getBody() && elseBody == boundIfExpression.getElseBody()) {
+        if (condition == boundIfExpression.getCondition()
+                && body == boundIfExpression.getBody()
+                && elseBody == boundIfExpression.getElseBody()) {
             return boundIfExpression;
         }
 
