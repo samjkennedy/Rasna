@@ -214,7 +214,7 @@ public class Simulator {
             array[i] = localsStack.pop();
         }
         //TODO: To really mimic the JVM push a reference
-        localsStack.push(new LazuliArray<>(array));
+        localsStack.push(new RasnaArray<>(array));
     }
 
     private void evaluateIncrement(BoundIncrementExpression incrementExpression) {
@@ -284,38 +284,38 @@ public class Simulator {
             array[i] = localsStack.pop();
         }
         //TODO: To really mimic the JVM push a reference
-        localsStack.push(new LazuliArray<>(array));
+        localsStack.push(new RasnaArray<>(array));
     }
 
     private void evaluateArrayAccessExpression(BoundPositionalAccessExpression arrayAccessExpression) {
         evaluate(arrayAccessExpression.getArray());
         evaluate(arrayAccessExpression.getIndex());
         int index = (int) localsStack.pop();
-        LazuliArray<Object> array = (LazuliArray<Object>) localsStack.pop();
+        RasnaArray<Object> array = (RasnaArray<Object>) localsStack.pop();
         localsStack.push(array.get(index));
     }
 
     private void evaluateArrayLengthExpression(BoundArrayLengthExpression arrayLengthExpression) {
         evaluate(arrayLengthExpression.getIterable());
-        LazuliArray lazuliArray = (LazuliArray) localsStack.pop();
-        localsStack.push(lazuliArray.array.length);
+        RasnaArray rasnaArray = (RasnaArray) localsStack.pop();
+        localsStack.push(rasnaArray.array.length);
     }
 
     private void evaluateArrayAssignmentExpression(BoundArrayAssignmentExpression arrayAssignmentExpression) {
         evaluate(arrayAssignmentExpression.getArrayAccessExpression().getIndex());
         int index = (int) localsStack.pop();
         evaluate(arrayAssignmentExpression.getArrayAccessExpression().getArray());
-        LazuliArray<Object> array = (LazuliArray<Object>) localsStack.pop();
+        RasnaArray<Object> array = (RasnaArray<Object>) localsStack.pop();
         evaluate(arrayAssignmentExpression.getAssignment());
         Object value = localsStack.pop();
         array.set(index, value);
     }
 
-    private class LazuliArray<T> {
+    private class RasnaArray<T> {
 
         private T[] array;
 
-        LazuliArray(T[] array) {
+        RasnaArray(T[] array) {
             this.array = array;
         }
 
