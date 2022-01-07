@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Created with Scriftas (0.3 alpha) (https://github.com/hornc/scriftas) -->
+<svg xmlns="http://www.w3.org/2000/svg"
+   version="1.0"
+   id="EtruscanR-04"
+   x="0px"
+   y="0px"
+   width="130"
+   height="180"
+>
+<line fill="none" stroke="#000" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" x1="115" y1="15" x2="115" y2="165" /><path fill="none" stroke="#000" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" d="M 115 15 q -140 75 0 150" />
+</svg>
