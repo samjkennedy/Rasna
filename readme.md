@@ -1,15 +1,14 @@
-![](logo.svg)
-# Lazuli
+# ![](EtruscanR-04.svg) Rasna 
 
-Lazuli is my attempt at making a working high-level programming language.
+Rasna is my attempt at making a working high-level programming language.
 
-Lazuli is planned to be:
+Rasna is planned to be:
 - [x] Compiled to Java Bytecode
 - [ ] Turing-complete
 - [x] Statically typed
 - [ ] Everything is an expression (everything can be assigned, see Features)
 - [ ] Type Oriented/Based in set theory (rather than classes there are Types that can be subsetted)
-- [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Lazuli)
+- [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Rasna)
 
 ## Features
 
@@ -37,7 +36,7 @@ Implemented:
 
 ### Guards
 
-Lazuli features **Guards** where an expression can be defined for a specific **Subset** of its full domain. 
+Rasna features **Guards** where an expression can be defined for a specific **Subset** of its full domain. 
 
 For example with Variables:
 
@@ -61,7 +60,7 @@ Implemented:
 
 ### Everything is an expression
 
-In Lazuli, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
+In Rasna, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
 
 ```julia
 i: Int = if (x > y) 1 else 2

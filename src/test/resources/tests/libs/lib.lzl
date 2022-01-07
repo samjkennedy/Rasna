@@ -1,5 +1,0 @@
-import inline "lib2.lzl"
-
-fn square(a: A): A {
-    return A(a.i * a.i)
-}

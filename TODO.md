@@ -1,5 +1,7 @@
 # TODO
 
+- Fix chained ifs
+- Better import scoping system
 - Proper concatenation
 - do/while loops
 - `break` and `continue` operations
@@ -9,7 +11,6 @@
 - Proper pattern matching
     - Type matching
     - Array matching
-- Be more consistent with `const`
 - Longs
 - Non-scuffed control flow analysis
 - Multidimensional arrays (And arrays of structs)
