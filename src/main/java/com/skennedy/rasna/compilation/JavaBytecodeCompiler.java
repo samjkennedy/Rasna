@@ -65,7 +65,6 @@ import static org.objectweb.asm.Opcodes.GOTO;
 import static org.objectweb.asm.Opcodes.I2D;
 import static org.objectweb.asm.Opcodes.IADD;
 import static org.objectweb.asm.Opcodes.IALOAD;
-import static org.objectweb.asm.Opcodes.IAND;
 import static org.objectweb.asm.Opcodes.IASTORE;
 import static org.objectweb.asm.Opcodes.ICONST_0;
 import static org.objectweb.asm.Opcodes.ICONST_1;
@@ -75,6 +74,9 @@ import static org.objectweb.asm.Opcodes.ICONST_4;
 import static org.objectweb.asm.Opcodes.ICONST_5;
 import static org.objectweb.asm.Opcodes.IDIV;
 import static org.objectweb.asm.Opcodes.IFEQ;
+import static org.objectweb.asm.Opcodes.IFGE;
+import static org.objectweb.asm.Opcodes.IFGT;
+import static org.objectweb.asm.Opcodes.IFLE;
 import static org.objectweb.asm.Opcodes.IFNE;
 import static org.objectweb.asm.Opcodes.IF_ICMPEQ;
 import static org.objectweb.asm.Opcodes.IF_ICMPGE;
@@ -88,7 +90,6 @@ import static org.objectweb.asm.Opcodes.INSTANCEOF;
 import static org.objectweb.asm.Opcodes.INTEGER;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
-import static org.objectweb.asm.Opcodes.IOR;
 import static org.objectweb.asm.Opcodes.IREM;
 import static org.objectweb.asm.Opcodes.IRETURN;
 import static org.objectweb.asm.Opcodes.ISTORE;
@@ -1194,25 +1195,22 @@ public class JavaBytecodeCompiler implements Compiler {
                 scope.popStack();
                 break;
             case LESS_THAN:
-                //visitComparison(methodVisitor, IF_ICMPLT);
+                visitComparison(methodVisitor, IF_ICMPLT);
                 break;
             case GREATER_THAN:
-                //visitComparison(methodVisitor, IF_ICMPGT);
+                visitComparison(methodVisitor, IF_ICMPGT);
                 break;
             case LESS_THAN_OR_EQUAL:
-               // visitComparison(methodVisitor, IF_ICMPLE);
+                visitComparison(methodVisitor, IF_ICMPLE);
                 break;
             case GREATER_THAN_OR_EQUAL:
-                //visitComparison(methodVisitor, IF_ICMPGE);
+                visitComparison(methodVisitor, IF_ICMPGE);
                 break;
             case EQUALS:
-                //visitComparison(methodVisitor, IF_ICMPEQ);
+                visitComparison(methodVisitor, IF_ICMPEQ);
                 break;
             case NOT_EQUALS:
-                //visitComparison(methodVisitor, IF_ICMPNE);
-                break;
-            case BOOLEAN_OR:
-            case BOOLEAN_AND:
+                visitComparison(methodVisitor, IF_ICMPNE);
                 break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
@@ -1333,6 +1331,14 @@ public class JavaBytecodeCompiler implements Compiler {
                     visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
+                    break;
+                case BOOLEAN_OR:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    visit(binaryCondition.getRight(), methodVisitor);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
                     break;
                 default:
                     throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
