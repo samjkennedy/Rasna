@@ -14,7 +14,6 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +24,7 @@ import java.util.stream.Collectors;
 public class Binder {
 
     private List<BindingError> errors;
+    private List<BindingWarning> warnings;
     private BoundScope currentScope;
 
     public Binder() {
@@ -34,6 +34,7 @@ public class Binder {
     public BoundProgram bind(Program program) {
 
         errors = new ArrayList<>();
+        warnings = new ArrayList<>();
 
         List<BoundExpression> boundExpressions = new ArrayList<>();
 
@@ -41,7 +42,7 @@ public class Binder {
         for (Expression expression : expressions) {
             boundExpressions.add(bind(expression));
         }
-        return new BoundProgram(boundExpressions, errors);
+        return new BoundProgram(boundExpressions, errors, warnings);
     }
 
     public BoundExpression bind(Expression expression) {
@@ -577,12 +578,62 @@ public class Binder {
 
         BoundExpression left = bind(binaryExpression.getLeft());
         BoundExpression right = bind(binaryExpression.getRight());
+
         try {
             BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
+
+            if (left.isConstExpression() && left.getType() == TypeSymbol.INT
+                    && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+
+                return calculateConstantExpression(left, operator, right);
+            }
+            if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL
+                    && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+
+                return calculateConstantExpression(left, operator, right);
+            }
+
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {
             errors.add(BindingError.raiseInvalidOperationException(binaryExpression.getOperation(), left.getType(), right.getType(), binaryExpression.getSpan()));
             return new BoundBinaryExpression(left, BoundBinaryOperator.error(binaryExpression.getOperation(), left.getType(), right.getType()), right);
+        }
+    }
+
+    private BoundExpression calculateConstantExpression(BoundExpression left, BoundBinaryOperator operator, BoundExpression right) {
+        switch (operator.getBoundOpType()) {
+            case ADDITION:
+                return new BoundLiteralExpression((int) left.getConstValue() + (int) right.getConstValue());
+            case SUBTRACTION:
+                return new BoundLiteralExpression((int) left.getConstValue() - (int) right.getConstValue());
+            case MULTIPLICATION:
+                return new BoundLiteralExpression((int) left.getConstValue() * (int) right.getConstValue());
+            case DIVISION:
+                return new BoundLiteralExpression((int) left.getConstValue() / (int) right.getConstValue());
+            case REMAINDER:
+                return new BoundLiteralExpression((int) left.getConstValue() % (int) right.getConstValue());
+            case GREATER_THAN:
+                return new BoundLiteralExpression((int) left.getConstValue() > (int) right.getConstValue());
+            case LESS_THAN:
+                return new BoundLiteralExpression((int) left.getConstValue() < (int) right.getConstValue());
+            case GREATER_THAN_OR_EQUAL:
+                return new BoundLiteralExpression((int) left.getConstValue() >= (int) right.getConstValue());
+            case LESS_THAN_OR_EQUAL:
+                return new BoundLiteralExpression((int) left.getConstValue() <= (int) right.getConstValue());
+            case EQUALS:
+                return new BoundLiteralExpression((int) left.getConstValue() == (int) right.getConstValue());
+            case NOT_EQUALS:
+                return new BoundLiteralExpression((int) left.getConstValue() != (int) right.getConstValue());
+            case BOOLEAN_OR:
+                return new BoundLiteralExpression((boolean) left.getConstValue() || (boolean) right.getConstValue());
+            case BOOLEAN_AND:
+                return new BoundLiteralExpression((boolean) left.getConstValue() && (boolean) right.getConstValue());
+            case BOOLEAN_XOR:
+                return new BoundLiteralExpression((boolean) left.getConstValue() ^ (boolean) right.getConstValue());
+            case ERROR:
+                return new BoundBinaryExpression(left, operator, right);
+            default:
+                throw new IllegalStateException("Unhandled binary expression for const evaluation: " + operator.getBoundOpType());
         }
     }
 
@@ -917,6 +968,11 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(type, initialiser.getType(), variableDeclarationExpression.getInitialiser().getSpan()));
         }
 
+        boolean readOnly = variableDeclarationExpression.getConstKeyword() != null;
+        if (readOnly && (initialiser == null || !initialiser.isConstExpression())) {
+            errors.add(BindingError.raiseNonConstAssignmentError(variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getSpan()));
+        }
+
         if (type == TypeSymbol.FUNCTION) {
             //We're defining a lambda
             if (!(variableDeclarationExpression.getInitialiser() instanceof LambdaExpression)) {
@@ -932,10 +988,10 @@ public class Binder {
             ));
         }
 
-        VariableSymbol variable = buildVariableSymbol(type, identifier, guard, variableDeclarationExpression.getConstKeyword() != null, variableDeclarationExpression);
+        VariableSymbol variable = buildVariableSymbol(type, identifier, guard, readOnly, variableDeclarationExpression);
 
         currentScope.reassignVariable((String) identifier.getValue(), variable);
-        return new BoundVariableDeclarationExpression(variable, guard, initialiser, variableDeclarationExpression.getConstKeyword() != null);
+        return new BoundVariableDeclarationExpression(variable, guard, initialiser, readOnly);
     }
 
     private BoundExpression bindWhileExpression(WhileExpression whileExpression) {
@@ -945,6 +1001,13 @@ public class Binder {
             throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
 
+        if (condition.isConstExpression()) {
+            if ((boolean) condition.getConstValue()) {
+                warnings.add(BindingWarning.raiseConditionAlwaysTrue(whileExpression.getCondition().getSpan()));
+            } else {
+                warnings.add(BindingWarning.raiseConditionAlwaysFalse(whileExpression.getCondition().getSpan()));
+            }
+        }
         BoundExpression body = bind(whileExpression.getBody());
 
         return new BoundWhileExpression(condition, body);

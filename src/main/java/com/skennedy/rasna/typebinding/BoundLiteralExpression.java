@@ -36,6 +36,16 @@ public class BoundLiteralExpression implements BoundExpression {
         return Collections.emptyIterator();
     }
 
+    @Override
+    public boolean isConstExpression() {
+        return true;
+    }
+
+    @Override
+    public Object getConstValue() {
+        return value;
+    }
+
     public Object getValue() {
         return value;
     }

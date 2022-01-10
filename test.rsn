@@ -1,5 +1,8 @@
-if (1 < 0) {
-    print("a")
-} else {
-    print("b")
-}
+fn choice(check: Bool): Int {
+    if (check) {
+        return 1
+    }
+    return 2
+ }
+
+ print(choice(false))

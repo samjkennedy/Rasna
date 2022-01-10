@@ -133,7 +133,7 @@ public class Parser {
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
-                return new BlockExpression(Collections.emptyList());
+                return new NoOpExpression();
         }
     }
 
@@ -218,14 +218,17 @@ public class Parser {
             return new NamespaceExpression(
                     new IdentifierExpression(new Token(TokenType.NAMESPACE_KEYWORD, new Location(fileNameWithExt, -1, -1)), TokenType.NAMESPACE_KEYWORD, TokenType.NAMESPACE_KEYWORD.getText()),
                     new IdentifierExpression(new Token(TokenType.IDENTIFIER, new Location(fileNameWithExt, -1, -1), fileName), TokenType.IDENTIFIER, fileName),
-                    new BlockExpression(program.getExpressions()),
+                    new BlockExpression(
+                            new IdentifierExpression(new Token(TokenType.OPEN_CURLY_BRACE, new Location(fileNameWithExt, -1, -1)), TokenType.OPEN_CURLY_BRACE, TokenType.OPEN_CURLY_BRACE.getText()),
+                            program.getExpressions(),
+                            new IdentifierExpression(new Token(TokenType.CLOSE_CURLY_BRACE, new Location(fileNameWithExt, -1, -1)), TokenType.CLOSE_CURLY_BRACE, TokenType.CLOSE_CURLY_BRACE.getText())),
                     inline
             );
 
         } catch (IOException e) {
             errors.add(Error.raiseImportError(path, importPath.getToken()));
         }
-        return new BlockExpression(Collections.emptyList());
+        return new NoOpExpression();
     }
 
     private Expression parseMemberAccessorExpression() {
@@ -914,7 +917,7 @@ public class Parser {
     }
 
     private BlockExpression parseBlockExpression() {
-        matchToken(TokenType.OPEN_CURLY_BRACE);
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<Expression> expressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
@@ -922,9 +925,9 @@ public class Parser {
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
             expressions.add(parseExpression());
         }
-        matchToken(TokenType.CLOSE_CURLY_BRACE);
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
-        return new BlockExpression(expressions);
+        return new BlockExpression(openCurly, expressions, closeCurly);
     }
 
     private OpType parseOpType() {
