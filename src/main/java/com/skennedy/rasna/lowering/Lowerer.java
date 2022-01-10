@@ -234,6 +234,9 @@ public class Lowerer extends BoundProgramRewriter {
 
     private BoundExpression rewriteCondition(BoundExpression condition, BoundLabel endLabel) {
 
+        if (condition instanceof BoundConditionalGotoExpression) {
+            return condition;
+        }
         if (condition instanceof BoundBinaryExpression) {
 
             BoundBinaryExpression binaryExpression = (BoundBinaryExpression) condition;
@@ -263,10 +266,8 @@ public class Lowerer extends BoundProgramRewriter {
                 default:
                     return new BoundConditionalGotoExpression(endLabel, condition, true);
             }
-        } else if (condition instanceof BoundLiteralExpression || condition instanceof BoundVariableExpression) {
-            return new BoundConditionalGotoExpression(endLabel, condition, true);
         }
-        return condition;
+        return new BoundConditionalGotoExpression(endLabel, condition, true);
     }
 
     @Override

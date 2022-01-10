@@ -491,7 +491,7 @@ public abstract class BoundProgramRewriter {
             if ((boolean) condition.getConstValue()) {
                 return body;
             } else {
-                return boundIfExpression.getElseBody() != null ? boundIfExpression.getElseBody() : new BoundNoOpExpression();
+                return boundIfExpression.getElseBody() != null ? rewriteExpression(boundIfExpression.getElseBody()) : new BoundNoOpExpression();
             }
         }
 
