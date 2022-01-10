@@ -140,7 +140,7 @@ public class Parser {
     private Expression parseUnaryExpression() {
         OpType operator = parseOpType();
         Expression operand = parseExpression();
-        
+
         return new UnaryExpression(operator, operand);
     }
 
@@ -957,6 +957,8 @@ public class Parser {
                 return OpType.LOR;
             case AND_KEYWORD:
                 return OpType.LAND;
+            case XOR_KEYWORD:
+                return OpType.LXOR;
             case NOT_KEYWORD:
                 return OpType.NOT;
             default:

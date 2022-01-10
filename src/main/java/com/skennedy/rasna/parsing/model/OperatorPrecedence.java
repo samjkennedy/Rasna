@@ -28,6 +28,7 @@ public class OperatorPrecedence {
             case LTEQ:
                 return 3;
             case AND_KEYWORD:
+            case XOR_KEYWORD:
                 return 2;
             case OR_KEYWORD:
                 return 1;

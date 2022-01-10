@@ -50,6 +50,7 @@ public enum TokenType {
     OR_KEYWORD("or"),
     AND_KEYWORD("and"),
     NOT_KEYWORD("not"),
+    XOR_KEYWORD("xor"),
     IF_KEYWORD("if"),
     ELSE_KEYWORD("else"),
     WHILE_KEYWORD("while"),

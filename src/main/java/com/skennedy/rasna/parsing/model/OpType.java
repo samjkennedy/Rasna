@@ -11,11 +11,12 @@ public enum OpType {
     LOR("logical or"),
     LT("less than"),
     LTEQ("less than or equal"),
+    LXOR("Logical XOR"),
     MOD("modulo"),
     MUL("multiply"),
+    NEG("negation"),
     NEQ("not equals"),
     NOT("logical not"),
-    NEG("negation"),
     SUB("subtract");
 
     private final String name;

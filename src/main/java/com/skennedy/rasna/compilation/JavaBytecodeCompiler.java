@@ -95,6 +95,7 @@ import static org.objectweb.asm.Opcodes.IREM;
 import static org.objectweb.asm.Opcodes.IRETURN;
 import static org.objectweb.asm.Opcodes.ISTORE;
 import static org.objectweb.asm.Opcodes.ISUB;
+import static org.objectweb.asm.Opcodes.IXOR;
 import static org.objectweb.asm.Opcodes.NEWARRAY;
 import static org.objectweb.asm.Opcodes.RETURN;
 import static org.objectweb.asm.Opcodes.SIPUSH;
@@ -1219,6 +1220,12 @@ public class JavaBytecodeCompiler implements Compiler {
 
                 scope.popStack();
                 break;
+            case BOOLEAN_XOR:
+                methodVisitor.visitInsn(IXOR);
+                textifierVisitor.visitInsn(IXOR);
+
+                scope.popStack();
+                break;
             case LESS_THAN:
                 visitComparison(methodVisitor, IF_ICMPLT);
                 break;
@@ -1364,6 +1371,14 @@ public class JavaBytecodeCompiler implements Compiler {
                     visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    break;
+                case BOOLEAN_AND:
+//                    visit(binaryCondition.getLeft(), methodVisitor);
+//                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+//                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+//                    visit(binaryCondition.getRight(), methodVisitor);
+//                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+//                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
                     break;
                 default:
                     throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());

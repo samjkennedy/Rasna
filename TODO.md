@@ -5,7 +5,7 @@
 - Proper concatenation
 - do/while loops
 - `break` and `continue` operations
-- Logical or, and, xor, not
+- Logical xor
 - Comparison operations for non integer types
 - Nested accessors . and ::
 - Proper pattern matching
