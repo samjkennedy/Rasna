@@ -1345,6 +1345,8 @@ public class JavaBytecodeCompiler implements Compiler {
             }
             scope.popStack(); //Pop right
             scope.popStack(); //Pop left
+        } else if (condition instanceof BoundConditionalGotoExpression) {
+            visit(condition, methodVisitor);
         } else {
             //Compare true/false to 0
             visit(condition, methodVisitor);

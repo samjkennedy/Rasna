@@ -11,6 +11,7 @@
     <properties>
         <flags.version>0.1.0-SNAPSHOT</flags.version>
         <assertclauses.version>0.1.0</assertclauses.version>
+        <asm.version>9.2</asm.version>
     </properties>
 
     <dependencies>
@@ -67,19 +68,25 @@
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
-            <version>9.2</version>
+            <version>${asm.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.ow2.asm/asm-util -->
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-util</artifactId>
-            <version>9.2</version>
+            <version>${asm.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.ow2.asm/asm-analysis -->
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-analysis</artifactId>
-            <version>9.2</version>
+            <version>${asm.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.ow2.asm/asm-commons -->
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-commons</artifactId>
+            <version>${asm.version}</version>
         </dependency>
 
 

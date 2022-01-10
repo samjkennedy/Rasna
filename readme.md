@@ -1,13 +1,14 @@
 # ![](EtruscanR-04.svg) Rasna 
 
-Rasna is my attempt at making a working high-level programming language.
+Rasna is my attempt at making a working programming language.
 
 Rasna is planned to be:
 - [x] Compiled to Java Bytecode
+- [ ] Compiled to LLVM
 - [ ] Turing-complete
 - [x] Statically typed
-- [ ] Everything is an expression (everything can be assigned, see Features)
-- [ ] Type Oriented/Based in set theory (rather than classes there are Types that can be subsetted)
+- [ ] As safe at runtime as it can be
+- [x] Everything is an expression (everything can be assigned, see Features)
 - [ ] Self-hosted (Java is used only as an initial bootstrap, once the language is mature enough I hope to rewrite it in Rasna)
 
 ## Features

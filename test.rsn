@@ -1,0 +1,3 @@
+import inline "std/math.rsn"
+
+print(sin(pow(2, 2) as Real))
