@@ -9,7 +9,6 @@ import com.skennedy.rasna.exceptions.UndefinedVariableException;
 import com.skennedy.rasna.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.rasna.lexing.model.TokenType;
 import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
-import com.skennedy.rasna.lowering.BoundNoOpExpression;
 import com.skennedy.rasna.parsing.*;
 import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
@@ -77,7 +76,7 @@ public class Binder {
             case INCREMENT_EXPR:
                 return bindIncrementExpression((IncrementExpression) expression);
             case UNARY_EXPR:
-                throw new IllegalStateException("Unhandled expression type: " + expression.getExpressionType());
+                return bindUnaryExpression((UnaryExpression) expression);
             case VAR_DECLARATION_EXPR:
                 return bindVariableDeclaration((VariableDeclarationExpression) expression);
             case WHILE_EXPR:
@@ -138,14 +137,14 @@ public class Binder {
         if (type.isEmpty()) {
             //This should never happen
             errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
-            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+            return new BoundErrorExpression();
         }
 
         Optional<FunctionSymbol> constructor = currentScope.tryLookupFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
         if (constructor.isEmpty()) {
             //This should never happen
             errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
-            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+            return new BoundErrorExpression();
         }
 
         List<BoundExpression> members = new ArrayList<>();
@@ -157,7 +156,7 @@ public class Binder {
         if (constructor.get().getArguments().size() != structLiteralExpression.getMembers().size()) {
             //This could be a little misleading, need signature info in the functionsymbol
             errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
-            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+            return new BoundErrorExpression();
         }
 
 
@@ -174,7 +173,7 @@ public class Binder {
         if (constructor.get().getArguments().size() != members.size()) {
             //This could be a little misleading, need signature info in the functionsymbol
             errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
-            return new BoundNoOpExpression(); //TODO: BoundExceptionExpression
+            return new BoundErrorExpression();
         }
 
         return new BoundStructLiteralExpression(type.get(), members);
@@ -194,7 +193,7 @@ public class Binder {
         Optional<BoundScope> namespaceScope = currentScope.tryLookupNamespace((String) namespace.getValue());
         if (namespaceScope.isEmpty()) {
             errors.add(BindingError.raiseUnknownNamespace((String) namespace.getValue(), namespaceAccessorExpression.getSpan()));
-            throw new IllegalStateException("Unknown namespace: `" + namespace.getValue() + "`"); //TODO: Return a BoundExceptionExpression in future
+            return new BoundErrorExpression();
         }
         BoundScope previous = currentScope;
         currentScope = BoundScope.merge(previous, namespaceScope.get());
@@ -552,7 +551,6 @@ public class Binder {
         BoundExpression condition = bind(ifExpression.getCondition());
         if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
             errors.add(BindingError.raiseTypeMismatch(TypeSymbol.BOOL, condition.getType(), ifExpression.getCondition().getSpan()));
-            throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
         }
         BoundExpression body = bind(ifExpression.getBody());
 
@@ -561,6 +559,18 @@ public class Binder {
             elseBody = bind(ifExpression.getElseBody());
         }
         return new BoundIfExpression(condition, body, elseBody);
+    }
+
+    private BoundExpression bindUnaryExpression(UnaryExpression unaryExpression) {
+        BoundExpression operand = bind(unaryExpression.getOperand());
+
+        try {
+            BoundUnaryOperator operator = BoundUnaryOperator.bind(unaryExpression.getOperator(), operand.getType());
+            return new BoundUnaryExpression(operator, operand);
+        } catch (InvalidOperationException ioe) {
+            errors.add(BindingError.raiseInvalidOperationException(unaryExpression.getOperator(), operand.getType(), unaryExpression.getSpan()));
+            return new BoundUnaryExpression(BoundUnaryOperator.error(unaryExpression.getOperator(), operand.getType()), operand);
+        }
     }
 
     private BoundExpression bindBinaryExpression(BinaryExpression binaryExpression) {
@@ -572,7 +582,7 @@ public class Binder {
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {
             errors.add(BindingError.raiseInvalidOperationException(binaryExpression.getOperation(), left.getType(), right.getType(), binaryExpression.getSpan()));
-            return new BoundBinaryExpression(left, null, right);
+            return new BoundBinaryExpression(left, BoundBinaryOperator.error(binaryExpression.getOperation(), left.getType(), right.getType()), right);
         }
     }
 
@@ -820,8 +830,23 @@ public class Binder {
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
         if (scopedFunction.isEmpty()) {
             //TODO: Get arguments somehow
-            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), Collections.emptyList(), functionCallExpression.getSpan()));
-            return new BoundNoOpExpression(); //TODO: Add BoundExceptionExpression
+            List<BoundExpression> boundArguments = new ArrayList<>();
+            List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+            for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+                Expression functionCallExpressionArgument = functionCallExpressionArguments.get(i);
+                if (functionCallExpressionArgument.getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
+                    List<BoundExpression> boundMembers = new ArrayList<>();
+                    for (Expression member : ((StructLiteralExpression) functionCallExpressionArguments.get(i)).getMembers()) {
+                        boundMembers.add(bind(member));
+                    }
+                    boundArguments.add(new BoundStructLiteralExpression(TypeSymbol.ANY, boundMembers));
+                } else {
+                    BoundExpression boundArgument = bind(functionCallExpressionArgument);
+                    boundArguments.add(boundArgument);
+                }
+            }
+            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+            return new BoundErrorExpression();
         }
         FunctionSymbol function = scopedFunction.get();
 
@@ -848,7 +873,7 @@ public class Binder {
 
         if (function.getArguments().size() != functionCallExpression.getArguments().size()) {
             errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
-            return new BoundFunctionCallExpression(function, boundArguments); //TODO: Add BoundExceptionExpression
+            return new BoundFunctionCallExpression(function, boundArguments);
         }
 
         List<BoundFunctionArgumentExpression> arguments = function.getArguments();

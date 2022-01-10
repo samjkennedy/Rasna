@@ -72,6 +72,8 @@ public class Parser {
                 return matchToken(TokenType.TRUE_KEYWORD);
             case FALSE_KEYWORD:
                 return matchToken(TokenType.FALSE_KEYWORD);
+            case NOT_KEYWORD:
+                return parseUnaryExpression();
             case OPEN_CURLY_BRACE:
                 return parseBlockExpression();
             case OPEN_SQUARE_BRACE:
@@ -133,6 +135,13 @@ public class Parser {
                 matchToken(current().getTokenType());
                 return new BlockExpression(Collections.emptyList());
         }
+    }
+
+    private Expression parseUnaryExpression() {
+        OpType operator = parseOpType();
+        Expression operand = parseExpression();
+
+        return new UnaryExpression(operator, operand);
     }
 
     private Expression parseNamespaceAccessorExpression() {
@@ -930,7 +939,6 @@ public class Parser {
                 return OpType.MUL;
             case SLASH:
                 return OpType.DIV;
-            case PERCENT:
             case MOD_KEYWORD:
                 return OpType.MOD; //TODO: Should `mod` be the modulo operator?
             case EQUALS_EQUALS:
@@ -949,6 +957,10 @@ public class Parser {
                 return OpType.LOR;
             case AND_KEYWORD:
                 return OpType.LAND;
+            case XOR_KEYWORD:
+                return OpType.LXOR;
+            case NOT_KEYWORD:
+                return OpType.NOT;
             default:
                 throw new IllegalStateException("Unexpected value: " + token.getTokenType());
         }

@@ -3,6 +3,9 @@ package com.skennedy.rasna;
 import com.skennedy.assertclauses.Assert;
 import com.skennedy.flags.Flag;
 import com.skennedy.flags.Flags;
+import com.skennedy.rasna.compilation.CompileTarget;
+import com.skennedy.rasna.compilation.Compiler;
+import com.skennedy.rasna.compilation.CompilerFactory;
 import com.skennedy.rasna.compilation.JavaBytecodeCompiler;
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
@@ -31,7 +34,7 @@ import java.util.List;
 
 public class Rasna {
 
-    public static final String FILE_EXT = "ras";
+    public static final String FILE_EXT = "rsn";
 
     private static final Logger log = LogManager.getLogger(Rasna.class);
 
@@ -45,9 +48,12 @@ public class Rasna {
                 .withName("f")
                 .withDescription("The file to compile")
                 .build();
+        Flag<String> targetFlag = Flags.stringFlag()
+                .withName("t")
+                .withDefaultValue("jvm")
+                .withDescription("The target for the compiler, possible values: {jvm, llvm}")
+                .build();
         Flags.parse(args);
-
-        Math.log(1.0);
 
         Mode mode;
         if ("sim".equals(modeFlag.getValue())) {
@@ -61,6 +67,7 @@ public class Rasna {
             System.exit(1);
             return;
         }
+        CompileTarget compileTarget = CompileTarget.fromId(targetFlag.getValue());
 
         String fileNameWithExt = (String) Assert.that(fileFlag.getValue()).isNotBlank().get();
         String[] fileParts = fileNameWithExt.split("\\.");
@@ -85,6 +92,7 @@ public class Rasna {
                 System.err.println("Parsing failed with " + errorSize + (errorSize > 1 ? " errors:\n" : " error:\n"));
                 for (Error error : program.getErrors()) {
                     System.err.println(error.getMessage());
+                    //TODO: This breaks if the error is in an imported file, i.e. the error is not in `lines`
                     highlightError(error, lines);
                 }
                 return;
@@ -147,9 +155,9 @@ public class Rasna {
                     System.out.print(ConsoleColors.RESET);
                     break;
                 case COMPILATION:
-                    log.info("Compiling program {}", fileNameWithExt);
-                    JavaBytecodeCompiler javaBytecodeCompiler = new JavaBytecodeCompiler();
-                    javaBytecodeCompiler.compile(boundProgram, fileName);
+                    log.info("Compiling file {} for {}", fileNameWithExt, compileTarget.name());
+                    Compiler compiler = CompilerFactory.create(compileTarget);
+                    compiler.compile(boundProgram, fileName);
                     Instant end = Instant.now();
                     log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 
@@ -200,7 +208,7 @@ public class Rasna {
         char[] charArray = line.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             char c = charArray[i];
-            if (i < location.getColumn() || i > location.getColumn() + ((String)error.getToken().getValue()).length()) {
+            if (i < location.getColumn() || i > location.getColumn() + (String.valueOf(error.getToken().getValue())).length()-1) {
                 System.out.print(ConsoleColors.CYAN_BOLD);
             } else {
                 System.out.print(ConsoleColors.RED_BOLD);

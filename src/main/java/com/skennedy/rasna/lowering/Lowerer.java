@@ -196,37 +196,75 @@ public class Lowerer extends BoundProgramRewriter {
         BoundIfExpression rewrittenBoundIfExpression = (BoundIfExpression) expression;
 
         BoundLabel endLabel = blockEndLabel == null ? generateLabel() : blockEndLabel;
+        BoundLabel tmp = blockEndLabel;
         blockEndLabel = endLabel;
         BoundLabelExpression endLabelExpression = new BoundLabelExpression(endLabel);
 
+        BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), endLabel);
+
         if (rewrittenBoundIfExpression.getElseBody() == null) {
 
-            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(endLabel, rewrittenBoundIfExpression.getCondition(), true);
             BoundBlockExpression result = new BoundBlockExpression(
-                    gotoFalse,
+                    condition,
                     rewrittenBoundIfExpression.getBody(),
                     endLabelExpression
             );
-            return rewriteBlockExpression(result);
+            blockEndLabel = tmp;
+            return flatten(rewriteBlockExpression(result));
 
         } else {
 
             BoundLabel elseLabel = generateLabel();
 
-            BoundConditionalGotoExpression gotoFalse = new BoundConditionalGotoExpression(elseLabel, rewrittenBoundIfExpression.getCondition(), true);
             BoundGotoExpression gotoEndStatement = new BoundGotoExpression(endLabel);
             BoundLabelExpression elseLabelStatement = new BoundLabelExpression(elseLabel);
 
             BoundBlockExpression result = new BoundBlockExpression(
-                    gotoFalse,
+                    condition,
                     rewrittenBoundIfExpression.getBody(),
                     gotoEndStatement,
                     elseLabelStatement,
                     rewrittenBoundIfExpression.getElseBody(),
                     endLabelExpression
             );
+            blockEndLabel = tmp;
             return flatten(rewriteBlockExpression(result));
         }
+    }
+
+    private BoundExpression rewriteCondition(BoundExpression condition, BoundLabel endLabel) {
+
+        if (condition instanceof BoundBinaryExpression) {
+
+            BoundBinaryExpression binaryExpression = (BoundBinaryExpression) condition;
+            switch (binaryExpression.getOperator().getBoundOpType()) {
+
+                case BOOLEAN_OR: {
+                    BoundExpression left = rewriteCondition(binaryExpression.getLeft(), endLabel);
+                    BoundExpression right = rewriteCondition(binaryExpression.getRight(), endLabel);
+
+                    BoundLabel bodyStart = generateLabel();
+                    BoundLabelExpression bodyStartExpression = new BoundLabelExpression(bodyStart);
+
+                    BoundConditionalGotoExpression gotoBody = new BoundConditionalGotoExpression(bodyStart, left, false);
+                    BoundConditionalGotoExpression gotoEnd = new BoundConditionalGotoExpression(endLabel, right, true);
+
+                    return new BoundBlockExpression(gotoBody, gotoEnd, bodyStartExpression);
+                }
+                case BOOLEAN_AND: {
+                    BoundExpression left = binaryExpression.getLeft();
+                    BoundExpression right = binaryExpression.getRight();
+
+                    BoundConditionalGotoExpression gotoEndFirst = new BoundConditionalGotoExpression(endLabel, left, true);
+                    BoundConditionalGotoExpression gotoEndSecond = new BoundConditionalGotoExpression(endLabel, right, true);
+
+                    return new BoundBlockExpression(gotoEndFirst, gotoEndSecond);
+                }
+                default:
+                    return new BoundConditionalGotoExpression(endLabel, condition, true);
+            }
+        }
+        return new BoundConditionalGotoExpression(endLabel, condition, true);
     }
 
     @Override

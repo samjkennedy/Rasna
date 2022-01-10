@@ -1,0 +1,4 @@
+print(false xor false)
+print(true xor false)
+print(false xor true)
+print(true xor true)

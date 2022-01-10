@@ -1,7 +1,7 @@
-const INT_MAX: Int = 2147483647 //TODO: Java bytecode can't store this number, but can store 2^31 - 2
-const PI: Real = 3.14159265359 //TODO: the functions can't access this - make a `global` keyword or let them have it
-//
-//TODO: These two should be intrinsics on Real
+//const INT_MAX: Int = 2147483647 //TODO: Java bytecode can't store this number, but can store 2^31 - 2
+//const PI: Real = 3.14159265359 //TODO: the functions can't access this - make a `global` keyword or let them have it
+
+//TODO: These two should be intrinsic methods on Real
 fn getInt(r: Real): Real {
      return r as Int as Real
  }
@@ -12,17 +12,14 @@ fn getDec(r: Real): Real {
 
 fn pow(n: Int, p: Int | p >= 0): Int {
 
-    //This should be done with ifs but sequential ifs break things for some reason
-    match n {
-        0 or 1 -> return n,
-        else -> {
-            res: Int = n
-            for (i: Int = 0 to p - 1) {
-                res = res * n
-            }
-            return res
-        }
+    if (n == 0 or n == 1) {
+        return n
     }
+    res: Int = n
+    for (i: Int = 0 to p - 1) {
+        res = res * n
+    }
+    return res
 }
 
 //TODO: Need method overloading for stuff like this
@@ -50,7 +47,7 @@ fn rad2deg(rad: Real): Real {
 fn sin(x: Real): Real {
 
     const _PI: Real = 3.14159265359
-    precision: Int = 60
+    const precision: Int = 60
 
     sign: Int = -1
     x = x mod (2 * _PI)
@@ -62,7 +59,8 @@ fn sin(x: Real): Real {
         term = term * (x / (iter as Real))
         if (iter mod 4 == 1) {
             sum = sum + term
-        } else if (iter mod 4 == 3) {
+        }
+        if (iter mod 4 == 3) {
             sum = sum - term
         }
     }
@@ -77,17 +75,15 @@ fn cos(x: Real): Real {
 fn min(a: Int, b: Int): Int {
     if (a < b) {
         return a
-    } else {
-        return b
     }
+    return b
 }
 
 fn max(a: Int, b: Int): Int {
     if (a > b) {
         return a
-    } else {
-        return b
     }
+    return b
 }
 
 fn lerp(a: Real, b: Real, t: Real): Real {

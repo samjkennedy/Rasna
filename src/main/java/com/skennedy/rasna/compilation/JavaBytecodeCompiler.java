@@ -65,7 +65,6 @@ import static org.objectweb.asm.Opcodes.GOTO;
 import static org.objectweb.asm.Opcodes.I2D;
 import static org.objectweb.asm.Opcodes.IADD;
 import static org.objectweb.asm.Opcodes.IALOAD;
-import static org.objectweb.asm.Opcodes.IAND;
 import static org.objectweb.asm.Opcodes.IASTORE;
 import static org.objectweb.asm.Opcodes.ICONST_0;
 import static org.objectweb.asm.Opcodes.ICONST_1;
@@ -75,6 +74,9 @@ import static org.objectweb.asm.Opcodes.ICONST_4;
 import static org.objectweb.asm.Opcodes.ICONST_5;
 import static org.objectweb.asm.Opcodes.IDIV;
 import static org.objectweb.asm.Opcodes.IFEQ;
+import static org.objectweb.asm.Opcodes.IFGE;
+import static org.objectweb.asm.Opcodes.IFGT;
+import static org.objectweb.asm.Opcodes.IFLE;
 import static org.objectweb.asm.Opcodes.IFNE;
 import static org.objectweb.asm.Opcodes.IF_ICMPEQ;
 import static org.objectweb.asm.Opcodes.IF_ICMPGE;
@@ -84,15 +86,16 @@ import static org.objectweb.asm.Opcodes.IF_ICMPLT;
 import static org.objectweb.asm.Opcodes.IF_ICMPNE;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
+import static org.objectweb.asm.Opcodes.INEG;
 import static org.objectweb.asm.Opcodes.INSTANCEOF;
 import static org.objectweb.asm.Opcodes.INTEGER;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
-import static org.objectweb.asm.Opcodes.IOR;
 import static org.objectweb.asm.Opcodes.IREM;
 import static org.objectweb.asm.Opcodes.IRETURN;
 import static org.objectweb.asm.Opcodes.ISTORE;
 import static org.objectweb.asm.Opcodes.ISUB;
+import static org.objectweb.asm.Opcodes.IXOR;
 import static org.objectweb.asm.Opcodes.NEWARRAY;
 import static org.objectweb.asm.Opcodes.RETURN;
 import static org.objectweb.asm.Opcodes.SIPUSH;
@@ -271,6 +274,10 @@ public class JavaBytecodeCompiler implements Compiler {
             case BINARY_EXPRESSION:
 
                 visit((BoundBinaryExpression) expression, methodVisitor);
+                break;
+            case UNARY_EXPRESSION:
+
+                visit((BoundUnaryExpression) expression, methodVisitor);
                 break;
             case BLOCK:
 
@@ -1126,6 +1133,26 @@ public class JavaBytecodeCompiler implements Compiler {
         scope.popStack();
         scope.pushStack(TypeSymbol.INT);
     }
+    
+    private void visit(BoundUnaryExpression unaryExpression, MethodVisitor methodVisitor) {
+
+        visit(unaryExpression.getOperand(), methodVisitor);
+        scope.pushStack(TypeSymbol.BOOL);
+        
+        switch (unaryExpression.getOperator().getBoundOpType()) {
+
+            case NOT:
+                visitComparison(methodVisitor, IFEQ);
+                break;
+            case NEGATION:
+                methodVisitor.visitInsn(INEG);
+                textifierVisitor.visitInsn(INEG);
+                break;
+            case ERROR:
+            default:
+                throw new IllegalStateException("Unexpected unary operatpr: " + unaryExpression.getOperator().getBoundOpType());
+        }
+    }
 
     private void visit(BoundBinaryExpression binaryExpression, MethodVisitor methodVisitor) {
 
@@ -1193,6 +1220,12 @@ public class JavaBytecodeCompiler implements Compiler {
 
                 scope.popStack();
                 break;
+            case BOOLEAN_XOR:
+                methodVisitor.visitInsn(IXOR);
+                textifierVisitor.visitInsn(IXOR);
+
+                scope.popStack();
+                break;
             case LESS_THAN:
                 visitComparison(methodVisitor, IF_ICMPLT);
                 break;
@@ -1210,18 +1243,6 @@ public class JavaBytecodeCompiler implements Compiler {
                 break;
             case NOT_EQUALS:
                 visitComparison(methodVisitor, IF_ICMPNE);
-                break;
-            case BOOLEAN_OR:
-                methodVisitor.visitInsn(IOR);
-                textifierVisitor.visitInsn(IOR);
-
-                scope.popStack();
-                break;
-            case BOOLEAN_AND:
-                methodVisitor.visitInsn(IAND);
-                textifierVisitor.visitInsn(IAND);
-
-                scope.popStack();
                 break;
             default:
                 throw new IllegalStateException("Unhandled binary operation: " + binaryExpression.getOperator().getBoundOpType());
@@ -1306,38 +1327,66 @@ public class JavaBytecodeCompiler implements Compiler {
         if (condition instanceof BoundBinaryExpression) {
             BoundBinaryExpression binaryCondition = (BoundBinaryExpression) condition;
             BoundBinaryOperator operator = binaryCondition.getOperator();
-            visit(binaryCondition.getLeft(), methodVisitor);
-            visit(binaryCondition.getRight(), methodVisitor);
             switch (operator.getBoundOpType()) {
                 case GREATER_THAN:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
                     break;
                 case LESS_THAN:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
                     break;
                 case GREATER_THAN_OR_EQUAL:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
                     break;
                 case LESS_THAN_OR_EQUAL:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
                     break;
                 case EQUALS:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
                     break;
                 case NOT_EQUALS:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    visit(binaryCondition.getRight(), methodVisitor);
                     methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
                     textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
+                    break;
+                case BOOLEAN_OR:
+                    visit(binaryCondition.getLeft(), methodVisitor);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    visit(binaryCondition.getRight(), methodVisitor);
+                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                    break;
+                case BOOLEAN_AND:
+//                    visit(binaryCondition.getLeft(), methodVisitor);
+//                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+//                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+//                    visit(binaryCondition.getRight(), methodVisitor);
+//                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+//                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
                     break;
                 default:
                     throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
             }
             scope.popStack(); //Pop right
             scope.popStack(); //Pop left
+        } else if (condition instanceof BoundConditionalGotoExpression) {
+            visit(condition, methodVisitor);
         } else {
             //Compare true/false to 0
             visit(condition, methodVisitor);

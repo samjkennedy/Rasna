@@ -1,5 +1,6 @@
 package com.skennedy.rasna.lowering;
 
+import com.skennedy.rasna.parsing.UnaryExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.*;
 
@@ -81,8 +82,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteAssignmentExpression((BoundAssignmentExpression) expression);
             case BINARY_EXPRESSION:
                 return rewriteBinaryExpression((BoundBinaryExpression) expression);
-            case BINARY_OPERATOR:
-                throw new IllegalStateException("Unhandled bound expression type: " + expression.getBoundExpressionType());
+            case UNARY_EXPRESSION:
+                return rewriteUnaryExpression((BoundUnaryExpression) expression);
             case BLOCK:
                 return rewriteBlockExpression((BoundBlockExpression) expression);
             case IF:
@@ -448,6 +449,16 @@ public abstract class BoundProgramRewriter {
         return new BoundAssignmentExpression(assignmentExpression.getVariable(), assignmentExpression.getGuard(), assignmentExpression.getExpression());
     }
 
+    protected BoundExpression rewriteUnaryExpression(BoundUnaryExpression unaryExpression) {
+
+        BoundExpression operand = rewriteExpression(unaryExpression.getOperand());
+
+        if (operand == unaryExpression.getOperand()) {
+            return unaryExpression;
+        }
+        return new BoundUnaryExpression(unaryExpression.getOperator(), operand);
+    }
+
     protected BoundExpression rewriteBinaryExpression(BoundBinaryExpression boundBinaryExpression) {
 
         BoundExpression left = rewriteExpression(boundBinaryExpression.getLeft());
@@ -502,7 +513,9 @@ public abstract class BoundProgramRewriter {
 //            }
 //        }
 
-        if (condition == boundIfExpression.getCondition() && body == boundIfExpression.getBody() && elseBody == boundIfExpression.getElseBody()) {
+        if (condition == boundIfExpression.getCondition()
+                && body == boundIfExpression.getBody()
+                && elseBody == boundIfExpression.getElseBody()) {
             return boundIfExpression;
         }
 

@@ -17,6 +17,14 @@ public class UnaryExpression extends Expression {
         this.operand = operand;
     }
 
+    public OpType getOperator() {
+        return operator;
+    }
+
+    public Expression getOperand() {
+        return operand;
+    }
+
     @Override
     public ExpressionType getExpressionType() {
         return ExpressionType.UNARY_EXPR;
