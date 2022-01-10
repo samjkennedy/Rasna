@@ -19,6 +19,7 @@ import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
 import com.skennedy.rasna.simulation.Simulator;
 import com.skennedy.rasna.typebinding.Binder;
+import com.skennedy.rasna.typebinding.BindingWarning;
 import com.skennedy.rasna.typebinding.BoundProgram;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -101,15 +102,24 @@ public class Rasna {
             Binder binder = new Binder();
             BoundProgram boundProgram = binder.bind(program);
 
+            if (boundProgram.hasWarnings()) {
+                int warningSize = boundProgram.getWarnings().size();
+                System.err.println("Compilation completed with " + warningSize + (warningSize > 1 ? " warnings:\n" : " warning:\n"));
+                for (BindingWarning warning : boundProgram.getWarnings()) {
+                    highlightBindingWarning(warning, lines);
+                    try {
+                        Thread.sleep(50); //For some reason without this the printing goes out of order...
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
             if (boundProgram.hasErrors()) {
                 int errorSize = boundProgram.getErrors().size();
                 System.err.println("Compilation failed with " + errorSize + (errorSize > 1 ? " errors:\n" : " error:\n"));
                 for (BindingError error : boundProgram.getErrors()) {
-                    if (error.getSpan().getStart() == error.getSpan().getEnd()) {
-                        System.err.println(error.getMessage());
-                    } else {
-                        System.err.println(error.getMessage());
-                    }
+                    System.err.println(error.getMessage());
                     highlightBindingError(error, lines);
                     try {
                         Thread.sleep(50); //For some reason without this the printing goes out of order...
@@ -229,8 +239,21 @@ public class Rasna {
         System.out.println();
     }
 
+    private static void highlightBindingWarning(BindingWarning warning, List<String> lines) {
+
+        System.err.print(ConsoleColors.YELLOW_BOLD);
+        System.err.println(warning.getMessage());
+        highlightMessage(lines, warning.getSpan(), ConsoleColors.YELLOW_BOLD);
+    }
+
     private static void highlightBindingError(BindingError error, List<String> lines) {
-        TextSpan span = error.getSpan();
+
+        System.err.print(ConsoleColors.RED_BOLD);
+        System.err.println(error.getMessage());
+        highlightMessage(lines, error.getSpan(), ConsoleColors.RED_BOLD);
+    }
+
+    private static void highlightMessage(List<String> lines, TextSpan span, String color) {
         int row = span.getStart().getRow();
         String line = lines.get(row);
 
@@ -250,14 +273,14 @@ public class Rasna {
             if (i < span.getStart().getColumn() || i > span.getEnd().getColumn()) {
                 System.out.print(ConsoleColors.CYAN_BOLD);
             } else {
-                System.out.print(ConsoleColors.RED_BOLD);
+                System.out.print(color);
             }
             System.out.print(c);
             System.out.print(ConsoleColors.RESET);
         }
         System.out.println();
 
-        if (row < lines.size()-1) {
+        if (row < lines.size() - 1) {
             System.out.print(row + 1 + ": ");
             System.out.print(ConsoleColors.CYAN_BOLD);
             System.out.print(lines.get(row + 1));

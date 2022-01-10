@@ -1,6 +1,7 @@
 package com.skennedy.rasna.diagnostics;
 
 import com.skennedy.rasna.lexing.model.Location;
+import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.BoundExpression;
 import com.skennedy.rasna.typebinding.TypeSymbol;
@@ -90,6 +91,11 @@ public class BindingError {
     public static BindingError raiseInvalidOperationException(OpType operator, TypeSymbol operandType, TextSpan span) {
 
         return new BindingError("Operation `" + operator.getName() + "` is not defined for type `" + operandType + "`:", span);
+    }
+
+    public static BindingError raiseNonConstAssignmentError(IdentifierExpression identifier, TextSpan span) {
+
+        return new BindingError("Cannot assign non constant value to constant `" + identifier + "`:", span);
     }
 
     public String getMessage() {

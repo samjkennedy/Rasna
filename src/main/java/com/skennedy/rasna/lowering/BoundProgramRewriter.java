@@ -1,6 +1,5 @@
 package com.skennedy.rasna.lowering;
 
-import com.skennedy.rasna.parsing.UnaryExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.*;
 
@@ -32,7 +31,7 @@ public abstract class BoundProgramRewriter {
 
         BoundBlockExpression nestedProgram = new BoundBlockExpression(rewrittenExpressions);
 
-        return new BoundProgram(flatten(nestedProgram).getExpressions(), program.getErrors());
+        return new BoundProgram(flatten(nestedProgram).getExpressions(), program.getErrors(), program.getWarnings());
     }
 
 
@@ -464,12 +463,6 @@ public abstract class BoundProgramRewriter {
         BoundExpression left = rewriteExpression(boundBinaryExpression.getLeft());
         BoundExpression right = rewriteExpression(boundBinaryExpression.getRight());
 
-        //if both sides are constant, can do constant folding
-//        if (left instanceof BoundLiteralExpression && right instanceof BoundLiteralExpression) {
-//
-//            return new BoundLiteralExpression(calculateConstant(boundBinaryExpression));
-//        }
-
         if (left == boundBinaryExpression.getLeft() && right == boundBinaryExpression.getRight()) {
             return boundBinaryExpression;
         }
@@ -494,6 +487,13 @@ public abstract class BoundProgramRewriter {
         BoundExpression condition = rewriteExpression(boundIfExpression.getCondition());
         BoundExpression body = rewriteExpression(boundIfExpression.getBody());
 
+        if (condition.isConstExpression()) {
+            if ((boolean) condition.getConstValue()) {
+                return body;
+            } else {
+                return boundIfExpression.getElseBody() != null ? rewriteExpression(boundIfExpression.getElseBody()) : new BoundNoOpExpression();
+            }
+        }
 
         BoundExpression elseBody = null;
         if (boundIfExpression.getElseBody() != null) {
@@ -610,7 +610,7 @@ public abstract class BoundProgramRewriter {
         if (initialiser instanceof BoundBlockExpression) {
             return rewriteBlockInitialiser(boundVariableDeclarationExpression, (BoundBlockExpression) initialiser);
         }
-        return boundVariableDeclarationExpression;
+        return new BoundVariableDeclarationExpression(boundVariableDeclarationExpression.getVariable(), guard, initialiser, boundVariableDeclarationExpression.isReadOnly());
     }
 
     private BoundExpression rewriteBlockInitialiser(BoundVariableDeclarationExpression boundVariableDeclarationExpression, BoundBlockExpression initialiser) {

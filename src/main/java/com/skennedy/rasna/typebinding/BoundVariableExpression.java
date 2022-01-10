@@ -27,6 +27,11 @@ public class BoundVariableExpression implements BoundExpression {
         return Collections.emptyIterator();
     }
 
+    @Override
+    public boolean isConstExpression() {
+        return false;
+    }
+
     public VariableSymbol getVariable() {
         return variable;
     }

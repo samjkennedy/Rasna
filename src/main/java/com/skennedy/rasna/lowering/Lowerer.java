@@ -189,7 +189,7 @@ public class Lowerer extends BoundProgramRewriter {
     protected BoundExpression rewriteIfExpression(BoundIfExpression boundIfExpression) {
         BoundExpression expression = super.rewriteIfExpression(boundIfExpression);
 
-        if (expression instanceof BoundNoOpExpression) {
+        if (!(expression instanceof BoundIfExpression)) {
             return expression;
         }
 
@@ -209,7 +209,6 @@ public class Lowerer extends BoundProgramRewriter {
                     rewrittenBoundIfExpression.getBody(),
                     endLabelExpression
             );
-            blockEndLabel = tmp;
             return flatten(rewriteBlockExpression(result));
 
         } else {
@@ -229,13 +228,15 @@ public class Lowerer extends BoundProgramRewriter {
                     rewrittenBoundIfExpression.getElseBody(),
                     endLabelExpression
             );
-            blockEndLabel = tmp;
             return flatten(rewriteBlockExpression(result));
         }
     }
 
     private BoundExpression rewriteCondition(BoundExpression condition, BoundLabel endLabel) {
 
+        if (condition instanceof BoundConditionalGotoExpression) {
+            return condition;
+        }
         if (condition instanceof BoundBinaryExpression) {
 
             BoundBinaryExpression binaryExpression = (BoundBinaryExpression) condition;
