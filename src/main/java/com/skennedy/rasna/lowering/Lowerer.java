@@ -200,9 +200,9 @@ public class Lowerer extends BoundProgramRewriter {
         blockEndLabel = endLabel;
         BoundLabelExpression endLabelExpression = new BoundLabelExpression(endLabel);
 
-        BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), endLabel);
 
         if (rewrittenBoundIfExpression.getElseBody() == null) {
+            BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), endLabel);
 
             BoundBlockExpression result = new BoundBlockExpression(
                     condition,
@@ -218,6 +218,8 @@ public class Lowerer extends BoundProgramRewriter {
 
             BoundGotoExpression gotoEndStatement = new BoundGotoExpression(endLabel);
             BoundLabelExpression elseLabelStatement = new BoundLabelExpression(elseLabel);
+
+            BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), elseLabel);
 
             BoundBlockExpression result = new BoundBlockExpression(
                     condition,

@@ -65,6 +65,7 @@ import static org.objectweb.asm.Opcodes.GOTO;
 import static org.objectweb.asm.Opcodes.I2D;
 import static org.objectweb.asm.Opcodes.IADD;
 import static org.objectweb.asm.Opcodes.IALOAD;
+import static org.objectweb.asm.Opcodes.IAND;
 import static org.objectweb.asm.Opcodes.IASTORE;
 import static org.objectweb.asm.Opcodes.ICONST_0;
 import static org.objectweb.asm.Opcodes.ICONST_1;
@@ -91,6 +92,7 @@ import static org.objectweb.asm.Opcodes.INSTANCEOF;
 import static org.objectweb.asm.Opcodes.INTEGER;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
 import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
+import static org.objectweb.asm.Opcodes.IOR;
 import static org.objectweb.asm.Opcodes.IREM;
 import static org.objectweb.asm.Opcodes.IRETURN;
 import static org.objectweb.asm.Opcodes.ISTORE;
@@ -1223,6 +1225,18 @@ public class JavaBytecodeCompiler implements Compiler {
             case BOOLEAN_XOR:
                 methodVisitor.visitInsn(IXOR);
                 textifierVisitor.visitInsn(IXOR);
+
+                scope.popStack();
+                break;
+            case BOOLEAN_OR:
+                methodVisitor.visitInsn(IOR);
+                textifierVisitor.visitInsn(IOR);
+
+                scope.popStack();
+                break;
+            case BOOLEAN_AND:
+                methodVisitor.visitInsn(IAND);
+                textifierVisitor.visitInsn(IAND);
 
                 scope.popStack();
                 break;
