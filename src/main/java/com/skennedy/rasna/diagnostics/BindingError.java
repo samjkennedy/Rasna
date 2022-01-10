@@ -87,6 +87,11 @@ public class BindingError {
         return new BindingError(message + ":", span);
     }
 
+    public static BindingError raiseInvalidOperationException(OpType operator, TypeSymbol operandType, TextSpan span) {
+
+        return new BindingError("Operation `" + operator.getName() + "` is not defined for type `" + operandType + "`:", span);
+    }
+
     public String getMessage() {
         return message;
     }

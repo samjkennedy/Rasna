@@ -86,6 +86,7 @@ import static org.objectweb.asm.Opcodes.IF_ICMPLT;
 import static org.objectweb.asm.Opcodes.IF_ICMPNE;
 import static org.objectweb.asm.Opcodes.ILOAD;
 import static org.objectweb.asm.Opcodes.IMUL;
+import static org.objectweb.asm.Opcodes.INEG;
 import static org.objectweb.asm.Opcodes.INSTANCEOF;
 import static org.objectweb.asm.Opcodes.INTEGER;
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
@@ -272,6 +273,10 @@ public class JavaBytecodeCompiler implements Compiler {
             case BINARY_EXPRESSION:
 
                 visit((BoundBinaryExpression) expression, methodVisitor);
+                break;
+            case UNARY_EXPRESSION:
+
+                visit((BoundUnaryExpression) expression, methodVisitor);
                 break;
             case BLOCK:
 
@@ -1126,6 +1131,26 @@ public class JavaBytecodeCompiler implements Compiler {
 
         scope.popStack();
         scope.pushStack(TypeSymbol.INT);
+    }
+    
+    private void visit(BoundUnaryExpression unaryExpression, MethodVisitor methodVisitor) {
+
+        visit(unaryExpression.getOperand(), methodVisitor);
+        scope.pushStack(TypeSymbol.BOOL);
+        
+        switch (unaryExpression.getOperator().getBoundOpType()) {
+
+            case NOT:
+                visitComparison(methodVisitor, IFEQ);
+                break;
+            case NEGATION:
+                methodVisitor.visitInsn(INEG);
+                textifierVisitor.visitInsn(INEG);
+                break;
+            case ERROR:
+            default:
+                throw new IllegalStateException("Unexpected unary operatpr: " + unaryExpression.getOperator().getBoundOpType());
+        }
     }
 
     private void visit(BoundBinaryExpression binaryExpression, MethodVisitor methodVisitor) {

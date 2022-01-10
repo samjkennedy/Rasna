@@ -2,19 +2,21 @@ package com.skennedy.rasna.parsing.model;
 
 public enum OpType {
     ADD("add"),
-    SUB("subtract"),
-    MUL("multiply"),
     DIV("divide"),
-    MOD("modulo"),
-    INC("increment"),
     EQ("equals"),
-    NEQ("not equals"),
     GT("greater than"),
-    LT("less than"),
     GTEQ("greater than or equal"),
-    LTEQ("less than or equal"),
+    INC("increment"),
     LAND("logical and"),
-    LOR("logical or");
+    LOR("logical or"),
+    LT("less than"),
+    LTEQ("less than or equal"),
+    MOD("modulo"),
+    MUL("multiply"),
+    NEQ("not equals"),
+    NOT("logical not"),
+    NEG("negation"),
+    SUB("subtract");
 
     private final String name;
 

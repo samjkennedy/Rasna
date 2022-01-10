@@ -76,7 +76,7 @@ public class Binder {
             case INCREMENT_EXPR:
                 return bindIncrementExpression((IncrementExpression) expression);
             case UNARY_EXPR:
-                throw new IllegalStateException("Unhandled expression type: " + expression.getExpressionType());
+                return bindUnaryExpression((UnaryExpression) expression);
             case VAR_DECLARATION_EXPR:
                 return bindVariableDeclaration((VariableDeclarationExpression) expression);
             case WHILE_EXPR:
@@ -559,6 +559,18 @@ public class Binder {
             elseBody = bind(ifExpression.getElseBody());
         }
         return new BoundIfExpression(condition, body, elseBody);
+    }
+
+    private BoundExpression bindUnaryExpression(UnaryExpression unaryExpression) {
+        BoundExpression operand = bind(unaryExpression.getOperand());
+
+        try {
+            BoundUnaryOperator operator = BoundUnaryOperator.bind(unaryExpression.getOperator(), operand.getType());
+            return new BoundUnaryExpression(operator, operand);
+        } catch (InvalidOperationException ioe) {
+            errors.add(BindingError.raiseInvalidOperationException(unaryExpression.getOperator(), operand.getType(), unaryExpression.getSpan()));
+            return new BoundUnaryExpression(BoundUnaryOperator.error(unaryExpression.getOperator(), operand.getType()), operand);
+        }
     }
 
     private BoundExpression bindBinaryExpression(BinaryExpression binaryExpression) {

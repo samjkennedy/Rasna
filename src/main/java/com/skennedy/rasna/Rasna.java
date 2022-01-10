@@ -208,7 +208,7 @@ public class Rasna {
         char[] charArray = line.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             char c = charArray[i];
-            if (i < location.getColumn() || i > location.getColumn() + ((String)error.getToken().getValue()).length()) {
+            if (i < location.getColumn() || i > location.getColumn() + (String.valueOf(error.getToken().getValue())).length()-1) {
                 System.out.print(ConsoleColors.CYAN_BOLD);
             } else {
                 System.out.print(ConsoleColors.RED_BOLD);
