@@ -28,3 +28,9 @@ while (i < 10) {
     }
     i = i + 1
 }
+
+r: Real = 0.
+while (r <= 10.) {
+    print(r)
+    r = r + 0.5
+}
