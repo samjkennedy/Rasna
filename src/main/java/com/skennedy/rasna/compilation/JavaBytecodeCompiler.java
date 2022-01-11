@@ -49,6 +49,8 @@ import static org.objectweb.asm.Opcodes.D2I;
 import static org.objectweb.asm.Opcodes.DADD;
 import static org.objectweb.asm.Opcodes.DALOAD;
 import static org.objectweb.asm.Opcodes.DASTORE;
+import static org.objectweb.asm.Opcodes.DCMPG;
+import static org.objectweb.asm.Opcodes.DCMPL;
 import static org.objectweb.asm.Opcodes.DCONST_0;
 import static org.objectweb.asm.Opcodes.DCONST_1;
 import static org.objectweb.asm.Opcodes.DDIV;
@@ -76,6 +78,7 @@ import static org.objectweb.asm.Opcodes.ICONST_5;
 import static org.objectweb.asm.Opcodes.IDIV;
 import static org.objectweb.asm.Opcodes.IFEQ;
 import static org.objectweb.asm.Opcodes.IFGE;
+import static org.objectweb.asm.Opcodes.IFLT;
 import static org.objectweb.asm.Opcodes.IFGT;
 import static org.objectweb.asm.Opcodes.IFLE;
 import static org.objectweb.asm.Opcodes.IFNE;
@@ -1135,12 +1138,12 @@ public class JavaBytecodeCompiler implements Compiler {
         scope.popStack();
         scope.pushStack(TypeSymbol.INT);
     }
-    
+
     private void visit(BoundUnaryExpression unaryExpression, MethodVisitor methodVisitor) {
 
         visit(unaryExpression.getOperand(), methodVisitor);
         scope.pushStack(TypeSymbol.BOOL);
-        
+
         switch (unaryExpression.getOperator().getBoundOpType()) {
 
             case NOT:
@@ -1341,61 +1344,109 @@ public class JavaBytecodeCompiler implements Compiler {
         if (condition instanceof BoundBinaryExpression) {
             BoundBinaryExpression binaryCondition = (BoundBinaryExpression) condition;
             BoundBinaryOperator operator = binaryCondition.getOperator();
-            switch (operator.getBoundOpType()) {
-                case GREATER_THAN:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
-                    break;
-                case LESS_THAN:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
-                    break;
-                case GREATER_THAN_OR_EQUAL:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
-                    break;
-                case LESS_THAN_OR_EQUAL:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
-                    break;
-                case EQUALS:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
-                    break;
-                case NOT_EQUALS:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
-                    break;
-                case BOOLEAN_OR:
-                    visit(binaryCondition.getLeft(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
-                    visit(binaryCondition.getRight(), methodVisitor);
-                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
-                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
-                    break;
-                case BOOLEAN_AND:
+
+            if (binaryCondition.getLeft().getType() == TypeSymbol.REAL && binaryCondition.getRight().getType() == TypeSymbol.REAL) {
+                visit(binaryCondition.getLeft(), methodVisitor);
+                visit(binaryCondition.getRight(), methodVisitor);
+
+                switch (operator.getBoundOpType()) {
+                    case GREATER_THAN:
+                        methodVisitor.visitInsn(DCMPG);
+                        textifierVisitor.visitInsn(DCMPG);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                        break;
+                    case LESS_THAN:
+                        methodVisitor.visitInsn(DCMPL);
+                        textifierVisitor.visitInsn(DCMPL);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGE : IFLT, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGE : IFLT, label);
+                        break;
+                    case GREATER_THAN_OR_EQUAL:
+                        methodVisitor.visitInsn(DCMPG);
+                        textifierVisitor.visitInsn(DCMPG);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLT : IFGE, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLT : IFGE, label);
+                        break;
+                    case LESS_THAN_OR_EQUAL:
+                        methodVisitor.visitInsn(DCMPL);
+                        textifierVisitor.visitInsn(DCMPL);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLE, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFGT : IFLE, label);
+                        break;
+                    case EQUALS:
+                        methodVisitor.visitInsn(DCMPL);
+                        textifierVisitor.visitInsn(DCMPL);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFNE : IFEQ, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFNE : IFEQ, label);
+                        break;
+                    case NOT_EQUALS:
+                        methodVisitor.visitInsn(DCMPL);
+                        textifierVisitor.visitInsn(DCMPL);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFEQ : IFNE, label);
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Operator `" + operator.getBoundOpType() + "` is not yet implemented for `Real` type");
+                }
+            } else {
+
+                switch (operator.getBoundOpType()) {
+                    case GREATER_THAN:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLE : IF_ICMPGT, label);
+                        break;
+                    case LESS_THAN:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGE : IF_ICMPLT, label);
+                        break;
+                    case GREATER_THAN_OR_EQUAL:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPLT : IF_ICMPGE, label);
+                        break;
+                    case LESS_THAN_OR_EQUAL:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPGT : IF_ICMPLE, label);
+                        break;
+                    case EQUALS:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPNE : IF_ICMPEQ, label);
+                        break;
+                    case NOT_EQUALS:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IF_ICMPEQ : IF_ICMPNE, label);
+                        break;
+                    case BOOLEAN_OR:
+                        visit(binaryCondition.getLeft(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                        visit(binaryCondition.getRight(), methodVisitor);
+                        methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                        textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
+                        break;
+                    case BOOLEAN_AND:
 //                    visit(binaryCondition.getLeft(), methodVisitor);
 //                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
 //                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
 //                    visit(binaryCondition.getRight(), methodVisitor);
 //                    methodVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
 //                    textifierVisitor.visitJumpInsn(conditionalGotoExpression.jumpIfFalse() ? IFLE : IFGT, label);
-                    break;
-                default:
-                    throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
+                        break;
+                    default:
+                        throw new IllegalStateException("Unsupported binary condition op type: " + operator.getBoundOpType());
+                }
             }
             scope.popStack(); //Pop right
             scope.popStack(); //Pop left

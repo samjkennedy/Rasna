@@ -1,5 +1,0 @@
-if (3 < 34.5) {
-    print("Working!")
-} else {
-    print("Not working!")
-}
