@@ -711,7 +711,7 @@ public class Binder {
         }
 
         if (!variable.getType().isAssignableFrom(initialiser.getType())) {
-            throw new TypeMismatchException(variable.getType(), initialiser.getType());
+            errors.add(BindingError.raiseTypeMismatch(variable.getType(), initialiser.getType(), assignmentExpression.getAssignment().getSpan()));
         }
 
         return new BoundAssignmentExpression(variable, variable.getGuard(), initialiser);

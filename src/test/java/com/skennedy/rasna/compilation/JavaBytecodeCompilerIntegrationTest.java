@@ -2,6 +2,7 @@ package com.skennedy.rasna.compilation;
 
 import com.skennedy.rasna.Rasna;
 import com.skennedy.rasna.diagnostics.BindingError;
+import com.skennedy.rasna.diagnostics.TextSpan;
 import com.skennedy.rasna.lowering.Lowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
@@ -18,6 +19,8 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,7 +56,7 @@ class JavaBytecodeCompilerIntegrationTest {
 
         if (boundProgram.hasErrors()) {
             for (BindingError error : boundProgram.getErrors()) {
-                System.out.println(error.getMessage());
+                highlightBindingError(error, code.lines().collect(Collectors.toList()));
             }
         } else {
 
@@ -88,6 +91,41 @@ class JavaBytecodeCompilerIntegrationTest {
             File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
             assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
         }
+    }
+
+    private static void highlightBindingError(BindingError error, List<String> lines) {
+
+        System.out.println(error.getMessage());
+        highlightMessage(lines, error.getSpan());
+    }
+
+    private static void highlightMessage(List<String> lines, TextSpan span) {
+        int row = span.getStart().getRow();
+        String line = lines.get(row);
+
+        if (row > 0) {
+            System.out.print(row - 1 + ": ");
+            System.out.print(lines.get(row - 1));
+            System.out.println();
+        }
+        System.out.print(row + ": ");
+
+        char[] charArray = line.toCharArray();
+        for (int i = 0; i < charArray.length; i++) {
+            char c = charArray[i];
+            if (i < span.getStart().getColumn() || i > span.getEnd().getColumn()) {
+            } else {
+            }
+            System.out.print(c);
+        }
+        System.out.println();
+
+        if (row < lines.size() - 1) {
+            System.out.print(row + 1 + ": ");
+            System.out.print(lines.get(row + 1));
+            System.out.println();
+        }
+        System.out.println();
     }
 
 

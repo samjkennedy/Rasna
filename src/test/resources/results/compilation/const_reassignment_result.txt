@@ -1,0 +1,10 @@
+Value `i: Int` is constant and cannot be reassigned:
+1: 
+2: i = 2
+3: 
+
+Value `j: Int` is constant and cannot be reassigned:
+4: for (j: Int = 0 to 10) {
+5:     j = 2
+6: }
+
