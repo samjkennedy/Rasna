@@ -1,15 +1,5 @@
-fn multiReturn(a: Int): Tuple {
-    match a {
-        1    -> return ("Hello", true),
-        2    -> {
-            print("2")
-            return ("Goodbye", 6)
-        },
-        3 -> return (1,),
-        else -> return ("World", false, 1)
-    }
-}
-
-for (v: Any in multiReturn(2)) {
-    print(v)
+if (3 < 34.5) {
+    print("Working!")
+} else {
+    print("Not working!")
 }
