@@ -107,9 +107,7 @@ class JavaBytecodeCompilerIntegrationTest {
         }
         System.out.print(row + ": ");
 
-        char[] charArray = line.toCharArray();
-        for (int i = 0; i < charArray.length; i++) {
-            char c = charArray[i];
+        for (char c : line.toCharArray()) {
             System.out.print(c);
         }
         System.out.println();

@@ -585,15 +585,21 @@ public class Binder {
         try {
             BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
 
-            if (left.isConstExpression() && left.getType() == TypeSymbol.INT
-                    && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
 
-                return calculateConstantExpression(left, operator, right);
-            }
-            if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL
-                    && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
 
-                return calculateConstantExpression(left, operator, right);
+                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+
+                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+
+                return calculateConstantExpression(Integer.valueOf((int)left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+
+                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int)right.getConstValue()).doubleValue());
             }
 
             return new BoundBinaryExpression(left, operator, right);
@@ -603,40 +609,82 @@ public class Binder {
         }
     }
 
-    private BoundExpression calculateConstantExpression(BoundExpression left, BoundBinaryOperator operator, BoundExpression right) {
+    private BoundExpression calculateConstantExpression(double left, BoundBinaryOperator operator, double right) {
+
         switch (operator.getBoundOpType()) {
             case ADDITION:
-                return new BoundLiteralExpression((int) left.getConstValue() + (int) right.getConstValue());
+                return new BoundLiteralExpression(left + right);
             case SUBTRACTION:
-                return new BoundLiteralExpression((int) left.getConstValue() - (int) right.getConstValue());
+                return new BoundLiteralExpression(left - right);
             case MULTIPLICATION:
-                return new BoundLiteralExpression((int) left.getConstValue() * (int) right.getConstValue());
+                return new BoundLiteralExpression(left * right);
             case DIVISION:
-                return new BoundLiteralExpression((int) left.getConstValue() / (int) right.getConstValue());
+                return new BoundLiteralExpression(left / right);
             case REMAINDER:
-                return new BoundLiteralExpression((int) left.getConstValue() % (int) right.getConstValue());
+                return new BoundLiteralExpression(left % right);
             case GREATER_THAN:
-                return new BoundLiteralExpression((int) left.getConstValue() > (int) right.getConstValue());
+                return new BoundLiteralExpression(left > right);
             case LESS_THAN:
-                return new BoundLiteralExpression((int) left.getConstValue() < (int) right.getConstValue());
+                return new BoundLiteralExpression(left < right);
             case GREATER_THAN_OR_EQUAL:
-                return new BoundLiteralExpression((int) left.getConstValue() >= (int) right.getConstValue());
+                return new BoundLiteralExpression(left >= right);
             case LESS_THAN_OR_EQUAL:
-                return new BoundLiteralExpression((int) left.getConstValue() <= (int) right.getConstValue());
+                return new BoundLiteralExpression(left <= right);
             case EQUALS:
-                return new BoundLiteralExpression((int) left.getConstValue() == (int) right.getConstValue());
+                return new BoundLiteralExpression(left == right);
             case NOT_EQUALS:
-                return new BoundLiteralExpression((int) left.getConstValue() != (int) right.getConstValue());
-            case BOOLEAN_OR:
-                return new BoundLiteralExpression((boolean) left.getConstValue() || (boolean) right.getConstValue());
-            case BOOLEAN_AND:
-                return new BoundLiteralExpression((boolean) left.getConstValue() && (boolean) right.getConstValue());
-            case BOOLEAN_XOR:
-                return new BoundLiteralExpression((boolean) left.getConstValue() ^ (boolean) right.getConstValue());
+                return new BoundLiteralExpression(left != right);
             case ERROR:
-                return new BoundBinaryExpression(left, operator, right);
+                return new BoundBinaryExpression(new BoundLiteralExpression(left), operator, new BoundLiteralExpression(right));
             default:
-                throw new IllegalStateException("Unhandled binary expression for const evaluation: " + operator.getBoundOpType());
+                throw new IllegalStateException("Unhandled binary expression for real const evaluation: " + operator.getBoundOpType());
+        }
+    }
+
+    private BoundExpression calculateConstantExpression(int left, BoundBinaryOperator operator, int right) {
+
+        switch (operator.getBoundOpType()) {
+            case ADDITION:
+                return new BoundLiteralExpression(left + right);
+            case SUBTRACTION:
+                return new BoundLiteralExpression(left - right);
+            case MULTIPLICATION:
+                return new BoundLiteralExpression(left * right);
+            case DIVISION:
+                return new BoundLiteralExpression(left / right);
+            case REMAINDER:
+                return new BoundLiteralExpression(left % right);
+            case GREATER_THAN:
+                return new BoundLiteralExpression(left > right);
+            case LESS_THAN:
+                return new BoundLiteralExpression(left < right);
+            case GREATER_THAN_OR_EQUAL:
+                return new BoundLiteralExpression(left >= right);
+            case LESS_THAN_OR_EQUAL:
+                return new BoundLiteralExpression(left <= right);
+            case EQUALS:
+                return new BoundLiteralExpression(left == right);
+            case NOT_EQUALS:
+                return new BoundLiteralExpression(left != right);
+            case ERROR:
+                return new BoundBinaryExpression(new BoundLiteralExpression(left), operator, new BoundLiteralExpression(right));
+            default:
+                throw new IllegalStateException("Unhandled binary expression for int const evaluation: " + operator.getBoundOpType());
+        }
+    }
+
+    private BoundExpression calculateConstantExpression(boolean left, BoundBinaryOperator operator, boolean right) {
+        switch (operator.getBoundOpType()) {
+            case BOOLEAN_OR:
+                return new BoundLiteralExpression(left || right);
+            case BOOLEAN_AND:
+                return new BoundLiteralExpression(left && right);
+            case BOOLEAN_XOR:
+                return new BoundLiteralExpression(left ^ right);
+            case ERROR:
+                return new BoundBinaryExpression(new BoundLiteralExpression(left), operator, new BoundLiteralExpression(right));
+            default:
+                throw new IllegalStateException("Unhandled binary expression for bool const evaluation: " + operator.getBoundOpType());
         }
     }
 
@@ -770,7 +818,8 @@ public class Binder {
         return new BoundBlockExpression(constructorExpression, new BoundStructDeclarationExpression(type, members));
     }
 
-    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {
+    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression
+                                                                      functionDeclarationExpression) {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
@@ -834,7 +883,8 @@ public class Binder {
         return new BoundLambdaExpression(boundArguments, boundBody);
     }
 
-    private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression argumentExpression) {
+    private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression
+                                                                                   argumentExpression) {
 
         IdentifierExpression identifier = argumentExpression.getIdentifier();
         TypeSymbol type = parseType(argumentExpression.getTypeExpression());
