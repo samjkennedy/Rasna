@@ -14,7 +14,6 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
@@ -309,10 +308,14 @@ public class Binder {
 
         TypeSymbol type = null;
         for (MatchCaseExpression caseExpression : matchExpression.getCaseExpressions()) {
+
             BoundMatchCaseExpression boundMatchCaseExpression = bindCaseExpression(caseExpression);
+
             if (type != null && !type.isAssignableFrom(boundMatchCaseExpression.getType())) {
-                throw new TypeMismatchException(type, boundMatchCaseExpression.getType());
+                errors.add(BindingError.raiseTypeMismatch(type, boundMatchCaseExpression.getType(), caseExpression.getThenExpression().getSpan()));
+                return new BoundErrorExpression();
             }
+
             type = boundMatchCaseExpression.getType();
             if (boundMatchCaseExpression.getCaseExpression() != null
                     && !operand.getType().isAssignableFrom(boundMatchCaseExpression.getCaseExpression().getType())
@@ -791,9 +794,7 @@ public class Binder {
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());
 
-        if (functionSymbol.getType() != TypeSymbol.VOID) {
-            analyzeBody(functionSymbol, body.getExpressions().iterator());
-        }
+        errors.addAll(FunctionAnalyser.analyzeBody(functionSymbol, body.getExpressions(), functionDeclarationExpression.getBody().getExpressions(), functionDeclarationExpression));
 
         currentScope = currentScope.getParentScope();
 
@@ -831,23 +832,6 @@ public class Binder {
         currentScope = currentScope.getParentScope();
 
         return new BoundLambdaExpression(boundArguments, boundBody);
-    }
-
-    private void analyzeBody(FunctionSymbol function, Iterator<BoundExpression> expressions) {
-
-        //BFS the body to ensure all paths return a value of the right type
-        for (Iterator<BoundExpression> it = expressions; it.hasNext(); ) {
-            BoundExpression expression = it.next();
-            if (expression == null) {
-                return;
-            }
-            if (expression.getBoundExpressionType() == BoundExpressionType.RETURN) {
-                if (!expression.getType().isAssignableFrom(function.getType())) {
-                    throw new TypeMismatchException(function.getType(), expression.getType());
-                }
-                return;
-            }
-        }
     }
 
     private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression argumentExpression) {

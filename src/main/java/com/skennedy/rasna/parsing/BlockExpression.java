@@ -22,8 +22,16 @@ public class BlockExpression extends Expression {
         this.closeCurly = closeCurly;
     }
 
+    public IdentifierExpression getOpenCurly() {
+        return openCurly;
+    }
+
     public List<Expression> getExpressions() {
         return expressions;
+    }
+
+    public IdentifierExpression getCloseCurly() {
+        return closeCurly;
     }
 
     @Override

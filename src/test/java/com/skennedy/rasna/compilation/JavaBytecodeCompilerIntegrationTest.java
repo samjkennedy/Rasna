@@ -1,6 +1,7 @@
 package com.skennedy.rasna.compilation;
 
 import com.skennedy.rasna.Rasna;
+import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.lowering.Lowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
@@ -50,21 +51,28 @@ class JavaBytecodeCompilerIntegrationTest {
         Lowerer lowerer = new Lowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
-        JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
-        compiler.compile(boundProgram, filename.split("\\.")[0]);
+        if (boundProgram.hasErrors()) {
+            for (BindingError error : boundProgram.getErrors()) {
+                System.out.println(error.getMessage());
+            }
+        } else {
 
-        Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
-        InputStream inputStream = process.getInputStream();
-        char c = (char) inputStream.read();
-        while (c != '\uFFFF') {
-            System.out.print(c);
-            c = (char) inputStream.read();
-        }
-        InputStream errorStream = process.getErrorStream();
-        c = (char) errorStream.read();
-        while (c != '\uFFFF') {
-            System.out.print(c);
+            JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
+            compiler.compile(boundProgram, filename.split("\\.")[0]);
+
+            Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
+            InputStream inputStream = process.getInputStream();
+            char c = (char) inputStream.read();
+            while (c != '\uFFFF') {
+                System.out.print(c);
+                c = (char) inputStream.read();
+            }
+            InputStream errorStream = process.getErrorStream();
             c = (char) errorStream.read();
+            while (c != '\uFFFF') {
+                System.out.print(c);
+                c = (char) errorStream.read();
+            }
         }
         //Reset console
         System.setOut(console);
@@ -74,10 +82,12 @@ class JavaBytecodeCompilerIntegrationTest {
 
         assertEquals(expectedResult, actualResult);
 
-        File classFile = new File(filename.split("\\.")[0] + ".class");
-        assertTrue(classFile.delete(), "Could not delete classfile");
-        File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
-        assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
+        if (!boundProgram.hasErrors()) {
+            File classFile = new File(filename.split("\\.")[0] + ".class");
+            assertTrue(classFile.delete(), "Could not delete classfile");
+            File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
+            assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
+        }
     }
 
 
