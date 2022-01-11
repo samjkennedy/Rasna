@@ -35,7 +35,6 @@ class JavaBytecodeCompilerIntegrationTest {
 
         PrintStream console = System.out;
         //Set up output stream
-        //TODO: figure out how to delete this
         File outputFile = new File("src/test/resources/results/compilation/" + filename.split("\\.")[0] + "_result.txt");
         outputFile.createNewFile();
         PrintStream out = new PrintStream(outputFile);
@@ -80,8 +79,8 @@ class JavaBytecodeCompilerIntegrationTest {
         //Reset console
         System.setOut(console);
 
-        String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt");
-        String actualResult = read("results/compilation", filename.split("\\.")[0] + "_result.txt");
+        String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt").trim();
+        String actualResult = read("results/compilation", filename.split("\\.")[0] + "_result.txt").trim();
 
         assertEquals(expectedResult, actualResult);
 
@@ -104,26 +103,19 @@ class JavaBytecodeCompilerIntegrationTest {
         String line = lines.get(row);
 
         if (row > 0) {
-            System.out.print(row - 1 + ": ");
-            System.out.print(lines.get(row - 1));
-            System.out.println();
+            System.out.println(((row - 1) + ": " + lines.get(row - 1)).trim());
         }
         System.out.print(row + ": ");
 
         char[] charArray = line.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             char c = charArray[i];
-            if (i < span.getStart().getColumn() || i > span.getEnd().getColumn()) {
-            } else {
-            }
             System.out.print(c);
         }
         System.out.println();
 
         if (row < lines.size() - 1) {
-            System.out.print(row + 1 + ": ");
-            System.out.print(lines.get(row + 1));
-            System.out.println();
+            System.out.println(((row + 1) + ": " + lines.get(row + 1)).trim());
         }
         System.out.println();
     }

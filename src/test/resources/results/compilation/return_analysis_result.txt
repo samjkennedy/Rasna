@@ -1,22 +1,22 @@
 Missing return statement:
 3:     }
 4: }
-5: 
+5:
 
 Missing return statement:
 9:     }
 10: }
-11: 
+11:
 
 Missing return statement:
 17:     }
 18: }
-19: 
+19:
 
 Missing return statement:
 21:     print("Hello")
 22: }
-23: 
+23:
 
 Missing return statement:
 33:     }
