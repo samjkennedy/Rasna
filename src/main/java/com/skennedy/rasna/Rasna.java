@@ -119,7 +119,6 @@ public class Rasna {
                 int errorSize = boundProgram.getErrors().size();
                 System.err.println("Compilation failed with " + errorSize + (errorSize > 1 ? " errors:\n" : " error:\n"));
                 for (BindingError error : boundProgram.getErrors()) {
-                    System.err.println(error.getMessage());
                     highlightBindingError(error, lines);
                     try {
                         Thread.sleep(50); //For some reason without this the printing goes out of order...
@@ -248,7 +247,7 @@ public class Rasna {
 
     private static void highlightBindingError(BindingError error, List<String> lines) {
 
-        System.err.print(ConsoleColors.RED_BOLD);
+        System.err.print(ConsoleColors.RED);
         System.err.println(error.getMessage());
         highlightMessage(lines, error.getSpan(), ConsoleColors.RED_BOLD);
     }

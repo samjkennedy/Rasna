@@ -1,30 +1,15 @@
-if (true and false) {
-    print("this is unreachable")
-} else {
-    if (true or false) {
-        if (true xor true) {
-            print("this is also unreachable")
-        } else {
-            print("Hello there")
-        }
-    } else {
-        print("this is unreachable too")
+fn multiReturn(a: Int): Tuple {
+    match a {
+        1    -> return ("Hello", true),
+        2    -> {
+            print("2")
+            return ("Goodbye", 6)
+        },
+        3 -> return (1,),
+        else -> return ("World", false, 1)
     }
 }
 
-n: Int = 1
-while (n < 10) {
-    print(n)
-    n = n + n
-}
-
-i: Int = 0
-while (i < 10) {
-    print(i)
-    j: Int = 0
-    while (j < 10) {
-        print(j)
-        j = j + 1
-    }
-    i = i + 1
+for (v: Any in multiReturn(2)) {
+    print(v)
 }

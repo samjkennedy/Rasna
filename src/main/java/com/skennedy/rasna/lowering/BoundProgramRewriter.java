@@ -500,19 +500,6 @@ public abstract class BoundProgramRewriter {
             elseBody = rewriteExpression(boundIfExpression.getElseBody());
         }
 
-        //TODO: in the case of a const variable expression (const variable lol) currently cannot determine the const value + errors here,
-        //TODO: FIX
-//        if (condition.getBoundExpressionType() == BoundExpressionType.LITERAL || condition.getBoundExpressionType() == BoundExpressionType.VARIABLE_EXPRESSION && ((BoundVariableExpression) condition).getVariable().isReadOnly()) {
-//            boolean constValue = (boolean) calculateConstant(condition);
-//            if (constValue) {
-//                return body;
-//            } else if (elseBody != null) {
-//                return elseBody;
-//            } else {
-//                return new BoundNoOpExpression();
-//            }
-//        }
-
         if (condition == boundIfExpression.getCondition()
                 && body == boundIfExpression.getBody()
                 && elseBody == boundIfExpression.getElseBody()) {
@@ -794,63 +781,19 @@ public abstract class BoundProgramRewriter {
             return new BoundNoOpExpression();
         }
 
-//        if (condition.getBoundExpressionType() == BoundExpressionType.LITERAL || condition.getBoundExpressionType() == BoundExpressionType.VARIABLE_EXPRESSION && ((BoundVariableExpression) condition).getVariable().isReadOnly()) {
-//            boolean constValue = (boolean) calculateConstant(condition);
-//            if (!constValue) {
-//                return new BoundNoOpExpression();
-//            } else {
-//                throw new InfiniteLoopException();
-//            }
-//        }
+        if (condition.isConstExpression()) {
+            if ((boolean) condition.getConstValue()) {
+                return body;
+            } else {
+                return new BoundNoOpExpression();
+            }
+        }
 
         if (condition == boundWhileExpression.getCondition() && body == boundWhileExpression.getBody()) {
             return boundWhileExpression;
         }
         return new BoundWhileExpression(condition, body);
     }
-
-//    private Object calculateConstant(BoundExpression expression) {
-//        return expression;
-//        switch (expression.getBoundExpressionType()) {
-//
-//            case LITERAL:
-//                BoundLiteralExpression boundLiteralExpression = (BoundLiteralExpression) expression;
-//                return boundLiteralExpression.getValue();
-//            case VARIABLE_EXPRESSION:
-//                return expression;
-//            case BINARY_EXPRESSION:
-//                BoundBinaryExpression boundBinaryExpression = (BoundBinaryExpression) expression;
-//
-//                Object left = calculateConstant(boundBinaryExpression.getLeft());
-//                Object right = calculateConstant(boundBinaryExpression.getRight());
-//
-//                switch (boundBinaryExpression.getOperator().getOpType()) {
-//
-//                    case ADD:
-//                        return (int)left + (int)right;
-//                    case SUB:
-//                        return (int)left - (int)right;
-//                    case MUL:
-//                    case DIV:
-//                    case MOD:
-//                    case INC:
-//                    case EQ:
-//                    case NEQ:
-//                    case GT:
-//                    case LT:
-//                    case GTEQ:
-//                    case LTEQ:
-//                    case LAND:
-//                    case LOR:
-//                        break;
-//                }
-//
-//                return expression; //TODO: Constant folding
-//            //return calculateConstant(calculateConstant(boundBinaryExpression.getLeft()), calculateConstant(boundBinaryExpression.getRight()), boundBinaryExpression.getOperator());
-//            default:
-//                throw new IllegalStateException("Unexpected expression type for constant folding: " + expression.getBoundExpressionType());
-//        }
-//    }
 
     private BoundExpression rewriteConditionalGoto(BoundConditionalGotoExpression conditionalGotoExpression) {
         BoundExpression condition = rewriteExpression(conditionalGotoExpression.getCondition());
@@ -859,41 +802,6 @@ public abstract class BoundProgramRewriter {
         }
         return new BoundConditionalGotoExpression(conditionalGotoExpression.getLabel(), condition, conditionalGotoExpression.jumpIfFalse());
     }
-
-//    private BoundExpression calculateConstant(Object left, Object right, BoundBinaryOperator operator) {
-//        switch (operator.getBoundOpType()) {
-//
-//            case ADDITION:
-//                return new BoundLiteralExpression((int) left + (int) right);
-//            case SUBTRACTION:
-//                return new BoundLiteralExpression((int) left - (int) right);
-//            case MULTIPLICATION:
-//                return new BoundLiteralExpression((int) left * (int) right);
-//            case DIVISION:
-//                return new BoundLiteralExpression((int) left / (int) right);
-//            case REMAINDER:
-//                return new BoundLiteralExpression((int) left % (int) right);
-//            case GREATER_THAN:
-//                return new BoundLiteralExpression((int) left > (int) right);
-//            case LESS_THAN:
-//                return new BoundLiteralExpression((int) left < (int) right);
-//            case GREATER_THAN_OR_EQUAL:
-//                return new BoundLiteralExpression((int) left >= (int) right);
-//            case LESS_THAN_OR_EQUAL:
-//                return new BoundLiteralExpression((int) left <= (int) right);
-//            case EQUALS:
-//                return new BoundLiteralExpression((int) left == (int) right);
-//            case NOT_EQUALS:
-//                return new BoundLiteralExpression((int) left != (int) right);
-//            case BOOLEAN_OR:
-//                return new BoundLiteralExpression((boolean) left || (boolean) right);
-//            case BOOLEAN_AND:
-//                return new BoundLiteralExpression((boolean) left && (boolean) right);
-//            default:
-//                throw new IllegalStateException("Unhandled bound binary operator for constant folding: " + operator.getBoundOpType());
-//        }
-//    }
-
 
     private BoundExpression rewriteTypeofIntrinsic(BoundTypeofExpression typeofExpression) {
 

@@ -43,7 +43,7 @@ public class Lowerer extends BoundProgramRewriter {
 
         BoundExpression expression = super.rewriteWhileExpression(boundWhileExpression);
 
-        if (expression instanceof BoundNoOpExpression) {
+        if (!(expression instanceof BoundWhileExpression)) {
             return expression;
         }
 

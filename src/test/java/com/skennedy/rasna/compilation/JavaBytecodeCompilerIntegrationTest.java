@@ -1,6 +1,8 @@
 package com.skennedy.rasna.compilation;
 
 import com.skennedy.rasna.Rasna;
+import com.skennedy.rasna.diagnostics.BindingError;
+import com.skennedy.rasna.diagnostics.TextSpan;
 import com.skennedy.rasna.lowering.Lowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
@@ -17,6 +19,8 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,21 +54,28 @@ class JavaBytecodeCompilerIntegrationTest {
         Lowerer lowerer = new Lowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
-        JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
-        compiler.compile(boundProgram, filename.split("\\.")[0]);
+        if (boundProgram.hasErrors()) {
+            for (BindingError error : boundProgram.getErrors()) {
+                highlightBindingError(error, code.lines().collect(Collectors.toList()));
+            }
+        } else {
 
-        Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
-        InputStream inputStream = process.getInputStream();
-        char c = (char) inputStream.read();
-        while (c != '\uFFFF') {
-            System.out.print(c);
-            c = (char) inputStream.read();
-        }
-        InputStream errorStream = process.getErrorStream();
-        c = (char) errorStream.read();
-        while (c != '\uFFFF') {
-            System.out.print(c);
+            JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
+            compiler.compile(boundProgram, filename.split("\\.")[0]);
+
+            Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
+            InputStream inputStream = process.getInputStream();
+            char c = (char) inputStream.read();
+            while (c != '\uFFFF') {
+                System.out.print(c);
+                c = (char) inputStream.read();
+            }
+            InputStream errorStream = process.getErrorStream();
             c = (char) errorStream.read();
+            while (c != '\uFFFF') {
+                System.out.print(c);
+                c = (char) errorStream.read();
+            }
         }
         //Reset console
         System.setOut(console);
@@ -74,10 +85,47 @@ class JavaBytecodeCompilerIntegrationTest {
 
         assertEquals(expectedResult, actualResult);
 
-        File classFile = new File(filename.split("\\.")[0] + ".class");
-        assertTrue(classFile.delete(), "Could not delete classfile");
-        File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
-        assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
+        if (!boundProgram.hasErrors()) {
+            File classFile = new File(filename.split("\\.")[0] + ".class");
+            assertTrue(classFile.delete(), "Could not delete classfile");
+            File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
+            assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
+        }
+    }
+
+    private static void highlightBindingError(BindingError error, List<String> lines) {
+
+        System.out.println(error.getMessage());
+        highlightMessage(lines, error.getSpan());
+    }
+
+    private static void highlightMessage(List<String> lines, TextSpan span) {
+        int row = span.getStart().getRow();
+        String line = lines.get(row);
+
+        if (row > 0) {
+            System.out.print(row - 1 + ": ");
+            System.out.print(lines.get(row - 1));
+            System.out.println();
+        }
+        System.out.print(row + ": ");
+
+        char[] charArray = line.toCharArray();
+        for (int i = 0; i < charArray.length; i++) {
+            char c = charArray[i];
+            if (i < span.getStart().getColumn() || i > span.getEnd().getColumn()) {
+            } else {
+            }
+            System.out.print(c);
+        }
+        System.out.println();
+
+        if (row < lines.size() - 1) {
+            System.out.print(row + 1 + ": ");
+            System.out.print(lines.get(row + 1));
+            System.out.println();
+        }
+        System.out.println();
     }
 
 
