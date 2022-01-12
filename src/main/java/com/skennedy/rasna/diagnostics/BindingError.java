@@ -98,9 +98,14 @@ public class BindingError {
         return new BindingError("Cannot assign non constant value to constant `" + identifier + "`:", span);
     }
 
-    public static BindingError raiseMissingReturnExpression(String functionName, TextSpan span) {
+    public static BindingError raiseMissingReturnExpression(TextSpan span) {
 
         return new BindingError("Missing return statement:", span);
+    }
+
+    public static BindingError raiseUnknownIdentifier(String identifier, TextSpan span) {
+
+        return new BindingError("Unknown identifier `" + identifier + "`:", span);
     }
 
     public String getMessage() {

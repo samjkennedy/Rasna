@@ -709,7 +709,8 @@ public class Binder {
         if (variable.isPresent()) {
             return new BoundVariableExpression(variable.get());
         }
-        throw new UndefinedVariableException((String) identifierExpression.getValue());
+        errors.add(BindingError.raiseUnknownIdentifier((String) identifierExpression.getValue(), identifierExpression.getSpan()));
+        return new BoundErrorExpression();
     }
 
     private BoundExpression bindIncrementExpression(IncrementExpression incrementExpression) {
@@ -750,7 +751,8 @@ public class Binder {
         IdentifierExpression identifier = assignmentExpression.getIdentifier();
         Optional<VariableSymbol> scopedVariable = currentScope.tryLookupVariable((String) identifier.getValue());
         if (!scopedVariable.isPresent()) {
-            throw new UndefinedVariableException((String) identifier.getValue());
+            errors.add(BindingError.raiseUnknownIdentifier((String) identifier.getValue(), assignmentExpression.getIdentifier().getSpan()));
+            return new BoundErrorExpression();
         }
         VariableSymbol variable = scopedVariable.get();
         if (variable.isReadOnly()) {

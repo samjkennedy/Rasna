@@ -1,0 +1,38 @@
+//2520 is the smallest number that can be divided by each of the numbers from 1 to 10 without any remainder.
+
+//What is the smallest positive number that is evenly divisible by all of the numbers from 1 to 20?
+
+//Brute force method:
+
+//const n: Int = 20
+//
+//smallestNumber: Int = n
+//
+//found: Bool = false
+//while (not found) {
+//
+//    found = true
+//    for (i: Int = 1 to n) {
+//        remainder: Int = smallestNumber mod i
+//        if (remainder != 0) {
+//            found = false
+//        }
+//    }
+//    if (not found) {
+//        smallestNumber = smallestNumber + 1
+//    }
+//}
+//print(smallestNumber)
+
+//LCM method:
+
+//TODO: in future be able to import specific methods a la python
+//      import from std.math
+import "../../std/math.rsn"
+
+const N: Int = 20
+res: Int = math::lcm(1, 2)
+for (i: Int = 2 to N) {
+    res = math::lcm(res, i)
+}
+print(res)

@@ -103,9 +103,13 @@ public class Parser {
                 if (nextToken().getTokenType() == TokenType.OPEN_PARENTHESIS) {
                     return parseFunctionCallExpression();
                 }
+
+                //This is a bit spicy
                 if (nextToken().getTokenType() == TokenType.IDENTIFIER) {
                     if (lookAhead(2).getTokenType() == TokenType.COLON) {
-                        return parseVariableDeclarationExpression();
+                        if (lookAhead(3).getTokenType() == TokenType.IDENTIFIER) {
+                            return parseVariableDeclarationExpression();
+                        }
                     }
                 }
                 if (nextToken().getTokenType() == TokenType.DOT) {

@@ -196,19 +196,19 @@ public class Lowerer extends BoundProgramRewriter {
         BoundIfExpression rewrittenBoundIfExpression = (BoundIfExpression) expression;
 
         BoundLabel endLabel = blockEndLabel == null ? generateLabel() : blockEndLabel;
-        BoundLabel tmp = blockEndLabel;
         blockEndLabel = endLabel;
         BoundLabelExpression endLabelExpression = new BoundLabelExpression(endLabel);
 
 
         if (rewrittenBoundIfExpression.getElseBody() == null) {
-            BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), endLabel);
+            BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), endLabel, true);
 
             BoundBlockExpression result = new BoundBlockExpression(
                     condition,
                     rewrittenBoundIfExpression.getBody(),
                     endLabelExpression
             );
+            blockEndLabel = null;
             return flatten(rewriteBlockExpression(result));
 
         } else {
@@ -218,7 +218,7 @@ public class Lowerer extends BoundProgramRewriter {
             BoundGotoExpression gotoEndStatement = new BoundGotoExpression(endLabel);
             BoundLabelExpression elseLabelStatement = new BoundLabelExpression(elseLabel);
 
-            BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), elseLabel);
+            BoundExpression condition = rewriteCondition(rewrittenBoundIfExpression.getCondition(), elseLabel, true);
 
             BoundBlockExpression result = new BoundBlockExpression(
                     condition,
@@ -228,11 +228,12 @@ public class Lowerer extends BoundProgramRewriter {
                     rewrittenBoundIfExpression.getElseBody(),
                     endLabelExpression
             );
+            blockEndLabel = null;
             return flatten(rewriteBlockExpression(result));
         }
     }
 
-    private BoundExpression rewriteCondition(BoundExpression condition, BoundLabel endLabel) {
+    private BoundExpression rewriteCondition(BoundExpression condition, BoundLabel endLabel, boolean jumpIfFalse) {
 
         if (condition instanceof BoundConditionalGotoExpression) {
             return condition;
@@ -243,11 +244,12 @@ public class Lowerer extends BoundProgramRewriter {
             switch (binaryExpression.getOperator().getBoundOpType()) {
 
                 case BOOLEAN_OR: {
-                    BoundExpression left = rewriteCondition(binaryExpression.getLeft(), endLabel);
-                    BoundExpression right = rewriteCondition(binaryExpression.getRight(), endLabel);
 
                     BoundLabel bodyStart = generateLabel();
                     BoundLabelExpression bodyStartExpression = new BoundLabelExpression(bodyStart);
+
+                    BoundExpression left = rewriteCondition(binaryExpression.getLeft(), bodyStart, false);
+                    BoundExpression right = rewriteCondition(binaryExpression.getRight(), endLabel, true);
 
                     BoundConditionalGotoExpression gotoBody = new BoundConditionalGotoExpression(bodyStart, left, false);
                     BoundConditionalGotoExpression gotoEnd = new BoundConditionalGotoExpression(endLabel, right, true);
@@ -264,10 +266,10 @@ public class Lowerer extends BoundProgramRewriter {
                     return new BoundBlockExpression(gotoEndFirst, gotoEndSecond);
                 }
                 default:
-                    return new BoundConditionalGotoExpression(endLabel, condition, true);
+                    return new BoundConditionalGotoExpression(endLabel, condition, jumpIfFalse);
             }
         }
-        return new BoundConditionalGotoExpression(endLabel, condition, true);
+        return new BoundConditionalGotoExpression(endLabel, condition, jumpIfFalse);
     }
 
     @Override

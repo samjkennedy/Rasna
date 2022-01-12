@@ -1,11 +1,6 @@
 //const INT_MAX: Int = 2147483647 //TODO: Java bytecode can't store this number, but can store 2^31 - 2
 //const PI: Real = 3.14159265359 //TODO: the functions can't access this - make a `global` keyword or let them have it
 
-//TODO: These two should be intrinsic methods on Real
-fn getInt(r: Real): Real {
-     return r as Int as Real
- }
-
 fn getDec(r: Real): Real {
     return r - getInt(r)
 }
@@ -100,4 +95,27 @@ fn sqrt(S: Real | S >= 0.0): Real {
         x1 = tmp
     }
     return x0
+}
+
+fn gcd(a: Int | a >= 0, b: Int | b >= 0): Int {
+
+    while (b != 0) {
+        tmp: Int = b
+        b = a mod b
+        a = tmp
+    }
+
+    return a
+}
+
+fn lcm(a: Int | a >= 0, b: Int | b >= 0): Int {
+    return a / gcd(a, b) * b
+}
+
+fn floor(n: Real): Real {
+    return n as Int as Real
+}
+
+fn ceil(n: Real): Real {
+    return floor(n) + 1.
 }
