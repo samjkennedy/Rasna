@@ -1,7 +1,9 @@
-for (N: Int = 0 to 10) {
-    print(N)
+fn main() {
+    for (N: Int = 0 to 10) {
+        print(N)
+    }
+    for (M: Int = 0 to 10 by 2) {
+        print(M)
+    }
+    for (i: Int = 0 to 10) print(i)
 }
-for (M: Int = 0 to 10 by 2) {
-    print(M)
-}
-for (i: Int = 0 to 10) print(i)

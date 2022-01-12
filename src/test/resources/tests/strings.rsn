@@ -1,4 +1,6 @@
-s: String = "Hello!"
-print(s)
-escaped: String = "\"escaped\"!"
-print(escaped)
+fn main() {
+    s: String = "Hello!"
+    print(s)
+    escaped: String = "\"escaped\"!"
+    print(escaped)
+}

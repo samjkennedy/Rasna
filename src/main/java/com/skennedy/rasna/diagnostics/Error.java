@@ -1,8 +1,8 @@
 package com.skennedy.rasna.diagnostics;
 
-import com.skennedy.rasna.lexing.model.TokenType;
 import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.lexing.model.Token;
+import com.skennedy.rasna.lexing.model.TokenType;
 
 import java.nio.file.Path;
 
@@ -32,6 +32,10 @@ public class Error {
 
     public static Error raise(String message, Token token) {
         return new Error(message, token, token.getLocation());
+    }
+
+    public static Error raiseUnexpectedTokenAtTopLevel(TokenType unexpected, Token token) {
+        return new Error("Unexpected token `" + unexpected + "` at top level: ", token, token.getLocation());
     }
 
     public String getMessage() {

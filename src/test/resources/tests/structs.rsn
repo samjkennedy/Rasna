@@ -33,18 +33,6 @@ fn V2RR(r: Real): V2R {
     return V2R(r, r)
 }
 
-v2: V2R = V2RR(1.0)
-print(v2.x)
-print(v2.y)
-print(mag2(v2))
-
-v3: V3R = V3R(1.0, 2.0, 3.0)
-//v: V2R = {1.0, 2.0} //This should also be allowed
-print(v3.x)
-print(v3.y)
-print(v3.z)
-print(mag3(v3))
-
 struct S {
     s: String
 }
@@ -58,23 +46,6 @@ struct R {
     r: Real
 }
 
-s: S = {"Hello"}
-print(s.s)
-s.s = "Goodbye"
-print(s.s)
-i: I = {7}
-print(i.i)
-i.i = 8
-print(i.i)
-b: B = {false}
-print(b.b)
-b.b = true
-print(b.b)
-r: R = {1.141}
-print(r.r)
-r.r = 3.1415
-print(r.r)
-
 struct foo {
     int: Int
     real: Real
@@ -82,14 +53,46 @@ struct foo {
     str: String
 }
 
-f1: foo = {1, 1.0, true, "Hi"}
-f2: foo = foo(1, 1.0, true, "Hi")
+fn main() {
+    v2: V2R = V2RR(1.0)
+    print(v2.x)
+    print(v2.y)
+    print(mag2(v2))
 
-print(f1.int)
-print(f1.real)
-print(f1.bool)
-print(f1.str)
-print(f2.int)
-print(f2.real)
-print(f2.bool)
-print(f2.str)
+    v3: V3R = V3R(1.0, 2.0, 3.0)
+    //v: V2R = {1.0, 2.0} //This should also be allowed
+    print(v3.x)
+    print(v3.y)
+    print(v3.z)
+    print(mag3(v3))
+
+
+    s: S = {"Hello"}
+    print(s.s)
+    s.s = "Goodbye"
+    print(s.s)
+    i: I = {7}
+    print(i.i)
+    i.i = 8
+    print(i.i)
+    b: B = {false}
+    print(b.b)
+    b.b = true
+    print(b.b)
+    r: R = {1.141}
+    print(r.r)
+    r.r = 3.1415
+    print(r.r)
+
+    f1: foo = {1, 1.0, true, "Hi"}
+    f2: foo = foo(1, 1.0, true, "Hi")
+
+    print(f1.int)
+    print(f1.real)
+    print(f1.bool)
+    print(f1.str)
+    print(f2.int)
+    print(f2.real)
+    print(f2.bool)
+    print(f2.str)
+}

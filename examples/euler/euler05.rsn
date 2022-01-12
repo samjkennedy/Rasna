@@ -4,35 +4,36 @@
 
 //Brute force method:
 
-//const n: Int = 20
+//fn main() {
+//    const n: Int = 20
+//    smallestNumber: Int = n
 //
-//smallestNumber: Int = n
+//    found: Bool = false
+//    while (not found) {
 //
-//found: Bool = false
-//while (not found) {
-//
-//    found = true
-//    for (i: Int = 1 to n) {
-//        remainder: Int = smallestNumber mod i
-//        if (remainder != 0) {
-//            found = false
+//        found = true
+//        for (i: Int = 1 to n) {
+//            remainder: Int = smallestNumber mod i
+//            if (remainder != 0) {
+//                found = false
+//            }
+//        }
+//        if (not found) {
+//            smallestNumber = smallestNumber + 1
 //        }
 //    }
-//    if (not found) {
-//        smallestNumber = smallestNumber + 1
-//    }
+//    print(smallestNumber)
 //}
-//print(smallestNumber)
 
 //LCM method:
 
-//TODO: in future be able to import specific methods a la python
-//      import from std.math
 import "../../std/math.rsn"
 
-const N: Int = 20
-res: Int = math::lcm(1, 2)
-for (i: Int = 2 to N) {
-    res = math::lcm(res, i)
+fn main() {
+    const N: Int = 20
+    res: Int = math::lcm(1, 2)
+    for (i: Int = 2 to N) {
+        res = math::lcm(res, i)
+    }
+    print(res)
 }
-print(res)

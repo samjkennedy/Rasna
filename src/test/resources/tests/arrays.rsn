@@ -13,17 +13,19 @@ fn sort(array: Int[] ): Int[] {
    return array
 }
 
-arr: Int[] = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
-for (a: Int in sort(arr)) print(a)
+fn main() {
+    arr: Int[] = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
+    for (a: Int in sort(arr)) print(a)
 
-ints: Int[] = [1, 2, 3]
-for (i: Int in ints) print(i)
+    ints: Int[] = [1, 2, 3]
+    for (i: Int in ints) print(i)
 
-bools: Bool[] = [true, false, true, true, false]
-for (b: Bool in bools) print(b)
+    bools: Bool[] = [true, false, true, true, false]
+    for (b: Bool in bools) print(b)
 
-strings: String[] = ["Hello", "World"]
-for (s: String in strings) print(s)
+    strings: String[] = ["Hello", "World"]
+    for (s: String in strings) print(s)
 
-reals: Real[] = [1.414, 2.718, 3.141]
-for (r: Real in reals) print(r)
+    reals: Real[] = [1.414, 2.718, 3.141]
+    for (r: Real in reals) print(r)
+}

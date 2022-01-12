@@ -596,10 +596,10 @@ public class Binder {
                 return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
             } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
 
-                return calculateConstantExpression(Integer.valueOf((int)left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
             } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
 
-                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int)right.getConstValue()).doubleValue());
+                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
             }
 
             return new BoundBinaryExpression(left, operator, right);
@@ -820,8 +820,7 @@ public class Binder {
         return new BoundBlockExpression(constructorExpression, new BoundStructDeclarationExpression(type, members));
     }
 
-    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression
-                                                                      functionDeclarationExpression) {
+    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
@@ -849,7 +848,37 @@ public class Binder {
 
         currentScope = currentScope.getParentScope();
 
-        return new BoundFunctionDeclarationExpression(functionSymbol, arguments, body);
+        BoundFunctionDeclarationExpression boundFunctionDeclarationExpression = new BoundFunctionDeclarationExpression(functionSymbol, arguments, body);
+
+        if (identifier.getValue().equals("main")) {
+            typeCheckMainFunction(boundFunctionDeclarationExpression, functionDeclarationExpression);
+        }
+
+        return boundFunctionDeclarationExpression;
+    }
+
+    private void typeCheckMainFunction(BoundFunctionDeclarationExpression boundMainFunction, FunctionDeclarationExpression mainFunction) {
+
+        if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.VOID) {
+            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.VOID, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
+        }
+        List<BoundFunctionArgumentExpression> arguments = boundMainFunction.getArguments();
+        if (!arguments.isEmpty()) {
+            if (arguments.size() == 1) {
+                BoundFunctionArgumentExpression argumentExpression = arguments.get(0);
+                if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
+                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
+                }
+            } else {
+                BoundFunctionArgumentExpression argumentExpression = arguments.get(0);
+                if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
+                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
+                }
+                for (int i = 1; i < arguments.size(); i++) {
+                    errors.add(BindingError.raiseTypeMismatch(TypeSymbol.VOID, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getSpan()));
+                }
+            }
+        }
     }
 
     private BoundLambdaExpression bindLambdaExpression(LambdaExpression lambdaExpression) {

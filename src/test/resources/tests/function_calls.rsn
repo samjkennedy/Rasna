@@ -36,17 +36,19 @@ fn sum(a: Int, b: Int): Int {
     return a + b
 }
 
-echo2or0(true)
-echo2or0(false)
+fn main() {
+    echo2or0(true)
+    echo2or0(false)
 
-print(sum(3, 9))
+    print(sum(3, 9))
 
-print(sum(foo(), foo()))
-print(sum(sum(1, 2), sum(10, 11)))
+    print(sum(foo(), foo()))
+    print(sum(sum(1, 2), sum(10, 11)))
 
-print(foo())
-print(choice(true))
-print(choice(false))
-print(sum(choice(true), 5))
+    print(foo())
+    print(choice(true))
+    print(choice(false))
+    print(sum(choice(true), 5))
 
-printFromTo(0, 5)
+    printFromTo(0, 5)
+}

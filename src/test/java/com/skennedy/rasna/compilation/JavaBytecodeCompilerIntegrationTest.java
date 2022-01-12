@@ -2,7 +2,9 @@ package com.skennedy.rasna.compilation;
 
 import com.skennedy.rasna.Rasna;
 import com.skennedy.rasna.diagnostics.BindingError;
+import com.skennedy.rasna.diagnostics.Error;
 import com.skennedy.rasna.diagnostics.TextSpan;
+import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.lowering.Lowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
@@ -46,6 +48,11 @@ class JavaBytecodeCompilerIntegrationTest {
 
         Parser parser = new Parser();
         Program program = parser.parse(Path.of(getFullPath("tests", filename)).toAbsolutePath(), code);
+        if (program.hasErrors()) {
+            for (Error error : program.getErrors()) {
+                highlightError(error, code.lines().collect(Collectors.toList()));
+            }
+        }
 
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);
@@ -62,7 +69,7 @@ class JavaBytecodeCompilerIntegrationTest {
             JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
             compiler.compile(boundProgram, filename.split("\\.")[0]);
 
-            Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0]);
+            Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0] + " foo bar baz");
             InputStream inputStream = process.getInputStream();
             char c = (char) inputStream.read();
             while (c != '\uFFFF') {
@@ -90,6 +97,33 @@ class JavaBytecodeCompilerIntegrationTest {
             File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
             assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
         }
+    }
+
+    private static void highlightError(Error error, List<String> lines) {
+        System.out.println(error.getMessage());
+        Location location = error.getLocation();
+        int row = location.getRow();
+        if (row > lines.size()) {
+            return;
+        }
+        String line = lines.get(row);
+
+        if (row > 0) {
+            System.out.print(row - 1 + ": ");
+            System.out.print(lines.get(row - 1));
+            System.out.println();
+        }
+
+        System.out.print(row + ": ");
+
+        System.out.println(line);
+
+        if (row < lines.size() - 1) {
+            System.out.print(row + 1 + ": ");
+            System.out.print(lines.get(row + 1));
+            System.out.println();
+        }
+        System.out.println();
     }
 
     private static void highlightBindingError(BindingError error, List<String> lines) {
