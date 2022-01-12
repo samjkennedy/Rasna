@@ -1,0 +1,17 @@
+//Find the difference between the sum of the squares of the first one hundred natural numbers and the square of the sum.
+const N: Int = 100
+
+fn sumOfSquares(count: Int): Int {
+    sum: Int = 1
+    for (i: Int = 2 to count + 1) {
+        sum = sum + (i * i)
+    }
+    return sum
+}
+
+fn squareOfSum(count: Int): Int {
+    sum: Int = (count/2) * (count + 1)
+    return sum * sum
+}
+
+print(squareOfSum(N) - sumOfSquares(N))

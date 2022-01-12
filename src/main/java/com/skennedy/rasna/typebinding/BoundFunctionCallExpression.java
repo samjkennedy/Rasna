@@ -35,4 +35,11 @@ public class BoundFunctionCallExpression implements BoundExpression {
     public List<BoundExpression> getBoundArguments() {
         return boundArguments;
     }
+
+    @Override
+    public boolean isConstExpression() {
+        //The bound arguments can be const but the function sure isn't
+        //However if the function could be precomputed at compile time that could be spicy, as long as the entire body was guaranteed constant
+        return false;
+    }
 }

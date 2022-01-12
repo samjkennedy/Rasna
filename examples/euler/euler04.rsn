@@ -1,0 +1,46 @@
+//A palindromic number reads the same both ways. The largest palindrome made from the product of two 2-digit numbers is 9009 = 91 × 99.
+
+//Find the largest palindrome made from the product of two 3-digit numbers.
+fn reverse(n: Int): Int {
+    r: Int = 0
+    sum: Int = 0
+    while (n > 0) {
+        r = n mod 10
+        sum = (sum * 10) + r
+        n = n / 10
+    }
+    return sum
+}
+
+fn isPalindrome(const n: Int): Bool {
+    return n == reverse(n)
+}
+
+max: Int = 999
+l: Int = max
+r: Int = max
+product: Int = l * r
+
+largest: Int = 0
+bestL: Int = 0
+bestR: Int = 0
+
+while (l > 0 or r > 0) {
+
+    product = l * r
+    //TODO: no and, must have nested ifs
+    if (isPalindrome(product)) {
+        if (product > largest) {
+            largest = product
+            bestL = l
+            bestR = r
+        }
+    }
+
+    l = l - 1
+    if (l == 0) {
+        l = max
+        r = r - 1
+    }
+}
+print(largest)

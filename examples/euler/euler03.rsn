@@ -12,7 +12,7 @@ while (N > 1 and (d * d < N)) {
         N = N / d
     }
     d = d + 1
-    if (d*d > N and N > largestPrimeFactor) {
+    if (d * d > N and N > largestPrimeFactor) {
         largestPrimeFactor = N
     }
 }

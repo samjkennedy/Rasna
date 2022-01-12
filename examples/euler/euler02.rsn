@@ -4,12 +4,11 @@
 sum: Int = 0
 last: Int = 1
 curr: Int = 1
-tmp: Int = 0
 while (curr < 4000000) {
-    if (curr % 2 == 0) {
+    if (curr mod 2 == 0) {
         sum = sum + curr
     }
-    tmp = curr + last
+    tmp: Int = curr + last
     last = curr
     curr = tmp
 }

@@ -9,7 +9,7 @@
 - Proper pattern matching
     - Array matching
 - Longs
+- Pure functions and const function compile time evaluation
 - Multidimensional arrays (And arrays of structs)
 - Generics/Templates
-- Pythonish data structures: Dict, ~~Tuple, Struct~~
 - REPL

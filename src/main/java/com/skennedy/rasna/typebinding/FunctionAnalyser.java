@@ -17,7 +17,7 @@ public class FunctionAnalyser {
         if (function.getType() != TypeSymbol.VOID) {
             boolean allPathsReturnValue = checkReturnPaths(boundExpressions);
             if (!allPathsReturnValue) {
-                errors.add(BindingError.raiseMissingReturnExpression(function.getName(), functionDeclarationExpression.getBody().getCloseCurly().getSpan()));
+                errors.add(BindingError.raiseMissingReturnExpression(functionDeclarationExpression.getBody().getCloseCurly().getSpan()));
             }
         }
 
