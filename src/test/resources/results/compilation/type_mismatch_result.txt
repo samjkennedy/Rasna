@@ -1,28 +1,30 @@
+Expected type `Int` but got `Bool`:
+0: fn int(): Int {
+1:     return true
+2: }
+
 Expected type `Int` but got `String`:
-0: i: Int = "Hello"
-1: i = true
+4: fn main() {
+5:     i: Int = "Hello"
+6:     i = true
 
 Expected type `Int` but got `Bool`:
-0: i: Int = "Hello"
-1: i = true
-2:
+5:     i: Int = "Hello"
+6:     i = true
+7:
 
 Expected type `Real` but got `String`:
-2:
-3: r: Real = "Hello"
-4: r = true
+7:
+8:     r: Real = "Hello"
+9:     r = true
 
 Expected type `Real` but got `Bool`:
-3: r: Real = "Hello"
-4: r = true
-5:
-
-Expected type `Int` but got `Bool`:
-6: fn int(): Int {
-7:     return true
-8: }
+8:     r: Real = "Hello"
+9:     r = true
+10:
 
 Expected type `String` but got `Int`:
-9:
-10: s: String = int()
+10:
+11:     s: String = int()
+12: }
 

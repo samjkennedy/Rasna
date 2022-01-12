@@ -175,30 +175,29 @@ public class JavaBytecodeCompiler implements Compiler {
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
                 scope = new Scope(null, null);
-                visit((BoundFunctionDeclarationExpression) expression);
+
+                BoundFunctionDeclarationExpression functionDeclarationExpression = (BoundFunctionDeclarationExpression) expression;
+
+                if (functionDeclarationExpression.getFunctionSymbol().getName().equals("main")) {
+
+                    MethodVisitor mainMethodVisitor = classWriter.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
+                    textifierVisitor.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
+
+                    visitMainMethod(functionDeclarationExpression, mainMethodVisitor);
+
+                    //TODO: determine how much memory the program requires and set accordingly
+                    mainMethodVisitor.visitMaxs(1000, 1000);
+                    // END 2: Close main()
+                    mainMethodVisitor.visitEnd();
+                } else {
+                    visit(functionDeclarationExpression);
+                }
             }
         }
 
         scope = new Scope(null, null);
         scope.pushLocal("[Ljava/lang/String;");
 
-        /** ASM = CODE : public static void main(String args[]). */
-        // BEGIN 2: creates a MethodVisitor for the 'main' method
-        MethodVisitor mainMethodVisitor = classWriter.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
-        textifierVisitor.visitMethod(ACC_PUBLIC + ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
-
-        for (BoundExpression expression : program.getExpressions()) {
-            //Already declared, skip
-            if (expression instanceof BoundFunctionDeclarationExpression) {
-                ip++;
-                continue;
-            }
-            printExpression(expression, 0);
-            visit(expression, mainMethodVisitor);
-            ip++;
-        }
-        mainMethodVisitor.visitInsn(RETURN);
-        textifierVisitor.visitInsn(RETURN);
         scope = scope.parent;
 
         textifierVisitor.visitMaxs(1000, 1000);
@@ -209,12 +208,6 @@ public class JavaBytecodeCompiler implements Compiler {
         PrintWriter fileWriter = new PrintWriter(bytecodeFile);
         textifierVisitor.print(fileWriter);
         fileWriter.close();
-
-        //TODO: determine how much memory the program requires and set accordingly
-        mainMethodVisitor.visitMaxs(1000, 1000);
-
-        // END 2: Close main()
-        mainMethodVisitor.visitEnd();
 
         // END 1: Close class()
         classWriter.visitEnd();
@@ -1498,6 +1491,29 @@ public class JavaBytecodeCompiler implements Compiler {
         methodVisitor.visitJumpInsn(GOTO, label);
         textifierVisitor.visitJumpInsn(GOTO, label);
     }
+
+    private void visitMainMethod(BoundFunctionDeclarationExpression mainMethodDeclaration, MethodVisitor mainMethodVisitor) {
+
+        List<TypeSymbol> argumentTypes = mainMethodDeclaration.getArguments().stream()
+                .map(BoundFunctionArgumentExpression::getType)
+                .collect(Collectors.toList());
+
+        if (argumentTypes.size() == 1) {
+            BoundFunctionArgumentExpression args = mainMethodDeclaration.getArguments().get(0);
+            variables.put(args.getArgument().getName(), 0);
+        }
+
+        for (BoundExpression expression : mainMethodDeclaration.getBody().getExpressions()) {
+            visit(expression, mainMethodVisitor);
+        }
+        variableIndex = 0;
+
+        if (mainMethodDeclaration.getBody().getExpressions().get(mainMethodDeclaration.getBody().getExpressions().size() - 1).getBoundExpressionType() != BoundExpressionType.RETURN) {
+            mainMethodVisitor.visitInsn(RETURN);
+            textifierVisitor.visitInsn(RETURN);
+        }
+    }
+
 
     private void visit(BoundFunctionDeclarationExpression functionDeclarationExpression) {
 

@@ -1,6 +1,3 @@
-i: Int = 3
-r: Real = 3.5
-
 fn putr(x: Real) {
     print(x)
 }
@@ -9,50 +6,55 @@ fn puti(x: Int) {
     print(x)
 }
 
-//Method calls require explicit casts
-putr(i as Real)
-puti(r as Int)
+fn main() {
+    i: Int = 3
+    r: Real = 3.5
 
-putr(i + 0.0)
+    //Method calls require explicit casts
+    putr(i as Real)
+    puti(r as Int)
 
-//Implicit casting
-print(2.5 + 1)
-print(1 + 1.5)
-print(2.5 - 1)
-print(1 - 1.5)
-print(2.5 * 2)
-print(2 * 1.5)
-print(3.5 / 2)
-print(2 / 1.5)
+    putr(i + 0.0)
 
-print(2.5 as Int)
+    //Implicit casting
+    print(2.5 + 1)
+    print(1 + 1.5)
+    print(2.5 - 1)
+    print(1 - 1.5)
+    print(2.5 * 2)
+    print(2 * 1.5)
+    print(3.5 / 2)
+    print(2 / 1.5)
 
-t: Tuple = ("Hello", "World!")
+    print(2.5 as Int)
 
-for (n: Int = 0 to len(t)) {
-    s: String = t[n] as String
-    print(s)
-}
+    t: Tuple = ("Hello", "World!")
 
-for (x: Any in t) {
-     s: String = x as String
-     print(s)
-}
+    for (n: Int = 0 to len(t)) {
+        s: String = t[n] as String
+        print(s)
+    }
 
-t = (true, false)
-for (el: Any in t) {
-     x: Bool = el as Bool
-     print(x)
-}
+    for (x: Any in t) {
+         s: String = x as String
+         print(s)
+    }
 
-t = (2.5,3.)
-for (el: Any in t) {
-     x: Real = el as Real
-     print(x)
-}
+    t = (true, false)
+    for (el: Any in t) {
+         x: Bool = el as Bool
+         print(x)
+    }
 
-t = (2.5,3.)
-for (el: Any in t) {
-     x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
-     print(x)
+    t = (2.5,3.)
+    for (el: Any in t) {
+         x: Real = el as Real
+         print(x)
+    }
+
+    t = (2.5,3.)
+    for (el: Any in t) {
+         x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
+         print(x)
+    }
 }

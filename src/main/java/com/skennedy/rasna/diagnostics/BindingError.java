@@ -28,7 +28,7 @@ public class BindingError {
             //String spans do not include the surrounding "s
             span = new TextSpan(Location.fromOffset(span.getStart(), -1), Location.fromOffset(span.getEnd(), 1));
         }
-        return new BindingError("Expected type `" + expected.getName() + "` but got `" + actual.getName() + "`:", span);
+        return new BindingError("Expected type `" + expected + "` but got `" + actual + "`:", span);
     }
 
     //TODO: Have the location the variable already declared

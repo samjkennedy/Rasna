@@ -1,10 +1,12 @@
-i: Int = 1
+fn main() {
+    i: Int = 1
 
-b: Bool = i is Int
-print(b)
-b = i is Bool
-print(b)
-b = i as Real is Real
-print(b)
-b = i as Real is Int
-print(b)
+    b: Bool = i is Int
+    print(b)
+    b = i is Bool
+    print(b)
+    b = i as Real is Real
+    print(b)
+    b = i as Real is Int
+    print(b)
+}

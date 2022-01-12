@@ -1,11 +1,13 @@
-i: Int = "Hello"
-i = true
-
-r: Real = "Hello"
-r = true
-
 fn int(): Int {
     return true
 }
 
-s: String = int()
+fn main() {
+    i: Int = "Hello"
+    i = true
+
+    r: Real = "Hello"
+    r = true
+
+    s: String = int()
+}

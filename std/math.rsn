@@ -1,6 +1,10 @@
 //const INT_MAX: Int = 2147483647 //TODO: Java bytecode can't store this number, but can store 2^31 - 2
 //const PI: Real = 3.14159265359 //TODO: the functions can't access this - make a `global` keyword or let them have it
 
+fn getInt(r: Real): Real {
+    return r as Int as Real
+}
+
 fn getDec(r: Real): Real {
     return r - getInt(r)
 }

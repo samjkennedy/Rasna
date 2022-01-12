@@ -16,31 +16,33 @@ fn isPalindrome(const n: Int): Bool {
     return n == reverse(n)
 }
 
-max: Int = 999
-l: Int = max
-r: Int = max
-product: Int = l * r
+fn main() {
+    max: Int = 999
+    l: Int = max
+    r: Int = max
+    product: Int = l * r
 
-largest: Int = 0
-bestL: Int = 0
-bestR: Int = 0
+    largest: Int = 0
+    bestL: Int = 0
+    bestR: Int = 0
 
-while (l > 0 or r > 0) {
+    while (l > 0 or r > 0) {
 
-    product = l * r
-    //TODO: no and, must have nested ifs
-    if (isPalindrome(product)) {
-        if (product > largest) {
-            largest = product
-            bestL = l
-            bestR = r
+        product = l * r
+        //TODO: no and, must have nested ifs
+        if (isPalindrome(product)) {
+            if (product > largest) {
+                largest = product
+                bestL = l
+                bestR = r
+            }
+        }
+
+        l = l - 1
+        if (l == 0) {
+            l = max
+            r = r - 1
         }
     }
-
-    l = l - 1
-    if (l == 0) {
-        l = max
-        r = r - 1
-    }
+    print(largest)
 }
-print(largest)

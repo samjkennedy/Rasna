@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 public class Parser {
@@ -30,6 +30,13 @@ public class Parser {
     private List<Error> errors;
 
     private Path filePath;
+
+    private static List<TokenType> allowedTopLevelTokens = Arrays.asList(
+            TokenType.FN_KEYWORD,
+            TokenType.STRUCT_KEYWORD,
+            TokenType.IMPORT_KEYWORD
+    );
+    private boolean inTopLevel = true;
 
     public Program parse(Path filePath, String program) {
         this.filePath = filePath;
@@ -46,8 +53,6 @@ public class Parser {
             }
         }
 
-        //System.out.println(tokensToParse.stream().map(Token::toString).collect(Collectors.joining(", ")));
-
         while (current().getTokenType() != TokenType.EOF_TOKEN) {
             if (current().getTokenType() == TokenType.WHITESPACE) {
                 position++;
@@ -61,6 +66,9 @@ public class Parser {
 
     private Expression parsePrimaryExpression() {
 
+        if (inTopLevel && !allowedTopLevelTokens.contains(current().getTokenType())) {
+            errors.add(Error.raiseUnexpectedTokenAtTopLevel(current().getTokenType(), current()));
+        }
         switch (current().getTokenType()) {
             case CONST_KEYWORD:
                 return parseVariableDeclarationExpression();
@@ -105,12 +113,10 @@ public class Parser {
                 }
 
                 //This is a bit spicy
-                if (nextToken().getTokenType() == TokenType.IDENTIFIER) {
-                    if (lookAhead(2).getTokenType() == TokenType.COLON) {
-                        if (lookAhead(3).getTokenType() == TokenType.IDENTIFIER) {
-                            return parseVariableDeclarationExpression();
-                        }
-                    }
+                if (nextToken().getTokenType() == TokenType.IDENTIFIER
+                        && lookAhead(2).getTokenType() == TokenType.COLON
+                        && lookAhead(3).getTokenType() == TokenType.IDENTIFIER) {
+                    return parseVariableDeclarationExpression();
                 }
                 if (nextToken().getTokenType() == TokenType.DOT) {
                     return parseMemberAccessorExpression();
@@ -174,6 +180,7 @@ public class Parser {
 
     //TODO: This should all be done as part of the binder to allow better error reporting
     private Expression parseImportStatement() {
+        inTopLevel = false;
         matchToken(TokenType.IMPORT_KEYWORD);
 
         boolean inline = false;
@@ -219,6 +226,7 @@ public class Parser {
             }
 
             //This is real scuffed
+            inTopLevel = true;
             return new NamespaceExpression(
                     new IdentifierExpression(new Token(TokenType.NAMESPACE_KEYWORD, new Location(fileNameWithExt, -1, -1)), TokenType.NAMESPACE_KEYWORD, TokenType.NAMESPACE_KEYWORD.getText()),
                     new IdentifierExpression(new Token(TokenType.IDENTIFIER, new Location(fileNameWithExt, -1, -1), fileName), TokenType.IDENTIFIER, fileName),
@@ -232,6 +240,7 @@ public class Parser {
         } catch (IOException e) {
             errors.add(Error.raiseImportError(path, importPath.getToken()));
         }
+        inTopLevel = true;
         return new NoOpExpression();
     }
 
@@ -406,7 +415,7 @@ public class Parser {
             }
 
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-            Expression body = parseBlockExpression();
+            Expression body = parseExpression();
 
             return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, guard, closeParen, body);
 
@@ -483,6 +492,7 @@ public class Parser {
     }
 
     private Expression parseStructDeclarationExpression() {
+        inTopLevel = false;
         IdentifierExpression structKeyword = matchToken(TokenType.STRUCT_KEYWORD);
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
@@ -496,11 +506,13 @@ public class Parser {
         }
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
+        inTopLevel = true;
         return new StructDeclarationExpression(structKeyword, identifier, openCurly, members, closeCurly);
     }
 
     private Expression parseFunctionDeclarationExpression() {
 
+        inTopLevel = false;
         IdentifierExpression fnKeyword = matchToken(TokenType.FN_KEYWORD);
 
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
@@ -525,6 +537,7 @@ public class Parser {
 
         BlockExpression body = parseBlockExpression();
 
+        inTopLevel = true;
         return new FunctionDeclarationExpression(fnKeyword, identifier, openParen, argumentExpressions, closeParen, typeExpression, body);
     }
 

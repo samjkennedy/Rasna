@@ -1,7 +1,9 @@
-i: Int = 0
-while(i < 10) {
-    print(i)
-    i = i + 1
+fn main() {
+    i: Int = 0
+    while(i < 10) {
+        print(i)
+        i = i + 1
+    }
+    x: Int = 0
+    while(x < 10) x = x + 1
 }
-x: Int = 0
-while(x < 10) x = x + 1

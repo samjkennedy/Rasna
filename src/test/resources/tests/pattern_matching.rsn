@@ -1,42 +1,45 @@
-x: Int = 1
+fn main() {
+    x: Int = 1
 
-//Literal matching
-match x {
-    1 -> print(1),
-    2 -> print(2),
-    else print(0)
-}
-
-//Multiple matches
-for (z: Int = 0 to 5) {
-    match z {
-        1 or 2 -> print(1),
+    //Literal matching
+    match x {
+        1 -> print(1),
+        2 -> print(2),
         else -> print(0)
     }
+
+    //Multiple matches
+    for (z: Int = 0 to 5) {
+        match z {
+            1 or 2 -> print(1),
+            else -> print(0)
+        }
+    }
+
+    ////Guards
+    //match x {
+    //
+    //}
+    //
+
+    ////range matching
+    //match x {
+    //    0 to 9 -> print(1),
+    //    10 to 99 -> print(2),
+    //    else print(0)
+    //}
+
+    //Matching arrays and tuples
+    //....
+
+
+    t: Tuple = ("Hello", true, 1, 2.4)
+    for (v: Any in t) {
+        match v {
+            b: Bool -> print(b),
+            i: Int -> print(i),
+            s: String -> print(s),
+            else -> print("Unknown type")
+        }
+    }
 }
-
-////Guards
-//match x {
-//
-//}
-//
-
-////range matching
-//match x {
-//    0 to 9 -> print(1),
-//    10 to 99 -> print(2),
-//    else print(0)
-//}
-
-//Matching arrays and tuples
-//....
-
-////Type matching
-//var v = 3
-//
-//match v {
-//    b: Bool -> print(b)
-//    i: Int -> print(i),
-//    s: String -> print(s),
-//    else -> print("Unknown type")
-//}

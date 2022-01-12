@@ -10,7 +10,9 @@ fn sqrt(S: Real): Real {
     return x0
 }
 
-print(sqrt(4.))
-print(sqrt(5.0))
-print(sqrt(35.2))
-print(sqrt(125348.))
+fn main() {
+    print(sqrt(4.))
+    print(sqrt(5.0))
+    print(sqrt(35.2))
+    print(sqrt(125348.))
+}

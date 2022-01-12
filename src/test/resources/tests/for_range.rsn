@@ -1,5 +1,7 @@
-for (N: Int = 0 to 100 | N mod 3 == 0) {
-    print(N)
+fn main() {
+    for (N: Int = 0 to 100 | N mod 3 == 0) {
+        print(N)
+    }
+    a: Int[] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    for (i: Int in a | i mod 2 == 1) print(i)
 }
-a: Int[] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-for (i: Int in a | i mod 2 == 1) print(i)

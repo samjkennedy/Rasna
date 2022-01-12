@@ -1,5 +1,7 @@
 import inline "libs/lib.rsn"
 
-a: A = A(5)
-b: A = square(a)
-print(b.i)
+fn main() {
+    a: A = A(5)
+    b: A = square(a)
+    print(b.i)
+}
