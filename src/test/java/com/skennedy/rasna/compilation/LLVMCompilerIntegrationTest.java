@@ -18,9 +18,8 @@ import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
+public class LLVMCompilerIntegrationTest extends CompilerBaseIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("getFilesToTest")
@@ -28,7 +27,7 @@ class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
 
         PrintStream console = System.out;
         //Set up output stream
-        File outputFile = new File("src/test/resources/results/compilation/jvm_" + filename.split("\\.")[0] + "_result.txt");
+        File outputFile = new File("src/test/resources/results/compilation/llvm_" + filename.split("\\.")[0] + "_result.txt");
         outputFile.createNewFile();
         PrintStream out = new PrintStream(outputFile);
         // Store current System.out before assigning a new value
@@ -57,10 +56,10 @@ class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
             }
         } else {
 
-            JavaBytecodeCompiler compiler = new JavaBytecodeCompiler();
+            LLVMCompiler compiler = new LLVMCompiler();
             compiler.compile(boundProgram, filename.split("\\.")[0]);
 
-            Process process = Runtime.getRuntime().exec("java " + filename.split("\\.")[0] + " foo bar baz");
+            Process process = Runtime.getRuntime().exec("/" + filename.split("\\.")[0] + " foo bar baz");
             InputStream inputStream = process.getInputStream();
             char c = (char) inputStream.read();
             while (c != '\uFFFF') {
@@ -78,15 +77,8 @@ class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         System.setOut(console);
 
         String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt").trim();
-        String actualResult = read("results/compilation", "jvm_" + filename.split("\\.")[0] + "_result.txt").trim();
+        String actualResult = read("results/compilation", "llvm_" + filename.split("\\.")[0] + "_result.txt").trim();
 
         assertEquals(expectedResult, actualResult);
-
-        if (!boundProgram.hasErrors()) {
-            File classFile = new File(filename.split("\\.")[0] + ".class");
-            assertTrue(classFile.delete(), "Could not delete classfile");
-            File bytecodeFile = new File(filename.split("\\.")[0] + "_bytecode.txt");
-            assertTrue(bytecodeFile.delete(), "Could not delete bytecode file");
-        }
     }
 }

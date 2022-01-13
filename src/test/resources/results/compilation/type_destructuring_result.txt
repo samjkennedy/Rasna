@@ -1,4 +1,0 @@
-Hello
-1
-true
-I don't know what type this is...

@@ -6,7 +6,6 @@ import com.skennedy.flags.Flags;
 import com.skennedy.rasna.compilation.CompileTarget;
 import com.skennedy.rasna.compilation.Compiler;
 import com.skennedy.rasna.compilation.CompilerFactory;
-import com.skennedy.rasna.compilation.JavaBytecodeCompiler;
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
 import com.skennedy.rasna.diagnostics.TextSpan;
@@ -35,7 +34,7 @@ import java.util.List;
 
 public class Rasna {
 
-    public static final String FILE_EXT = "rsn";
+    public static final String FILE_EXT = "rasna";
 
     private static final Logger log = LogManager.getLogger(Rasna.class);
 
@@ -170,23 +169,33 @@ public class Rasna {
                     Instant end = Instant.now();
                     log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 
-                    Process process = Runtime.getRuntime().exec("java " + fileName);
-                    InputStream inputStream = process.getInputStream();
-                    char c = (char) inputStream.read();
-                    System.out.print(ConsoleColors.CYAN_BOLD);
-                    while (c != '\uFFFF') {
-                        System.out.print(c);
-                        c = (char) inputStream.read();
+                    Process process;
+                    switch (compileTarget) {
+                        case JVM:
+                            process = Runtime.getRuntime().exec("java " + fileName);
+
+                            InputStream inputStream = process.getInputStream();
+                            char c = (char) inputStream.read();
+                            System.out.print(ConsoleColors.CYAN_BOLD);
+                            while (c != '\uFFFF') {
+                                System.out.print(c);
+                                c = (char) inputStream.read();
+                            }
+                            System.out.print(ConsoleColors.RED_BOLD);
+                            InputStream errorStream = process.getErrorStream();
+                            c = (char) errorStream.read();
+                            while (c != '\uFFFF') {
+                                System.out.print(c);
+                                c = (char) errorStream.read();
+                            }
+                            System.out.print(ConsoleColors.RESET);
+                            break;
+                        case LLVM:
+                            //process = Runtime.getRuntime().exec("/" + fileName);
+                            break;
+                        default:
+                            throw new IllegalStateException("Unexpected compile target: " + compileTarget);
                     }
-                    System.out.print(ConsoleColors.RED_BOLD);
-                    InputStream errorStream = process.getErrorStream();
-                    c = (char) errorStream.read();
-                    while (c != '\uFFFF') {
-                        System.out.print(c);
-                        c = (char) errorStream.read();
-                    }
-                    System.out.print(ConsoleColors.RESET);
-                    break;
             }
 
         } catch (IOException ioe) {
@@ -295,7 +304,7 @@ public class Rasna {
     }
 
     //Yoinked from SO
-    private class ConsoleColors {
+    public class ConsoleColors {
         // Reset
         public static final String RESET = "\033[0m";  // Text Reset
 
