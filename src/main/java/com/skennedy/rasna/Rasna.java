@@ -169,33 +169,34 @@ public class Rasna {
                     Instant end = Instant.now();
                     log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 
+                    //TODO: only do this with a -r flag
                     Process process;
                     switch (compileTarget) {
                         case JVM:
                             process = Runtime.getRuntime().exec("java " + fileName);
-
-                            InputStream inputStream = process.getInputStream();
-                            char c = (char) inputStream.read();
-                            System.out.print(ConsoleColors.CYAN_BOLD);
-                            while (c != '\uFFFF') {
-                                System.out.print(c);
-                                c = (char) inputStream.read();
-                            }
-                            System.out.print(ConsoleColors.RED_BOLD);
-                            InputStream errorStream = process.getErrorStream();
-                            c = (char) errorStream.read();
-                            while (c != '\uFFFF') {
-                                System.out.print(c);
-                                c = (char) errorStream.read();
-                            }
-                            System.out.print(ConsoleColors.RESET);
                             break;
                         case LLVM:
-                            //process = Runtime.getRuntime().exec("/" + fileName);
+                            //TODO: This is windows specific
+                            process = Runtime.getRuntime().exec(fileName + ".exe");
                             break;
                         default:
                             throw new IllegalStateException("Unexpected compile target: " + compileTarget);
                     }
+                    InputStream inputStream = process.getInputStream();
+                    char c = (char) inputStream.read();
+                    System.out.print(ConsoleColors.CYAN_BOLD);
+                    while (c != '\uFFFF') {
+                        System.out.print(c);
+                        c = (char) inputStream.read();
+                    }
+                    System.out.print(ConsoleColors.RED_BOLD);
+                    InputStream errorStream = process.getErrorStream();
+                    c = (char) errorStream.read();
+                    while (c != '\uFFFF') {
+                        System.out.print(c);
+                        c = (char) errorStream.read();
+                    }
+                    System.out.print(ConsoleColors.RESET);
             }
 
         } catch (IOException ioe) {
