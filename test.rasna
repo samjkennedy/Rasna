@@ -1,5 +1,18 @@
 fn main() {
-    for (N: Int = 0 to 11 | N mod 2 == 0 and (N < 3 or N > 8)) {
-        print(N)
+    n: Int = 1
+    while (n < 256) {
+        print(n)
+        n = n + n
     }
+    i: Int = 0
+    while (i < 10) {
+        print(i)
+        j: Int = 0
+        while (j < 10) {
+            print(j)
+            j = j + 1
+        }
+        i = i + 1
+    }
+
 }

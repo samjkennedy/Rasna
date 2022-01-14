@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
+import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddIncoming;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
@@ -45,6 +46,8 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstString;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -397,6 +400,10 @@ public class LLVMCompiler implements Compiler {
         if (literalExpression.getType() == TypeSymbol.BOOL) {
             return LLVMConstInt(i32Type, (boolean) literalExpression.getValue() ? 1 : 0, 0);
         }
+        if (literalExpression.getType() == TypeSymbol.STRING) {
+            String value = (String) literalExpression.getValue();
+            return LLVMBuildGlobalStringPtr(builder, value, value); //TODO: This needs to be a pointer but not global
+        }
         throw new UnsupportedOperationException("Literals of type `" + literalExpression.getType() + "` are not yet supported in LLVM");
     }
 
@@ -407,11 +414,19 @@ public class LLVMCompiler implements Compiler {
         }
 
         LLVMValueRef res = visit(printExpression.getExpression(), builder, context, function);
-        PointerPointer<Pointer> printArgs = new PointerPointer<>(2)
-                .put(0, formatStr)
-                .put(1, res);
 
-        return LLVMBuildCall(builder, this.printf, printArgs, 2, "printcall");
+        PointerPointer<Pointer> printArgs;
+        if (printExpression.getExpression().getType() == STRING) {
+            printArgs = new PointerPointer<>(2)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%s\n", "str"))
+                    .put(1, res);
+        } else {
+            printArgs = new PointerPointer<>(2)
+                    .put(0, formatStr)
+                    .put(1, res);
+        }
+
+        return LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
     }
 
     private void visitMainMethod(BoundFunctionDeclarationExpression mainMethodDeclaration, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {

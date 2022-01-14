@@ -3,6 +3,8 @@ package com.skennedy.rasna.lowering;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.*;
 
+import java.util.Iterator;
+
 public class LLVMLowerer extends BoundProgramRewriter {
 
     @Override
@@ -68,6 +70,39 @@ public class LLVMLowerer extends BoundProgramRewriter {
 
         BoundDoWhileExpression doWhileCondition = new BoundDoWhileExpression(boundWhileExpression.getBody(), boundWhileExpression.getCondition());
 
-        return rewriteIfExpression(new BoundIfExpression(boundWhileExpression.getCondition(), doWhileCondition, null));
+        return rewriteExpression(new BoundIfExpression(boundWhileExpression.getCondition(), doWhileCondition, null));
+    }
+
+    @Override
+    protected BoundExpression rewriteMatchExpression(BoundMatchExpression matchExpression) {
+
+        BoundExpression expression = super.rewriteMatchExpression(matchExpression);
+
+        if (expression instanceof BoundNoOpExpression) {
+            return expression;
+        }
+        BoundMatchExpression rewrittenMatchExpression = (BoundMatchExpression) expression;
+
+        Iterator<BoundMatchCaseExpression> iterator = rewrittenMatchExpression.getMatchCaseExpressions().iterator();
+        return rewriteExpression(rewriteMatchCaseExpression(iterator, iterator.next(), matchExpression.getOperand()));
+    }
+
+    private BoundExpression rewriteMatchCaseExpression(Iterator<BoundMatchCaseExpression> iterator, BoundMatchCaseExpression matchCaseExpression, BoundExpression operand) {
+
+        if (matchCaseExpression.getCaseExpression() == null) { //base case
+            return matchCaseExpression.getThenExpression();
+        }
+
+        BoundExpression condition;
+        if (matchCaseExpression.getCaseExpression().getType() == TypeSymbol.BOOL) {
+            condition = matchCaseExpression.getCaseExpression();
+        } else {
+            condition = new BoundBinaryExpression(operand, BoundBinaryOperator.bind(OpType.EQ, TypeSymbol.INT, TypeSymbol.INT), matchCaseExpression.getCaseExpression());
+        }
+
+        if (iterator.hasNext()) {
+            return new BoundIfExpression(condition, matchCaseExpression.getThenExpression(), rewriteMatchCaseExpression(iterator, iterator.next(), operand));
+        }
+        return new BoundIfExpression(condition, matchCaseExpression.getThenExpression(), null);
     }
 }

@@ -210,7 +210,7 @@ public class Lexer {
             next();
         }
         next();//Skip closing '"'
-        return StringUtils.remove(line.substring(start, cursor - 1), STRING_ESCAPE_CHAR);
+        return line.substring(start, cursor - 1);
     }
 
     private Number parseNum(String line) {

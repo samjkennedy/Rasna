@@ -57,7 +57,7 @@ public abstract class BoundProgramRewriter {
         return new BoundBlockExpression(instructions);
     }
 
-    private BoundExpression rewriteExpression(BoundExpression expression) {
+    protected BoundExpression rewriteExpression(BoundExpression expression) {
         switch (expression.getBoundExpressionType()) {
 
             case ARRAY_LITERAL_EXPRESSION:
