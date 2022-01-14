@@ -1,4 +1,4 @@
-import inline "libs/lib.rsn"
+import inline "libs/lib.rasna"
 
 fn main() {
     a: A = A(5)

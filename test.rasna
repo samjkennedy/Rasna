@@ -1,0 +1,5 @@
+fn main() {
+    i: Int = 3
+    print(i)
+    print(i + 1)
+}

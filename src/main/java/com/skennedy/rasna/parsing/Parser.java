@@ -34,7 +34,8 @@ public class Parser {
     private static List<TokenType> allowedTopLevelTokens = Arrays.asList(
             TokenType.FN_KEYWORD,
             TokenType.STRUCT_KEYWORD,
-            TokenType.IMPORT_KEYWORD
+            TokenType.IMPORT_KEYWORD,
+            TokenType.NAMESPACE_KEYWORD
     );
     private boolean inTopLevel = true;
 

@@ -7,7 +7,7 @@ public class CompilerFactory {
             case JVM:
                 return new JavaBytecodeCompiler();
             case LLVM:
-                throw new UnsupportedOperationException("Compiling for " + target + " is not yet supported");
+                return new LLVMCompiler();
             default:
                 throw new IllegalArgumentException("Unknown target: " + target);
         }
