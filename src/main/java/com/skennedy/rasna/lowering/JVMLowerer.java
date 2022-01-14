@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class Lowerer extends BoundProgramRewriter {
+public class JVMLowerer extends BoundProgramRewriter {
 
     private static int labelCount = 0;
 

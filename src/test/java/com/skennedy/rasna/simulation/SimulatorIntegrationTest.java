@@ -1,7 +1,7 @@
 package com.skennedy.rasna.simulation;
 
 import com.skennedy.rasna.Rasna;
-import com.skennedy.rasna.lowering.Lowerer;
+import com.skennedy.rasna.lowering.JVMLowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
 import com.skennedy.rasna.typebinding.Binder;
@@ -43,7 +43,7 @@ class SimulatorIntegrationTest {
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);
 
-        Lowerer lowerer = new Lowerer();
+        JVMLowerer lowerer = new JVMLowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
         Simulator simulator = new Simulator(System.out);

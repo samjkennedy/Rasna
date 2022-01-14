@@ -6,12 +6,14 @@
 
     <groupId>com.skennedy</groupId>
     <artifactId>rasna</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 
     <properties>
         <flags.version>0.1.0-SNAPSHOT</flags.version>
         <assertclauses.version>0.1.0</assertclauses.version>
         <asm.version>9.2</asm.version>
+        <log4j.version>2.17.0</log4j.version>
+        <llvm.version>12.0.1-1.5.6</llvm.version>
     </properties>
 
     <dependencies>
@@ -54,12 +56,12 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.17.0</version>
+            <version>${log4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.17.0</version>
+            <version>${log4j.version}</version>
         </dependency>
 
         <!-- Graphing -->
@@ -100,12 +102,12 @@
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>llvm</artifactId>
-            <version>12.0.1-1.5.6</version>
+            <version>${llvm.version}</version>
         </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>llvm</artifactId>
-            <version>12.0.1-1.5.6</version>
+            <version>${llvm.version}</version>
             <classifier>windows-x86_64</classifier>
         </dependency>
         <dependency>

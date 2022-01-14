@@ -13,7 +13,8 @@ import com.skennedy.rasna.graphing.HighLevelTreeGrapher;
 import com.skennedy.rasna.graphing.LowLevelTreeGrapher;
 import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.lowering.BoundProgramRewriter;
-import com.skennedy.rasna.lowering.Lowerer;
+import com.skennedy.rasna.lowering.JVMLowerer;
+import com.skennedy.rasna.lowering.LowererFactory;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
 import com.skennedy.rasna.simulation.Simulator;
@@ -138,7 +139,7 @@ public class Rasna {
             }
 
             //Lower the program to a linear series of instructions
-            BoundProgramRewriter rewriter = new Lowerer();
+            BoundProgramRewriter rewriter = LowererFactory.getLowerer(compileTarget);
             boundProgram = rewriter.rewrite(boundProgram);
 
             if (graphProgram) {
