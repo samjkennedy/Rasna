@@ -172,6 +172,7 @@ public class Rasna {
 
                     //TODO: only do this with a -r flag
                     Process process;
+                    start = Instant.now();
                     switch (compileTarget) {
                         case JVM:
                             process = Runtime.getRuntime().exec("java " + fileName);
@@ -183,6 +184,7 @@ public class Rasna {
                         default:
                             throw new IllegalStateException("Unexpected compile target: " + compileTarget);
                     }
+                    end = Instant.now();
                     InputStream inputStream = process.getInputStream();
                     char c = (char) inputStream.read();
                     System.out.print(ConsoleColors.CYAN_BOLD);

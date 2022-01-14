@@ -1,9 +1,5 @@
 fn main() {
-    for (N: Int = 0 to 10) {
+    for (N: Int = 0 to 11 | N mod 2 == 0 and (N < 3 or N > 8)) {
         print(N)
     }
-    for (M: Int = 0 to 10 by 2) {
-        print(M)
-    }
-    for (i: Int = 0 to 10) print(i)
 }

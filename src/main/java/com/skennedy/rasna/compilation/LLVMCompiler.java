@@ -1,7 +1,6 @@
 package com.skennedy.rasna.compilation;
 
 import com.skennedy.rasna.lowering.BoundDoWhileExpression;
-import com.skennedy.rasna.parsing.VariableDeclarationExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -253,16 +252,15 @@ public class LLVMCompiler implements Compiler {
 
         LLVMBasicBlockRef bodyBlock = LLVMGetInsertBlock(builder);
         LLVMBasicBlockRef latchBlock = LLVMAppendBasicBlockInContext(context, function, "latch");
-        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "break");
-
-        LLVMPositionBuilderAtEnd(builder, bodyBlock);
-        LLVMValueRef bodyVal = visit(doWhileExpression.getBody(), builder, context, function);
-        LLVMBuildBr(builder, latchBlock);
-        bodyBlock = LLVMGetInsertBlock(builder);
+        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit-loop");
 
         LLVMPositionBuilderAtEnd(builder, latchBlock);
         LLVMValueRef condition = visit(doWhileExpression.getCondition(), builder, context, function);
         LLVMBuildCondBr(builder, condition, bodyBlock, exitBlock);
+
+        LLVMPositionBuilderAtEnd(builder, bodyBlock);
+        LLVMValueRef bodyVal = visit(doWhileExpression.getBody(), builder, context, function);
+        LLVMBuildBr(builder, latchBlock);
 
         LLVMPositionBuilderAtEnd(builder, exitBlock);
         return bodyVal;
@@ -272,7 +270,7 @@ public class LLVMCompiler implements Compiler {
 
         if (ifExpression.getElseBody() == null) {
             LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "then");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit");
+            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit-if");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
             LLVMBuildCondBr(builder, condition, thenBlock, exitBlock);
@@ -289,7 +287,7 @@ public class LLVMCompiler implements Compiler {
 
             LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "then");
             LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "else");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit");
+            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit-if-else");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
             LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
