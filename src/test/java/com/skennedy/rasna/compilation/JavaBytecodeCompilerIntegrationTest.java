@@ -28,7 +28,7 @@ class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
 
         PrintStream console = System.out;
         //Set up output stream
-        File outputFile = new File("src/test/resources/results/compilation/jvm_" + filename.split("\\.")[0] + "_result.txt");
+        File outputFile = new File("src/test/resources/results/compilation/jvm/" + filename.split("\\.")[0] + "_result.txt");
         outputFile.createNewFile();
         PrintStream out = new PrintStream(outputFile);
         // Store current System.out before assigning a new value
@@ -78,7 +78,7 @@ class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         System.setOut(console);
 
         String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt").trim();
-        String actualResult = read("results/compilation", "jvm_" + filename.split("\\.")[0] + "_result.txt").trim();
+        String actualResult = read("results/compilation", "jvm/" + filename.split("\\.")[0] + "_result.txt").trim();
 
         assertEquals(expectedResult, actualResult);
 

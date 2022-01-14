@@ -1,5 +1,5 @@
 fn main() {
-    print(1)
-    print(2)
-    print(2)
+    i: Int = 3
+    print(i)
+    print(i + 1)
 }
