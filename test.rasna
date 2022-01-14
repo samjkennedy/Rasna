@@ -1,5 +1,13 @@
 fn main() {
-    i: Int = 3
-    print(i)
-    print(i + 1)
+    i: Int = 4
+    if (i < 5) {
+        print(5)
+    }
+    else {
+        if (i < 4) {
+           print(4)
+        } else {
+            print(10)
+        }
+    }
 }

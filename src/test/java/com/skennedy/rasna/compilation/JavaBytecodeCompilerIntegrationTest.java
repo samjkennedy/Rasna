@@ -2,7 +2,7 @@ package com.skennedy.rasna.compilation;
 
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
-import com.skennedy.rasna.lowering.Lowerer;
+import com.skennedy.rasna.lowering.JVMLowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
 import com.skennedy.rasna.typebinding.Binder;
@@ -48,7 +48,7 @@ class JavaBytecodeCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);
 
-        Lowerer lowerer = new Lowerer();
+        JVMLowerer lowerer = new JVMLowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
         if (boundProgram.hasErrors()) {

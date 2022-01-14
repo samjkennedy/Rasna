@@ -1,5 +1,6 @@
 package com.skennedy.rasna.lowering;
 
+import com.skennedy.rasna.compilation.Compiler;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.*;
 
