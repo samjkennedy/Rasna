@@ -3,6 +3,7 @@ package com.skennedy.rasna.compilation;
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
 import com.skennedy.rasna.lowering.JVMLowerer;
+import com.skennedy.rasna.lowering.LLVMLowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
 import com.skennedy.rasna.typebinding.Binder;
@@ -48,7 +49,7 @@ public class LLVMCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);
 
-        JVMLowerer lowerer = new JVMLowerer();
+        LLVMLowerer lowerer = new LLVMLowerer();
         boundProgram = lowerer.rewrite(boundProgram);
 
         if (boundProgram.hasErrors()) {

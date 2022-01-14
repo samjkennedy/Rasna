@@ -126,9 +126,33 @@ public abstract class BoundProgramRewriter {
                 return rewriteMemberAccessorExpression((BoundMemberAccessorExpression) expression);
             case CAST_EXPRESSION:
                 return rewriteCastExpression((BoundCastExpression) expression);
+            case DO_WHILE:
+                return rewriteDoWhileExpression((BoundDoWhileExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundExpression rewriteDoWhileExpression(BoundDoWhileExpression doWhileExpression) {
+        BoundExpression body = doWhileExpression.getBody();
+        BoundExpression condition = doWhileExpression.getCondition();
+
+        if (body instanceof BoundNoOpExpression) {
+            return new BoundNoOpExpression();
+        }
+
+        if (condition.isConstExpression()) {
+            if ((boolean) condition.getConstValue()) {
+                return body;
+            } else {
+                return new BoundNoOpExpression();
+            }
+        }
+
+        if (condition == doWhileExpression.getCondition() && body == doWhileExpression.getBody()) {
+            return doWhileExpression;
+        }
+        return new BoundDoWhileExpression(body, condition);
     }
 
     private BoundExpression rewriteCastExpression(BoundCastExpression castExpression) {
