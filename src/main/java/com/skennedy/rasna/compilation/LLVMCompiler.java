@@ -1,5 +1,6 @@
 package com.skennedy.rasna.compilation;
 
+import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
 import com.skennedy.rasna.lowering.BoundDoWhileExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
@@ -13,6 +14,7 @@ import org.bytedeco.llvm.LLVM.LLVMContextRef;
 import org.bytedeco.llvm.LLVM.LLVMModuleRef;
 import org.bytedeco.llvm.LLVM.LLVMTypeRef;
 import org.bytedeco.llvm.LLVM.LLVMValueRef;
+import org.bytedeco.llvm.global.LLVM;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +28,7 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddIncoming;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
+import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAlloca;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAnd;
@@ -45,9 +48,8 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildStore;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstArray;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstString;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -56,8 +58,12 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetArrayLength;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetElementAsConstant;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetElementPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetNumOperands;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
@@ -94,8 +100,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef formatStr; //"%d\n"
 
     private Map<VariableSymbol, LLVMValueRef> variables;
-
-    private LLVMValueRef last;
+    private Map<VariableSymbol, LLVMTypeRef> types;
 
     @Override
     public void compile(BoundProgram program, String outputFileName) throws IOException {
@@ -108,6 +113,7 @@ public class LLVMCompiler implements Compiler {
         LLVMInitializeNativeTarget();
 
         variables = new HashMap<>();
+        types = new HashMap<>();
 
         LLVMContextRef context = LLVMContextCreate();
         LLVMModuleRef module = LLVMModuleCreateWithNameInContext(outputFileName, context);
@@ -215,9 +221,52 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundDoWhileExpression) expression, builder, context, function);
             case ASSIGNMENT_EXPRESSION:
                 return visit((BoundAssignmentExpression) expression, builder, context, function);
+            case ARRAY_LITERAL_EXPRESSION:
+                return visit((BoundArrayLiteralExpression) expression, builder, context, function);
+            case ARRAY_LENGTH_EXPRESSION:
+                return visit((BoundArrayLengthExpression) expression, builder, context, function);
+            case POSITIONAL_ACCESS_EXPRESSION:
+                return visit((BoundPositionalAccessExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
+    }
+
+    private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMValueRef array = visit(positionalAccessExpression.getArray(), builder, context, function);
+
+        if (!positionalAccessExpression.getIndex().isConstExpression()) {
+            throw new IllegalStateException("Cannot get element of array with non const index");
+        }
+        return LLVMGetElementAsConstant(array, (int) positionalAccessExpression.getIndex().getConstValue());
+    }
+
+    private LLVMValueRef visit(BoundArrayLengthExpression arrayLengthExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        if (!(arrayLengthExpression.getIterable() instanceof BoundVariableExpression)) {
+            LLVMValueRef visit = visit(arrayLengthExpression.getIterable(), builder, context, function);
+
+            LLVMGetNumOperands(visit);
+        }
+        BoundVariableExpression variableExpression = (BoundVariableExpression) arrayLengthExpression.getIterable();
+        if (!types.containsKey(variableExpression.getVariable())) {
+            throw new IllegalStateException("Variable `" + variableExpression.getVariable().getName() + "` has not been declared");
+        }
+
+        return LLVMConstInt(i32Type, LLVMGetArrayLength(types.get(variableExpression.getVariable())), 0);
+    }
+
+    private LLVMValueRef visit(BoundArrayLiteralExpression arrayLiteralExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        List<BoundExpression> elements = arrayLiteralExpression.getElements();
+        int size = elements.size();
+
+        PointerPointer<Pointer> els = new PointerPointer<>(size);
+        for (int i = 0; i < size; i++) {
+            els.put(i, visit(elements.get(i), builder, context, function));
+        }
+        return LLVMConstArray(getLlvmTypeRef(((ArrayTypeSymbol)arrayLiteralExpression.getType()).getType()), els, size);
     }
 
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -240,7 +289,7 @@ public class LLVMCompiler implements Compiler {
         }
         LLVMValueRef ptr = variables.get(variableSymbol);
 
-        return LLVMBuildAdd(builder, ptr, LLVMConstInt(i32Type, 1, 0), "incrtmp");
+        return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, variableSymbol.getName()), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
     }
 
     private LLVMValueRef visit(BoundBlockExpression blockExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -327,18 +376,35 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMTypeRef type;
-        if (variableDeclarationExpression.getType() == INT) {
-            type = i32Type;
+        if (variableDeclarationExpression instanceof BoundArrayVariableDeclarationExpression) {
+            BoundArrayVariableDeclarationExpression arrayVariableDeclarationExpression = (BoundArrayVariableDeclarationExpression) variableDeclarationExpression;
+            type = getArrayLlvmTypeRef((ArrayTypeSymbol) arrayVariableDeclarationExpression.getType(), arrayVariableDeclarationExpression.getElementCount());
+
+            types.put(variableDeclarationExpression.getVariable(), type);
         } else {
-            throw new UnsupportedOperationException("Variables of type `" + variableDeclarationExpression.getType() + "` are not yet implemented in LLVM");
+            type = getLlvmTypeRef(variableDeclarationExpression.getType());
         }
+
+        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
+
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
 
         variables.put(variableDeclarationExpression.getVariable(), ptr);
 
-        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
-
         return LLVMBuildStore(builder, val, ptr);
+    }
+
+    private LLVMTypeRef getArrayLlvmTypeRef(ArrayTypeSymbol arrayTypeSymbol, int elementCount) {
+
+        return LLVMArrayType(getLlvmTypeRef(arrayTypeSymbol.getType()), elementCount);
+    }
+
+    private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol) {
+        if (typeSymbol == INT) {
+            return i32Type;
+        } else {
+            throw new UnsupportedOperationException("Variables of type `" + typeSymbol + "` are not yet implemented in LLVM");
+        }
     }
 
     private LLVMValueRef visit(BoundVariableExpression variableExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {

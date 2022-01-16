@@ -5,7 +5,29 @@ import com.skennedy.rasna.typebinding.*;
 
 import java.util.Iterator;
 
-public class LLVMLowerer extends BoundProgramRewriter {
+public class LLVMLowerer extends Lowerer {
+
+    @Override
+    protected BoundExpression rewriteVariableDeclaration(BoundVariableDeclarationExpression variableDeclarationExpression) {
+        BoundExpression expression = super.rewriteVariableDeclaration(variableDeclarationExpression);
+
+        if (!(expression instanceof BoundVariableDeclarationExpression)) {
+            return expression;
+        }
+        BoundVariableDeclarationExpression rewrittenExpression = (BoundVariableDeclarationExpression) expression;
+
+        if (!(rewrittenExpression.getType() instanceof ArrayTypeSymbol)) {
+            return rewrittenExpression;
+        }
+
+        BoundExpression initialiser = variableDeclarationExpression.getInitialiser();
+        if (initialiser instanceof BoundArrayLiteralExpression) {
+            BoundArrayLiteralExpression arrayLiteralExpression = (BoundArrayLiteralExpression) initialiser;
+            return new BoundArrayVariableDeclarationExpression(rewrittenExpression.getVariable(), rewrittenExpression.getGuard(), arrayLiteralExpression, arrayLiteralExpression.getElements().size(), rewrittenExpression.isReadOnly());
+        }
+
+        throw new UnsupportedOperationException("Array declarations must have size available at compile time");
+    }
 
     @Override
     protected BoundExpression rewriteForExpression(BoundForExpression boundForExpression) {
@@ -68,7 +90,7 @@ public class LLVMLowerer extends BoundProgramRewriter {
             return expression;
         }
 
-        BoundDoWhileExpression doWhileCondition = new BoundDoWhileExpression(boundWhileExpression.getBody(), boundWhileExpression.getCondition());
+        BoundDoWhileExpression doWhileCondition = new BoundDoWhileExpression(rewriteExpression(boundWhileExpression.getBody()), boundWhileExpression.getCondition());
 
         return rewriteExpression(new BoundIfExpression(boundWhileExpression.getCondition(), doWhileCondition, null));
     }

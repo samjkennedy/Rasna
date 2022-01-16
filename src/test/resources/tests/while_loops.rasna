@@ -6,4 +6,14 @@ fn main() {
     }
     x: Int = 0
     while(x < 10) x = x + 1
+
+    n: Int = 0
+    while (n < 100) {
+        m: Int = 0
+        while (m < 10) {
+            print(m)
+            m = m + 1
+        }
+        n = n + m
+    }
 }
