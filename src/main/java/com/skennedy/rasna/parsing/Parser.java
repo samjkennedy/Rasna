@@ -698,7 +698,7 @@ public class Parser {
 
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
-        return new ParenthesisedExpression(openParen, expression, closeParen);
+        return parseAhead(new ParenthesisedExpression(openParen, expression, closeParen));
     }
 
     private TypeExpression parseTypeExpression() {
@@ -821,11 +821,7 @@ public class Parser {
             case DOT:
                 IdentifierExpression dot = matchToken(TokenType.DOT);
 
-                if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
-                    throw new UnsupportedOperationException("Member method calls are not yet supported");
-                }
-
-                IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
+                Expression member = parseExpression();
 
                 return parseAhead(new MemberAccessorExpression(parsed, dot, member));
             case AS_KEYWORD:

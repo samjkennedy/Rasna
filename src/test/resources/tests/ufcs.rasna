@@ -8,8 +8,23 @@ fn add(a: Vector, b: Vector): Vector {
     return Vector(a.x + b.x, a.y + b.y)
 }
 
-fn mul(v: Vector, s: Int): Vector {
+fn scale(v: Vector, s: Int): Vector {
     return Vector(v.x * s, v.y * s)
+}
+
+fn isqrt(x: Int): Int {
+
+    i: Int= 1
+    result: Int = 1
+    while (result <= x) {
+        i = i + 1
+        result = i * i
+    }
+    return i - 1
+}
+
+fn mag(v: Vector): Int {
+    return isqrt(v.x * v.x + v.y * v.y)
 }
 
 fn reverse(n: Int): Int {
@@ -45,7 +60,7 @@ fn main() {
     print(v5.y)
 
     //Methods can be chained a la OOP
-    v6: Vector = v2.add(v1).add(v2).mul(5)
+    v6: Vector = v2.add(v1).add(v2).scale(5)
     print(v6.x)
     print(v6.y)
 
@@ -54,4 +69,7 @@ fn main() {
     print(123.reverse().reverse())
 
     print(true.negate())
+
+    //Stress testing
+    print(not (v1.add(v2).scale(5).mag().reverse() == 63).negate()) //true
 }

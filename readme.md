@@ -121,7 +121,7 @@ Implemented:
  Functions can also take guards on their parameters:
  
  ```julia
- fn isqrt(Int x | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
+ fn isqrt(x: Int | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
 
      i: Int= 1
      result: Int = 1
