@@ -596,7 +596,7 @@ public abstract class BoundProgramRewriter {
         return new BoundForInExpression(forInExpression.getVariable(), iterable, guard, body);
     }
 
-    private BoundExpression rewriteVariableDeclaration(BoundVariableDeclarationExpression boundVariableDeclarationExpression) {
+    protected BoundExpression rewriteVariableDeclaration(BoundVariableDeclarationExpression boundVariableDeclarationExpression) {
 
         BoundExpression initialiser = null;
         if (boundVariableDeclarationExpression.getInitialiser() != null) {
