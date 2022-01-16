@@ -1,7 +1,10 @@
 package com.skennedy.rasna.typebinding;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TypeSymbol extends Symbol {
@@ -25,6 +28,10 @@ public class TypeSymbol extends Symbol {
         super(name);
         this.functions = functions;
         this.fields = fields;
+    }
+
+    public static List<TypeSymbol> getPrimitives() {
+        return Arrays.asList(BOOL, INT, REAL, STRING, TYPE, TUPLE, ANY);
     }
 
     public Map<String, FunctionSymbol> getFunctions() {

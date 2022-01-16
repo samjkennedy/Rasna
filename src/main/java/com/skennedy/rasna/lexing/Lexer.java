@@ -34,7 +34,7 @@ public class Lexer {
                     tokens.add(new Token(TokenType.WHITESPACE, new Location(filePath, lineNumber, start)));
                 } else if (Character.isDigit(current(line))) {
 
-                    tokens.add(new Token(TokenType.INT_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
+                    tokens.add(new Token(TokenType.NUM_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
 
                 } else if (Character.isAlphabetic(current(line)) || current(line) == '_') {
                     int start = cursor;
@@ -78,7 +78,7 @@ public class Lexer {
                                 tokens.add(new Token(TokenType.ARROW, new Location(filePath, lineNumber, cursor)));
                                 next();
                             } else if (Character.isDigit(lookAhead(line))) {
-                                tokens.add(new Token(TokenType.INT_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
+                                tokens.add(new Token(TokenType.NUM_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
                                 break;
                             } else {
                                 tokens.add(new Token(TokenType.MINUS, new Location(filePath, lineNumber, cursor)));
@@ -206,7 +206,7 @@ public class Lexer {
         next(); //Skip opening '"'
         int start = cursor;
 
-        while (cursor < line.length() && (line.charAt(cursor) != '"' || line.charAt(cursor - 1) == STRING_ESCAPE_CHAR)) {
+        while (cursor < line.length() && (charAhead(line, cursor) != '"' || charAhead(line, cursor - 1) == STRING_ESCAPE_CHAR)) {
             next();
         }
         next();//Skip closing '"'
@@ -218,7 +218,7 @@ public class Lexer {
         int start = cursor;
 
         next();
-        while (cursor < line.length() && (Character.isDigit(line.charAt(cursor)) || line.charAt(cursor) == '.')) {
+        while (cursor < line.length() && (Character.isDigit(charAhead(line, cursor)) || (charAhead(line, cursor) == '.') && !Character.isAlphabetic(charAhead(line, cursor + 1)))) {
             next();
         }
 
@@ -238,6 +238,13 @@ public class Lexer {
         }
     }
 
+    private char charAhead(String line, int i) {
+        if (line.length() <= i) {
+            return '\0';
+        }
+        return line.charAt(i);
+    }
+
     //TODO: Can only lookahead on one line, what if an expr is multiline?
 
     private char current(String line) {
@@ -254,7 +261,7 @@ public class Lexer {
         if (index >= line.length()) {
             return '\0';
         }
-        return line.charAt(index);
+        return charAhead(line, index);
     }
 
     private void next() {

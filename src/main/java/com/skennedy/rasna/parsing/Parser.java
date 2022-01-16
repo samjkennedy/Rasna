@@ -73,13 +73,25 @@ public class Parser {
         switch (current().getTokenType()) {
             case CONST_KEYWORD:
                 return parseVariableDeclarationExpression();
-            case INT_LITERAL:
-                return matchToken(TokenType.INT_LITERAL);
+            case NUM_LITERAL:
+                if (nextToken().getTokenType() == TokenType.DOT) {
+                    return parseMemberAccessorExpression(matchToken(TokenType.NUM_LITERAL));
+                }
+                return matchToken(TokenType.NUM_LITERAL);
             case STRING_LITERAL:
+                if (nextToken().getTokenType() == TokenType.DOT) {
+                    return parseMemberAccessorExpression(matchToken(TokenType.STRING_LITERAL));
+                }
                 return matchToken(TokenType.STRING_LITERAL);
             case TRUE_KEYWORD:
+                if (nextToken().getTokenType() == TokenType.DOT) {
+                    return parseMemberAccessorExpression(matchToken(TokenType.TRUE_KEYWORD));
+                }
                 return matchToken(TokenType.TRUE_KEYWORD);
             case FALSE_KEYWORD:
+                if (nextToken().getTokenType() == TokenType.DOT) {
+                    return parseMemberAccessorExpression(matchToken(TokenType.FALSE_KEYWORD));
+                }
                 return matchToken(TokenType.FALSE_KEYWORD);
             case NOT_KEYWORD:
                 return parseUnaryExpression();
@@ -120,7 +132,7 @@ public class Parser {
                     return parseVariableDeclarationExpression();
                 }
                 if (nextToken().getTokenType() == TokenType.DOT) {
-                    return parseMemberAccessorExpression();
+                    return parseMemberAccessorExpression(matchToken(TokenType.IDENTIFIER));
                 }
                 if (nextToken().getTokenType() == TokenType.COLON) {
                     return parseVariableDeclarationExpression();
@@ -245,24 +257,34 @@ public class Parser {
         return new NoOpExpression();
     }
 
-    private Expression parseMemberAccessorExpression() {
+    private Expression parseMemberAccessorExpression(Expression owner) {
 
-        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression dot = matchToken(TokenType.DOT);
 
-        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
-            throw new UnsupportedOperationException("Member method calls are not yet supported");
+        Expression member;
+        IdentifierExpression identifierExpression = matchToken(TokenType.IDENTIFIER);
+        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) { //Function call
+            IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+
+            List<Expression> arguments = parseArgumentList();
+
+            IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+            member = new FunctionCallExpression(identifierExpression, openParen, arguments, closeParen);
+        } else {
+            member = identifierExpression;
         }
-
-        IdentifierExpression member = matchToken(TokenType.IDENTIFIER);
-
-        MemberAccessorExpression memberAccessorExpression = new MemberAccessorExpression(identifier, dot, member);
+        MemberAccessorExpression memberAccessorExpression = new MemberAccessorExpression(owner, dot, member);
 
         if (current().getTokenType() == TokenType.EQUALS) {
             IdentifierExpression equals = matchToken(TokenType.EQUALS);
             Expression assignment = parseExpression();
 
             return new MemberAssignmentExpression(memberAccessorExpression, equals, assignment);
+        }
+
+        if (current().getTokenType() == TokenType.DOT) {
+            return parseMemberAccessorExpression(memberAccessorExpression);
         }
 
         //TODO: This might be more than just an identifier, e.g. method call: getVal().x
@@ -335,6 +357,14 @@ public class Parser {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
+        List<Expression> arguments = parseArgumentList();
+
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+        return new FunctionCallExpression(identifier, openParen, arguments, closeParen);
+    }
+
+    private List<Expression> parseArgumentList() {
         List<Expression> arguments = new ArrayList<>();
         while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
                 && current().getTokenType() != TokenType.EOF_TOKEN
@@ -352,9 +382,7 @@ public class Parser {
             }
             matchToken(TokenType.COMMA);
         }
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new FunctionCallExpression(identifier, openParen, arguments, closeParen);
+        return arguments;
     }
 
     private Expression parseReturnExpression() {
@@ -579,7 +607,6 @@ public class Parser {
     }
 
     private Expression parseArrayDeclarationExpression() {
-        IdentifierExpression colon = matchToken(TokenType.COLON);
         IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
             case INT_KEYWORD:
@@ -610,7 +637,7 @@ public class Parser {
         Expression elementCount = parseExpression();
         IdentifierExpression closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
 
-        return new ArrayDeclarationExpression(new TypeExpression(colon, typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
+        return new ArrayDeclarationExpression(new TypeExpression(null, typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
     }
 
     private Expression parseLambdaExpression() {

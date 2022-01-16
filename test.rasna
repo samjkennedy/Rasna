@@ -1,18 +1,20 @@
-fn main() {
-    n: Int = 1
-    while (n < 256) {
-        print(n)
-        n = n + n
+fn toArray(val: Real, length: Int): Real[] {
+    array: Real[] = Real[length]
+    for (i: Int = 0 to length) {
+        array[i] = val
     }
-    i: Int = 0
-    while (i < 10) {
-        print(i)
-        j: Int = 0
-        while (j < 10) {
-            print(j)
-            j = j + 1
-        }
-        i = i + 1
-    }
+    return array
+}
 
+fn elementArrayOf(length: Int, val: Real): Real[] {
+    array: Real[] = Real[length]
+    for (i: Int = 0 to length) {
+        array[i] = val
+    }
+    return array
+}
+
+fn main() {
+    arr: Real[] = 3.elementArrayOf(1.) //returns [1.0, 1.0, 1.0]
+    print(len(arr)) //prints 3
 }
