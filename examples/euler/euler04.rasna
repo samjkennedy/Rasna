@@ -29,8 +29,8 @@ fn main() {
     while (l > 0 or r > 0) {
 
         product = l * r
-        //TODO: no and, must have nested ifs
-        if (isPalindrome(product)) {
+        //TODO: no `and` yet, must have nested ifs
+        if (product.isPalindrome()) {
             if (product > largest) {
                 largest = product
                 bestL = l

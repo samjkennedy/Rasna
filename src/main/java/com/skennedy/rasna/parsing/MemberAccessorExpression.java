@@ -9,11 +9,11 @@ import java.util.Iterator;
 
 public class MemberAccessorExpression extends Expression {
 
-    final Expression owner;
-    final IdentifierExpression dot;
-    final IdentifierExpression member;
+    private final Expression owner;
+    private final IdentifierExpression dot;
+    private final Expression member;
 
-    public MemberAccessorExpression(Expression owner, IdentifierExpression dot, IdentifierExpression member) {
+    public MemberAccessorExpression(Expression owner, IdentifierExpression dot, Expression member) {
         this.owner = owner;
         this.dot = dot;
         this.member = member;
@@ -27,7 +27,7 @@ public class MemberAccessorExpression extends Expression {
         return dot;
     }
 
-    public IdentifierExpression getMember() {
+    public Expression getMember() {
         return member;
     }
 

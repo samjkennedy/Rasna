@@ -9,7 +9,7 @@ public enum TokenType {
 
     WHITESPACE(null),
     LINE_BREAK("\n"),
-    INT_LITERAL(null),
+    NUM_LITERAL(null),
     STRING_LITERAL(null),
     IDENTIFIER(null),
     COMMENT(null),

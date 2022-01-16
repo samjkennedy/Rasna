@@ -121,7 +121,7 @@ Implemented:
  Functions can also take guards on their parameters:
  
  ```julia
- fn isqrt(Int x | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
+ fn isqrt(x: Int | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
 
      i: Int= 1
      result: Int = 1
@@ -170,6 +170,40 @@ Implemented:
  ```julia
  fn mag3(v: V3R): Real {
      return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+ }
+ ```
+ 
+ ## Uniform Function Call Syntax
+ 
+ Like languages such as Nim and D, Rasna supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) instead of traditional OOP.
+ 
+ Any function defined with a type as the first argument can instead be called on that type, allowing chaining of methods:
+ 
+ ```julia
+ struct Vector {
+     x: Int
+     y: Int
+ }
+ 
+ fn add(a: Vector, b: Vector): Vector {
+     return Vector(a.x + b.x, a.y + b.y)
+ }
+ 
+ fn mul(v: Vector, s: Int): Vector {
+     return Vector(v.x * s, v.y * s)
+ }
+ 
+ fn main() {
+     v1: Vector = {1, 2}
+     v2: Vector = {3, 4}
+ 
+     //all the following are correct and equivalent
+     v3: Vector = add(v1, v2)
+     v4: Vector = v1.add(v2)
+     v5: Vector = v2.add(v1)
+     
+     //Methods can be chained a la OOP
+     v6: Vector = v2.add(v1).add(v2).mul(5)
  }
  ```
  

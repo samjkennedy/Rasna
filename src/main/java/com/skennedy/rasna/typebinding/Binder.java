@@ -234,31 +234,49 @@ public class Binder {
         return new BoundBlockExpression(boundExpressions);
     }
 
-    private BoundMemberAccessorExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
+    private BoundExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
         BoundExpression boundOwner = bind(memberAccessorExpression.getOwner());
 
-        IdentifierExpression member = memberAccessorExpression.getMember();
-
-        BoundExpression boundMember;
-
-        Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
-        if (typeSymbol.isEmpty()) {
-            throw new IllegalStateException("No such type " + boundOwner.getType().getName() + " in scope, possibly a parser bug");
-        }
-        TypeSymbol type = typeSymbol.get();
-        if (type.getFunctions().containsKey(member.getValue())) {
-            throw new UnsupportedOperationException("Function reference accessors are not yet supported");
+        TypeSymbol type;
+        if (TypeSymbol.getPrimitives().contains(boundOwner.getType())) {
+            type = boundOwner.getType();
+        } else {
+            Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
+            if (typeSymbol.isEmpty()) {
+                throw new IllegalStateException("No such type " + boundOwner.getType().getName() + " in scope, possibly a parser bug");
+            }
+            type = typeSymbol.get();
         }
 
-        if (!type.getFields().containsKey(member.getValue())) {
-            //TODO: Better error reporting
-            errors.add(BindingError.raiseUnknownMember((String) member.getValue(), type, memberAccessorExpression.getMember().getSpan()));
+        Expression member = memberAccessorExpression.getMember();
+        if (member.getExpressionType() == ExpressionType.FUNC_CALL_EXPR) {
+            //UFCS https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax
+            FunctionCallExpression functionCallExpression = (FunctionCallExpression) member;
+
+            List<Expression> ufscArgs = new ArrayList<>();
+            ufscArgs.add(memberAccessorExpression.getOwner());
+            ufscArgs.addAll(functionCallExpression.getArguments());
+
+            FunctionCallExpression ufcsFunctionCallExpression = new FunctionCallExpression(
+                    functionCallExpression.getIdentifier(),
+                    functionCallExpression.getOpenParen(),
+                    ufscArgs,
+                    functionCallExpression.getCloseParen()
+            );
+            return bindFunctionCallExpression(ufcsFunctionCallExpression);
         }
 
-        VariableSymbol variable = type.getFields().get(member.getValue());
-        boundMember = new BoundVariableExpression(variable);
+        if (member.getExpressionType() == ExpressionType.IDENTIFIER_EXPR) {
 
-        return new BoundMemberAccessorExpression(boundOwner, boundMember);
+            IdentifierExpression identifier = (IdentifierExpression) member;
+            VariableSymbol variable = type.getFields().get(identifier.getValue());
+            BoundVariableExpression variableExpression = new BoundVariableExpression(variable);
+            if (!type.getFields().containsKey(variableExpression.getVariable().getName())) {
+                errors.add(BindingError.raiseUnknownMember(variableExpression.getVariable().getName(), type, member.getSpan()));
+            }
+            return new BoundMemberAccessorExpression(boundOwner, variableExpression);
+        }
+        return new BoundErrorExpression();
     }
 
     private BoundExpression bindYieldExpression(YieldExpression yieldExpression) {
@@ -399,7 +417,12 @@ public class Binder {
 
     private BoundExpression bindMemberAssignmentExpression(MemberAssignmentExpression memberAssignmentExpression) {
 
-        BoundMemberAccessorExpression boundMemberAccessorExpression = bindMemberAccessorExpression(memberAssignmentExpression.getMemberAccessorExpression());
+        BoundExpression boundExpression = bindMemberAccessorExpression(memberAssignmentExpression.getMemberAccessorExpression());
+        if (boundExpression.getBoundExpressionType() != BoundExpressionType.MEMBER_ACCESSOR) {
+            return new BoundErrorExpression();
+        }
+        BoundMemberAccessorExpression boundMemberAccessorExpression = (BoundMemberAccessorExpression) boundExpression;
+
         BoundExpression assignment = bind(memberAssignmentExpression.getAssignment());
 
         if (!boundMemberAccessorExpression.getMember().getType().isAssignableFrom(assignment.getType())) {
@@ -690,7 +713,7 @@ public class Binder {
 
     private BoundExpression bindIdentifierExpression(IdentifierExpression identifierExpression) {
 
-        if (identifierExpression.getTokenType() == TokenType.INT_LITERAL || identifierExpression.getTokenType() == TokenType.STRING_LITERAL) {
+        if (identifierExpression.getTokenType() == TokenType.NUM_LITERAL || identifierExpression.getTokenType() == TokenType.STRING_LITERAL) {
             return new BoundLiteralExpression(identifierExpression.getValue());
 
         } else if (identifierExpression.getTokenType() == TokenType.TRUE_KEYWORD) {
@@ -931,6 +954,9 @@ public class Binder {
         BoundExpression guard = null;
         if (argumentExpression.getGuard() != null) {
             guard = bind(argumentExpression.getGuard());
+            if (guard.getType() != TypeSymbol.BOOL) {
+                errors.add(BindingError.raiseTypeMismatch(TypeSymbol.BOOL, guard.getType(), argumentExpression.getGuard().getSpan()));
+            }
         }
 
         VariableSymbol argument = buildVariableSymbol(type, identifier, guard, argumentExpression.getConstKeyword() != null, argumentExpression);

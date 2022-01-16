@@ -1,0 +1,75 @@
+//https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax
+struct Vector {
+    x: Int
+    y: Int
+}
+
+fn add(a: Vector, b: Vector): Vector {
+    return Vector(a.x + b.x, a.y + b.y)
+}
+
+fn scale(v: Vector, s: Int): Vector {
+    return Vector(v.x * s, v.y * s)
+}
+
+fn isqrt(x: Int): Int {
+
+    i: Int= 1
+    result: Int = 1
+    while (result <= x) {
+        i = i + 1
+        result = i * i
+    }
+    return i - 1
+}
+
+fn mag(v: Vector): Int {
+    return isqrt(v.x * v.x + v.y * v.y)
+}
+
+fn reverse(n: Int): Int {
+    r: Int = 0
+    sum: Int = 0
+    while (n > 0) {
+        r = n mod 10
+        sum = (sum * 10) + r
+        n = n / 10
+    }
+    return sum
+}
+
+fn negate(b: Bool): Bool {
+    return not b
+}
+
+fn main() {
+
+    v1: Vector = {1, 2}
+    v2: Vector = {3, 4}
+
+    //all the following are correct and equivalent
+    v3: Vector = add(v1, v2)
+    v4: Vector = v1.add(v2)
+    v5: Vector = v2.add(v1)
+
+    print(v3.x)
+    print(v3.y)
+    print(v4.x)
+    print(v4.y)
+    print(v5.x)
+    print(v5.y)
+
+    //Methods can be chained a la OOP
+    v6: Vector = v2.add(v1).add(v2).scale(5)
+    print(v6.x)
+    print(v6.y)
+
+    //UFCS works for literals
+    print(123.reverse())
+    print(123.reverse().reverse())
+
+    print(true.negate())
+
+    //Stress testing
+    print(not (v1.add(v2).scale(5).mag().reverse() == 63).negate()) //true
+}
