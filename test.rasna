@@ -15,6 +15,6 @@ fn puti(i: Int) {
 }
 
 fn main() {
-    j: Int = 3
-    puti(max(j, 3))
+    i: Int = 2
+    puti(max(i, 3))
 }

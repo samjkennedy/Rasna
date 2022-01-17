@@ -1,5 +1,8 @@
-package com.skennedy.rasna.compilation;
+package com.skennedy.rasna.compilation.llvm;
 
+import com.skennedy.rasna.compilation.Compiler;
+import com.skennedy.rasna.exceptions.FunctionAlreadyDeclaredException;
+import com.skennedy.rasna.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.rasna.lowering.BoundDoWhileExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
@@ -19,6 +22,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
@@ -95,10 +99,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef printf;
     private LLVMValueRef formatStr; //"%d\n"
 
-    //TODO: Scopes
-    private Map<VariableSymbol, LLVMValueRef> variables;
-    private Map<VariableSymbol, LLVMValueRef> pointers;
-    private Map<FunctionSymbol, LLVMValueRef> functions;
+    private Scope scope;
 
     @Override
     public void compile(BoundProgram program, String outputFileName) throws IOException {
@@ -110,9 +111,7 @@ public class LLVMCompiler implements Compiler {
         LLVMInitializeNativeAsmParser();
         LLVMInitializeNativeTarget();
 
-        variables = new HashMap<>();
-        functions = new HashMap<>();
-        pointers = new HashMap<>();
+        scope = new Scope(null);
 
         LLVMContextRef context = LLVMContextCreate();
         LLVMModuleRef module = LLVMModuleCreateWithNameInContext(outputFileName, context);
@@ -150,6 +149,7 @@ public class LLVMCompiler implements Compiler {
                         System.exit(1);
                     }
                 } else {
+                    scope = new Scope(scope);
                     FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
 
                     List<TypeSymbol> argumentTypes = functionSymbol.getArguments().stream()
@@ -172,8 +172,8 @@ public class LLVMCompiler implements Compiler {
                         LLVMDumpModule(module);
                         System.exit(1);
                     }
-
-                    functions.put(functionSymbol, func);
+                    scope = scope.parentScope;
+                    scope.declareFunction(functionSymbol, func);
                 }
             }
         }
@@ -282,18 +282,18 @@ public class LLVMCompiler implements Compiler {
         }
 
         if (functionSymbol.getType() == VOID) {
-            return LLVMBuildCall(builder, functions.get(functionSymbol), args, functionCallExpression.getBoundArguments().size(), "");
+            return scope.tryLookupFunction(functionSymbol).map(func -> LLVMBuildCall(builder, func, args, functionCallExpression.getBoundArguments().size(), ""))
+                    .orElseThrow(() -> new IllegalStateException("No such function defined in scope: `" + functionSymbol.getSignature() + "`"));
         }
-        return LLVMBuildCall(builder, functions.get(functionSymbol), args, functionCallExpression.getBoundArguments().size(), functionSymbol.getName());
+        return scope.tryLookupFunction(functionSymbol).map(func -> LLVMBuildCall(builder, func, args, functionCallExpression.getBoundArguments().size(), functionSymbol.getName()))
+                .orElseThrow(() -> new IllegalStateException("No such function defined in scope: `" + functionSymbol.getSignature() + "`"));
     }
 
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         VariableSymbol variableSymbol = assignmentExpression.getVariable();
-        if (!variables.containsKey(variableSymbol)) {
-            throw new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared");
-        }
-        LLVMValueRef ptr = variables.get(variableSymbol);
+        LLVMValueRef ptr =scope.tryLookupPointer(variableSymbol)
+                .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
 
         LLVMValueRef val = visit(assignmentExpression.getExpression(), builder, context, function);
 
@@ -302,10 +302,8 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundIncrementExpression incrementExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
         VariableSymbol variableSymbol = incrementExpression.getVariableSymbol();
-        if (!variables.containsKey(variableSymbol)) {
-            throw new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared");
-        }
-        LLVMValueRef ptr = variables.get(variableSymbol);
+        LLVMValueRef ptr =scope.tryLookupPointer(variableSymbol)
+                .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
 
         return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, variableSymbol.getName()), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
     }
@@ -397,7 +395,7 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
 
-        pointers.put(variableDeclarationExpression.getVariable(), ptr);
+        scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
         return LLVMBuildStore(builder, val, ptr);
     }
@@ -415,13 +413,14 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundVariableExpression variableExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         VariableSymbol variable = variableExpression.getVariable();
-        if (variables.containsKey(variable)) {
-            return variables.get(variable);
+        Optional<LLVMValueRef> variableRef = scope.tryLookupVariable(variable);
+        if (variableRef.isPresent()) {
+            return variableRef.get();
         }
-        if (pointers.containsKey(variable)) {
-            return LLVMBuildLoad(builder, pointers.get(variable), variable.getName());
+        Optional<LLVMValueRef> pointerRef = scope.tryLookupPointer(variable);
+        if (pointerRef.isPresent()) {
+            return LLVMBuildLoad(builder, pointerRef.get(), variable.getName());
         }
-
         throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
     }
 
@@ -525,7 +524,7 @@ public class LLVMCompiler implements Compiler {
         for (int i = 0; i < arguments.size(); i++) {
             BoundFunctionArgumentExpression argument = arguments.get(i);
             LLVMValueRef val = LLVMGetParam(function, i);
-            variables.put(argument.getArgument(), val);
+            scope.declareVariable(argument.getArgument(), val);
         }
 
         //Visit body
@@ -547,5 +546,76 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundReturnExpression returnExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         return visit(returnExpression.getReturnValue(), builder, context, function);
+    }
+
+    private final class Scope {
+
+        private final Scope parentScope;
+
+        private Map<VariableSymbol, LLVMValueRef> definedVariables;
+        private Map<VariableSymbol, LLVMValueRef> definedPointers;
+        private Map<FunctionSymbol, LLVMValueRef> definedFunctions;
+
+        private Scope(Scope parentScope) {
+            this.parentScope = parentScope;
+
+            definedVariables = new HashMap<>();
+            definedPointers = new HashMap<>();
+            definedFunctions = new HashMap<>();
+        }
+
+        public Optional<LLVMValueRef> tryLookupVariable(VariableSymbol variable) {
+
+            if (definedVariables.containsKey(variable)) {
+                return Optional.of(definedVariables.get(variable));
+            }
+            if (parentScope != null) {
+                return parentScope.tryLookupVariable(variable);
+            }
+            return Optional.empty();
+        }
+
+        public void declareVariable(VariableSymbol variable, LLVMValueRef value) {
+            if (tryLookupVariable(variable).isPresent()) {
+                throw new VariableAlreadyDeclaredException(variable.getName());
+            }
+            definedVariables.put(variable, value);
+        }
+
+        public Optional<LLVMValueRef> tryLookupPointer(VariableSymbol variable) {
+
+            if (definedPointers.containsKey(variable)) {
+                return Optional.of(definedPointers.get(variable));
+            }
+            if (parentScope != null) {
+                return parentScope.tryLookupPointer(variable);
+            }
+            return Optional.empty();
+        }
+
+        public void declarePointer(VariableSymbol variable, LLVMValueRef ptr) {
+            if (tryLookupPointer(variable).isPresent()) {
+                throw new VariableAlreadyDeclaredException(variable.getName());
+            }
+            definedPointers.put(variable, ptr);
+        }
+
+        public Optional<LLVMValueRef> tryLookupFunction(FunctionSymbol function) {
+
+            if (definedFunctions.containsKey(function)) {
+                return Optional.of(definedFunctions.get(function));
+            }
+            if (parentScope != null) {
+                return parentScope.tryLookupFunction(function);
+            }
+            return Optional.empty();
+        }
+
+        public void declareFunction(FunctionSymbol function, LLVMValueRef ref) {
+            if (tryLookupFunction(function).isPresent()) {
+                throw new FunctionAlreadyDeclaredException(function.getName());
+            }
+            definedFunctions.put(function, ref);
+        }
     }
 }
