@@ -1,13 +1,7 @@
-fn puti(i: Int) {
-    print(i)
-}
-
-fn print1() {
-    print(1)
+fn add(a: Int, b: Int): Int {
+    return a + b
 }
 
 fn main() {
-    k: Int = 3
-    puti(k)
-    print1()
+    print(2.add(3))
 }

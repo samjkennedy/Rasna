@@ -275,11 +275,12 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundPositionalAccessExpression) expression, builder, context, function);
             case FUNCTION_CALL:
                 return visit((BoundFunctionCallExpression) expression, builder, context, function);
+            case RETURN:
+                return visit((BoundReturnExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
     }
-
 
     private LLVMValueRef visit(BoundFunctionCallExpression functionCallExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
@@ -598,5 +599,9 @@ public class LLVMCompiler implements Compiler {
         if (functionDeclarationExpression.getFunctionSymbol().getType() == VOID) {
             LLVMBuildRetVoid(builder);
         }
+    }
+
+    private LLVMValueRef visit(BoundReturnExpression returnExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        return LLVMBuildRet(builder, visit(returnExpression.getReturnValue(), builder, context, function));
     }
 }

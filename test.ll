@@ -5,27 +5,21 @@ source_filename = "test"
 
 declare i32 @printf(i8*, ...)
 
-define void @puti(i32 %0) {
+define i32 @add(i32 %0, i32 %1) {
 entry:
-  %i = alloca i32, align 4
-  store i32 %0, i32* %i, align 4
-  %i1 = load i32, i32* %i, align 4
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %i1)
-  ret void
-}
-
-define void @print1() {
-entry:
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 1)
-  ret void
+  %a = alloca i32, align 4
+  store i32 %0, i32* %a, align 4
+  %b = alloca i32, align 4
+  store i32 %1, i32* %b, align 4
+  %a1 = load i32, i32* %a, align 4
+  %b2 = load i32, i32* %b, align 4
+  %saddtmp = add i32 %a1, %b2
+  ret i32 %saddtmp
 }
 
 define i32 @main() {
 entry:
-  %k = alloca i32, align 4
-  store i32 3, i32* %k, align 4
-  %k1 = load i32, i32* %k, align 4
-  call void @puti(i32 %k1)
-  call void @print1()
+  %0 = call i32 @add(i32 2, i32 3)
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %0)
   ret i32 0
 }
