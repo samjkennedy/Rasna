@@ -30,7 +30,7 @@ public class FunctionAnalyser {
         for (int i = 0; i < boundExpressions.size(); i++) {
 
             BoundExpression boundExpression = boundExpressions.get(i);
-            allPathsReturnValue = checkReturnPath(boundExpression);
+            allPathsReturnValue = allPathsReturnValue || checkReturnPath(boundExpression);
         }
 
         return allPathsReturnValue;
@@ -99,14 +99,19 @@ public class FunctionAnalyser {
         List<BindingError> errors = new ArrayList<>();
 
         TypeSymbol returnType = function.getType();
+
+        boolean ret = false;
         for (int i = 0; i < boundExpressions.size(); i++) {
+
 
             BoundExpression boundExpression = boundExpressions.get(i);
             if (boundExpression.getBoundExpressionType() == BoundExpressionType.RETURN) {
-
+                ret = true;
                 if (!boundExpression.getType().isAssignableFrom(returnType)) {
                     errors.add(BindingError.raiseTypeMismatch(returnType, boundExpression.getType(), expressions.get(i).getSpan()));
                 }
+            } else if (ret) {
+                errors.add(BindingError.raiseUnreachableExpression(expressions.get(i).getSpan()));
             }
             if (boundExpression.getBoundExpressionType() == BoundExpressionType.BLOCK) {
                 errors.addAll(analyzeBlock((BoundBlockExpression) boundExpression, (BlockExpression) expressions.get(i), returnType));

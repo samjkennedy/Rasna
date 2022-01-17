@@ -204,7 +204,6 @@ public class Lexer {
     private String parseString(String line) {
 
         next(); //Skip opening '"'
-        int start = cursor;
 
         StringBuilder sb = new StringBuilder();
         while (cursor < line.length() && charAt(line, cursor) != '"') {

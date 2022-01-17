@@ -108,6 +108,11 @@ public class BindingError {
         return new BindingError("Unknown identifier `" + identifier + "`:", span);
     }
 
+    public static BindingError raiseUnreachableExpression(TextSpan span) {
+
+        return new BindingError("Unreachable expression:", span);
+    }
+
     public String getMessage() {
         return message;
     }

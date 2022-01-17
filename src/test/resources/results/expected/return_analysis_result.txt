@@ -21,3 +21,9 @@ Missing return statement:
 Missing return statement:
 33:     }
 34: }
+35:
+
+Unreachable expression:
+38:     return 1
+39:     print("Unreachable!")
+40: }

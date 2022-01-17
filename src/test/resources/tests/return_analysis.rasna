@@ -33,3 +33,9 @@ fn badTuple(a: Int): Tuple {
         else -> return ("World", false, 1)
     }
 }
+
+fn unreachable(): Int {
+
+    return 1
+    print("Unreachable!")
+}
