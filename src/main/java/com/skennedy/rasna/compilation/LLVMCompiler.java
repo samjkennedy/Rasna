@@ -64,6 +64,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMGetElementAsConstant;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetNumOperands;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetParam;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
@@ -230,7 +231,7 @@ public class LLVMCompiler implements Compiler {
         LLVMTypeRef llvmReturnType = getLlvmTypeRef(returnType, context);
 
         if (argumentTypes.isEmpty()) {
-            return LLVMFunctionType(llvmReturnType, LLVMVoidType(), /* argumentCount */ 0, /* isVariadic */ 0);
+            return LLVMFunctionType(llvmReturnType, LLVMVoidType(), 0, 0);
         }
 
         PointerPointer<Pointer> llvmArgumentTypes = new PointerPointer<>(argumentTypes.size());
@@ -239,7 +240,7 @@ public class LLVMCompiler implements Compiler {
             llvmArgumentTypes.put(i, getLlvmTypeRef(argumentType, context));
         }
 
-        return LLVMFunctionType(llvmReturnType, llvmArgumentTypes, /* argumentCount */ argumentTypes.size(), /* isVariadic */ 0);
+        return LLVMFunctionType(llvmReturnType, llvmArgumentTypes, argumentTypes.size(), 0);
     }
 
     private LLVMValueRef visit(BoundExpression expression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -284,8 +285,14 @@ public class LLVMCompiler implements Compiler {
 
         FunctionSymbol functionSymbol = functionCallExpression.getFunction();
 
-        //TODO: Arguments and return type
-        return LLVMBuildCall(builder, functions.get(functionSymbol), new PointerPointer(0), 0, "");
+        PointerPointer<Pointer> args = new PointerPointer<>(functionCallExpression.getBoundArguments().size());
+        List<BoundExpression> boundArguments = functionCallExpression.getBoundArguments();
+        for (int i = 0; i < boundArguments.size(); i++) {
+            args.put(i, visit(boundArguments.get(i), builder, context, function));
+        }
+
+        //TODO: Non-void returns need a name
+        return LLVMBuildCall(builder, functions.get(functionSymbol), args, functionCallExpression.getBoundArguments().size(), "");
     }
 
     private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -322,7 +329,7 @@ public class LLVMCompiler implements Compiler {
         for (int i = 0; i < size; i++) {
             els.put(i, visit(elements.get(i), builder, context, function));
         }
-        return LLVMConstArray(getLlvmTypeRef(((ArrayTypeSymbol)arrayLiteralExpression.getType()).getType(), context), els, size);
+        return LLVMConstArray(getLlvmTypeRef(((ArrayTypeSymbol) arrayLiteralExpression.getType()).getType(), context), els, size);
     }
 
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -569,13 +576,27 @@ public class LLVMCompiler implements Compiler {
 
     private void visit(BoundFunctionDeclarationExpression functionDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        //TODO: Bind args
+        //Bind args
+        List<BoundFunctionArgumentExpression> arguments = functionDeclarationExpression.getArguments();
+        for (int i = 0; i < arguments.size(); i++) {
+            BoundFunctionArgumentExpression argument = arguments.get(i);
 
+            //TODO: It seems a bit convoluted to be allocating this instead of using it raw but visit(BoundVariableExpression...) uses pointers
+            LLVMValueRef val = LLVMGetParam(function, i);
+            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(argument.getType(), context), argument.getArgument().getName());
+            LLVMBuildStore(builder, val, ptr);
+
+            variables.put(argument.getArgument(), ptr);
+        }
+
+        //Visit body
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
             visit(expression, builder, context, function);
         }
 
-        //TODO: Not valid for non void returns
-        LLVMBuildRetVoid(builder);
+        //Add return for void methods
+        if (functionDeclarationExpression.getFunctionSymbol().getType() == VOID) {
+            LLVMBuildRetVoid(builder);
+        }
     }
 }
