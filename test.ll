@@ -5,21 +5,45 @@ source_filename = "test"
 
 declare i32 @printf(i8*, ...)
 
-define i32 @add(i32 %0, i32 %1) {
+define i32 @max(i32 %0, i32 %1) {
 entry:
-  %a = alloca i32, align 4
-  store i32 %0, i32* %a, align 4
-  %b = alloca i32, align 4
-  store i32 %1, i32* %b, align 4
-  %a1 = load i32, i32* %a, align 4
-  %b2 = load i32, i32* %b, align 4
-  %saddtmp = add i32 %a1, %b2
-  ret i32 %saddtmp
+  %sgttmp = icmp sgt i32 %0, %1
+  br i1 %sgttmp, label %if-true, label %if-false
+
+if-true:                                          ; preds = %entry
+  br label %end
+
+if-false:                                         ; preds = %entry
+  %eqtmp = icmp eq i32 %0, %1
+  br i1 %eqtmp, label %if-true1, label %if-false2
+
+end:                                              ; preds = %end3, %if-true
+  %2 = phi i32 [ %0, %if-true ], [ %3, %end3 ]
+  ret i32 %2
+
+if-true1:                                         ; preds = %if-false
+  br label %end3
+
+if-false2:                                        ; preds = %if-false
+  br label %end3
+
+end3:                                             ; preds = %if-false2, %if-true1
+  %3 = phi i32 [ %0, %if-true1 ], [ %1, %if-false2 ]
+  br label %end
+}
+
+define void @puti(i32 %0) {
+entry:
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %0)
+  ret void
 }
 
 define i32 @main() {
 entry:
-  %0 = call i32 @add(i32 2, i32 3)
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %0)
+  %j = alloca i32, align 4
+  store i32 3, i32* %j, align 4
+  %j1 = load i32, i32* %j, align 4
+  %max = call i32 @max(i32 %j1, i32 3)
+  call void @puti(i32 %max)
   ret i32 0
 }

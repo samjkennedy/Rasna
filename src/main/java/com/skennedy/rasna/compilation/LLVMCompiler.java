@@ -1,6 +1,5 @@
 package com.skennedy.rasna.compilation;
 
-import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
 import com.skennedy.rasna.lowering.BoundDoWhileExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
@@ -28,7 +27,6 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.VOID;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddIncoming;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
-import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAlloca;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAnd;
@@ -49,7 +47,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildStore;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstArray;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
@@ -59,11 +56,8 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
-import static org.bytedeco.llvm.global.LLVM.LLVMGetArrayLength;
-import static org.bytedeco.llvm.global.LLVM.LLVMGetElementAsConstant;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
-import static org.bytedeco.llvm.global.LLVM.LLVMGetNumOperands;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetParam;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
@@ -101,9 +95,10 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef printf;
     private LLVMValueRef formatStr; //"%d\n"
 
+    //TODO: Scopes
     private Map<VariableSymbol, LLVMValueRef> variables;
+    private Map<VariableSymbol, LLVMValueRef> pointers;
     private Map<FunctionSymbol, LLVMValueRef> functions;
-    private Map<VariableSymbol, LLVMTypeRef> types;
 
     @Override
     public void compile(BoundProgram program, String outputFileName) throws IOException {
@@ -117,7 +112,7 @@ public class LLVMCompiler implements Compiler {
 
         variables = new HashMap<>();
         functions = new HashMap<>();
-        types = new HashMap<>();
+        pointers = new HashMap<>();
 
         LLVMContextRef context = LLVMContextCreate();
         LLVMModuleRef module = LLVMModuleCreateWithNameInContext(outputFileName, context);
@@ -267,12 +262,6 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundDoWhileExpression) expression, builder, context, function);
             case ASSIGNMENT_EXPRESSION:
                 return visit((BoundAssignmentExpression) expression, builder, context, function);
-            case ARRAY_LITERAL_EXPRESSION:
-                return visit((BoundArrayLiteralExpression) expression, builder, context, function);
-            case ARRAY_LENGTH_EXPRESSION:
-                return visit((BoundArrayLengthExpression) expression, builder, context, function);
-            case POSITIONAL_ACCESS_EXPRESSION:
-                return visit((BoundPositionalAccessExpression) expression, builder, context, function);
             case FUNCTION_CALL:
                 return visit((BoundFunctionCallExpression) expression, builder, context, function);
             case RETURN:
@@ -292,45 +281,10 @@ public class LLVMCompiler implements Compiler {
             args.put(i, visit(boundArguments.get(i), builder, context, function));
         }
 
-        //TODO: Non-void returns need a name
-        return LLVMBuildCall(builder, functions.get(functionSymbol), args, functionCallExpression.getBoundArguments().size(), "");
-    }
-
-    private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-
-        LLVMValueRef array = visit(positionalAccessExpression.getArray(), builder, context, function);
-
-        if (!positionalAccessExpression.getIndex().isConstExpression()) {
-            throw new IllegalStateException("Cannot get element of array with non const index");
+        if (functionSymbol.getType() == VOID) {
+            return LLVMBuildCall(builder, functions.get(functionSymbol), args, functionCallExpression.getBoundArguments().size(), "");
         }
-        return LLVMGetElementAsConstant(array, (int) positionalAccessExpression.getIndex().getConstValue());
-    }
-
-    private LLVMValueRef visit(BoundArrayLengthExpression arrayLengthExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-
-        if (!(arrayLengthExpression.getIterable() instanceof BoundVariableExpression)) {
-            LLVMValueRef visit = visit(arrayLengthExpression.getIterable(), builder, context, function);
-
-            LLVMGetNumOperands(visit);
-        }
-        BoundVariableExpression variableExpression = (BoundVariableExpression) arrayLengthExpression.getIterable();
-        if (!types.containsKey(variableExpression.getVariable())) {
-            throw new IllegalStateException("Variable `" + variableExpression.getVariable().getName() + "` has not been declared");
-        }
-
-        return LLVMConstInt(i32Type, LLVMGetArrayLength(types.get(variableExpression.getVariable())), 0);
-    }
-
-    private LLVMValueRef visit(BoundArrayLiteralExpression arrayLiteralExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-
-        List<BoundExpression> elements = arrayLiteralExpression.getElements();
-        int size = elements.size();
-
-        PointerPointer<Pointer> els = new PointerPointer<>(size);
-        for (int i = 0; i < size; i++) {
-            els.put(i, visit(elements.get(i), builder, context, function));
-        }
-        return LLVMConstArray(getLlvmTypeRef(((ArrayTypeSymbol) arrayLiteralExpression.getType()).getType(), context), els, size);
+        return LLVMBuildCall(builder, functions.get(functionSymbol), args, functionCallExpression.getBoundArguments().size(), functionSymbol.getName());
     }
 
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -385,8 +339,8 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundIfExpression ifExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         if (ifExpression.getElseBody() == null) {
-            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "then");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit-if");
+            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if-true");
+            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "if-false");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
             LLVMBuildCondBr(builder, condition, thenBlock, exitBlock);
@@ -399,68 +353,53 @@ public class LLVMCompiler implements Compiler {
             LLVMBuildBr(builder, exitBlock);
             LLVMPositionBuilderAtEnd(builder, exitBlock);
             return thenVal;
-        } else {
-
-            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "then");
-            LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "else");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit-if-else");
-
-            LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
-            LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
-
-            LLVMPositionBuilderAtEnd(builder, thenBlock);
-            LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
-            if (thenVal == null) {
-                throw new IllegalStateException("ThenVal must not be null");
-            }
-            LLVMBuildBr(builder, exitBlock);
-            thenBlock = LLVMGetInsertBlock(builder);
-
-            LLVMPositionBuilderAtEnd(builder, elseBlock);
-            LLVMValueRef elseVal = visit(ifExpression.getElseBody(), builder, context, function);
-            if (elseVal == null) {
-                throw new IllegalStateException("ElseVal must not be null");
-            }
-            LLVMBuildBr(builder, exitBlock);
-            elseBlock = LLVMGetInsertBlock(builder);
-
-            LLVMPositionBuilderAtEnd(builder, exitBlock);
-            LLVMValueRef phi = LLVMBuildPhi(builder, i32Type, "result");
-            PointerPointer<Pointer> phiValues = new PointerPointer<>(2)
-                    .put(0, thenVal)
-                    .put(1, elseVal);
-            PointerPointer<Pointer> phiBlocks = new PointerPointer<>(2)
-                    .put(0, thenBlock)
-                    .put(1, elseBlock);
-            LLVMAddIncoming(phi, phiValues, phiBlocks, /* pairCount */ 2);
-            return phi;
         }
+
+        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if-true");
+        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if-false");
+        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "end");
+
+        LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
+        LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
+
+        LLVMPositionBuilderAtEnd(builder, thenBlock);
+        LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
+        if (thenVal == null) {
+            throw new IllegalStateException("ThenVal must not be null");
+        }
+        LLVMBuildBr(builder, exitBlock);
+        thenBlock = LLVMGetInsertBlock(builder);
+
+        LLVMPositionBuilderAtEnd(builder, elseBlock);
+        LLVMValueRef elseVal = visit(ifExpression.getElseBody(), builder, context, function);
+        if (elseVal == null) {
+            throw new IllegalStateException("ElseVal must not be null");
+        }
+        LLVMBuildBr(builder, exitBlock);
+        elseBlock = LLVMGetInsertBlock(builder);
+
+        LLVMPositionBuilderAtEnd(builder, exitBlock);
+        LLVMValueRef phi = LLVMBuildPhi(builder, i32Type, "");
+        PointerPointer<Pointer> phiValues = new PointerPointer<>(2)
+                .put(0, thenVal)
+                .put(1, elseVal);
+        PointerPointer<Pointer> phiBlocks = new PointerPointer<>(2)
+                .put(0, thenBlock)
+                .put(1, elseBlock);
+        LLVMAddIncoming(phi, phiValues, phiBlocks, /* pairCount */ 2);
+        return phi;
     }
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        LLVMTypeRef type;
-        if (variableDeclarationExpression instanceof BoundArrayVariableDeclarationExpression) {
-            BoundArrayVariableDeclarationExpression arrayVariableDeclarationExpression = (BoundArrayVariableDeclarationExpression) variableDeclarationExpression;
-            type = getArrayLlvmTypeRef((ArrayTypeSymbol) arrayVariableDeclarationExpression.getType(), context, arrayVariableDeclarationExpression.getElementCount());
-
-            types.put(variableDeclarationExpression.getVariable(), type);
-        } else {
-            type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
-        }
+        LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
 
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
-
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
 
-        variables.put(variableDeclarationExpression.getVariable(), ptr);
+        pointers.put(variableDeclarationExpression.getVariable(), ptr);
 
         return LLVMBuildStore(builder, val, ptr);
-    }
-
-    private LLVMTypeRef getArrayLlvmTypeRef(ArrayTypeSymbol arrayTypeSymbol, LLVMContextRef context, int elementCount) {
-
-        return LLVMArrayType(getLlvmTypeRef(arrayTypeSymbol.getType(), context), elementCount);
     }
 
     private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol, LLVMContextRef context) {
@@ -475,11 +414,15 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundVariableExpression variableExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        if (!variables.containsKey(variableExpression.getVariable())) {
-            throw new IllegalStateException("Variable `" + variableExpression.getVariable().getName() + "` has not been declared");
+        VariableSymbol variable = variableExpression.getVariable();
+        if (variables.containsKey(variable)) {
+            return variables.get(variable);
         }
-        LLVMValueRef ptr = variables.get(variableExpression.getVariable());
-        return LLVMBuildLoad(builder, ptr, variableExpression.getVariable().getName());
+        if (pointers.containsKey(variable)) {
+            return LLVMBuildLoad(builder, pointers.get(variable), variable.getName());
+        }
+
+        throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
     }
 
     private LLVMValueRef visit(BoundBinaryExpression binaryExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -581,27 +524,28 @@ public class LLVMCompiler implements Compiler {
         List<BoundFunctionArgumentExpression> arguments = functionDeclarationExpression.getArguments();
         for (int i = 0; i < arguments.size(); i++) {
             BoundFunctionArgumentExpression argument = arguments.get(i);
-
-            //TODO: It seems a bit convoluted to be allocating this instead of using it raw but visit(BoundVariableExpression...) uses pointers
             LLVMValueRef val = LLVMGetParam(function, i);
-            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(argument.getType(), context), argument.getArgument().getName());
-            LLVMBuildStore(builder, val, ptr);
-
-            variables.put(argument.getArgument(), ptr);
+            variables.put(argument.getArgument(), val);
         }
 
         //Visit body
+        LLVMValueRef last = null;
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
-            visit(expression, builder, context, function);
+
+            last = visit(expression, builder, context, function);
         }
 
-        //Add return for void methods
-        if (functionDeclarationExpression.getFunctionSymbol().getType() == VOID) {
+        //Build return value
+        TypeSymbol returnType = functionDeclarationExpression.getFunctionSymbol().getType();
+        if (returnType == VOID) {
             LLVMBuildRetVoid(builder);
+        } else {
+            LLVMBuildRet(builder, last);
         }
     }
 
     private LLVMValueRef visit(BoundReturnExpression returnExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-        return LLVMBuildRet(builder, visit(returnExpression.getReturnValue(), builder, context, function));
+
+        return visit(returnExpression.getReturnValue(), builder, context, function);
     }
 }

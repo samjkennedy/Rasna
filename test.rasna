@@ -1,7 +1,20 @@
-fn add(a: Int, b: Int): Int {
-    return a + b
+fn max(a: Int, b: Int): Int {
+    if (a > b) {
+        return a
+    } else {
+        if (a == b) {
+            return a
+        } else {
+            return b
+        }
+    }
+}
+
+fn puti(i: Int) {
+    print(i)
 }
 
 fn main() {
-    print(2.add(3))
+    j: Int = 3
+    puti(max(j, 3))
 }
