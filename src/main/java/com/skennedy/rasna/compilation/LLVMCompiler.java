@@ -14,7 +14,6 @@ import org.bytedeco.llvm.LLVM.LLVMContextRef;
 import org.bytedeco.llvm.LLVM.LLVMModuleRef;
 import org.bytedeco.llvm.LLVM.LLVMTypeRef;
 import org.bytedeco.llvm.LLVM.LLVMValueRef;
-import org.bytedeco.llvm.global.LLVM;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,6 +24,7 @@ import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
+import static com.skennedy.rasna.typebinding.TypeSymbol.VOID;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddIncoming;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
@@ -42,6 +42,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildPhi;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRet;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildRetVoid;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSDiv;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSRem;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildStore;
@@ -60,7 +61,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetArrayLength;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetElementAsConstant;
-import static org.bytedeco.llvm.global.LLVM.LLVMGetElementPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetNumOperands;
@@ -87,6 +87,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMVoidType;
+import static org.bytedeco.llvm.global.LLVM.LLVMVoidTypeInContext;
 
 public class LLVMCompiler implements Compiler {
 
@@ -100,6 +101,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef formatStr; //"%d\n"
 
     private Map<VariableSymbol, LLVMValueRef> variables;
+    private Map<FunctionSymbol, LLVMValueRef> functions;
     private Map<VariableSymbol, LLVMTypeRef> types;
 
     @Override
@@ -113,6 +115,7 @@ public class LLVMCompiler implements Compiler {
         LLVMInitializeNativeTarget();
 
         variables = new HashMap<>();
+        functions = new HashMap<>();
         types = new HashMap<>();
 
         LLVMContextRef context = LLVMContextCreate();
@@ -150,6 +153,31 @@ public class LLVMCompiler implements Compiler {
                         LLVMDumpModule(module);
                         System.exit(1);
                     }
+                } else {
+                    FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
+
+                    List<TypeSymbol> argumentTypes = functionSymbol.getArguments().stream()
+                            .map(BoundFunctionArgumentExpression::getType)
+                            .collect(Collectors.toList());
+                    TypeSymbol returnType = functionSymbol.getType();
+
+                    LLVMTypeRef functionType = buildFunctionType(argumentTypes, returnType, context);
+
+                    LLVMValueRef func = LLVMAddFunction(module, functionSymbol.getName(), functionType);
+                    LLVMSetFunctionCallConv(func, LLVMCCallConv);
+
+                    LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, func, "entry");
+                    LLVMPositionBuilderAtEnd(builder, entry);
+
+                    visit((BoundFunctionDeclarationExpression) expression, builder, context, func);
+
+                    if (LLVMVerifyFunction(func, LLVMPrintMessageAction) != 0) {
+                        log.error("Error when validating function `" + functionSymbol.getSignature() + "`:");
+                        LLVMDumpModule(module);
+                        System.exit(1);
+                    }
+
+                    functions.put(functionSymbol, func);
                 }
             }
         }
@@ -197,6 +225,23 @@ public class LLVMCompiler implements Compiler {
         LLVMContextDispose(context);
     }
 
+    private LLVMTypeRef buildFunctionType(List<TypeSymbol> argumentTypes, TypeSymbol returnType, LLVMContextRef context) {
+
+        LLVMTypeRef llvmReturnType = getLlvmTypeRef(returnType, context);
+
+        if (argumentTypes.isEmpty()) {
+            return LLVMFunctionType(llvmReturnType, LLVMVoidType(), /* argumentCount */ 0, /* isVariadic */ 0);
+        }
+
+        PointerPointer<Pointer> llvmArgumentTypes = new PointerPointer<>(argumentTypes.size());
+        for (int i = 0; i < argumentTypes.size(); i++) {
+            TypeSymbol argumentType = argumentTypes.get(i);
+            llvmArgumentTypes.put(i, getLlvmTypeRef(argumentType, context));
+        }
+
+        return LLVMFunctionType(llvmReturnType, llvmArgumentTypes, /* argumentCount */ argumentTypes.size(), /* isVariadic */ 0);
+    }
+
     private LLVMValueRef visit(BoundExpression expression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
         switch (expression.getBoundExpressionType()) {
             case NOOP:
@@ -227,9 +272,20 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundArrayLengthExpression) expression, builder, context, function);
             case POSITIONAL_ACCESS_EXPRESSION:
                 return visit((BoundPositionalAccessExpression) expression, builder, context, function);
+            case FUNCTION_CALL:
+                return visit((BoundFunctionCallExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
+    }
+
+
+    private LLVMValueRef visit(BoundFunctionCallExpression functionCallExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        FunctionSymbol functionSymbol = functionCallExpression.getFunction();
+
+        //TODO: Arguments and return type
+        return LLVMBuildCall(builder, functions.get(functionSymbol), new PointerPointer(0), 0, "");
     }
 
     private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -266,7 +322,7 @@ public class LLVMCompiler implements Compiler {
         for (int i = 0; i < size; i++) {
             els.put(i, visit(elements.get(i), builder, context, function));
         }
-        return LLVMConstArray(getLlvmTypeRef(((ArrayTypeSymbol)arrayLiteralExpression.getType()).getType()), els, size);
+        return LLVMConstArray(getLlvmTypeRef(((ArrayTypeSymbol)arrayLiteralExpression.getType()).getType(), context), els, size);
     }
 
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -378,11 +434,11 @@ public class LLVMCompiler implements Compiler {
         LLVMTypeRef type;
         if (variableDeclarationExpression instanceof BoundArrayVariableDeclarationExpression) {
             BoundArrayVariableDeclarationExpression arrayVariableDeclarationExpression = (BoundArrayVariableDeclarationExpression) variableDeclarationExpression;
-            type = getArrayLlvmTypeRef((ArrayTypeSymbol) arrayVariableDeclarationExpression.getType(), arrayVariableDeclarationExpression.getElementCount());
+            type = getArrayLlvmTypeRef((ArrayTypeSymbol) arrayVariableDeclarationExpression.getType(), context, arrayVariableDeclarationExpression.getElementCount());
 
             types.put(variableDeclarationExpression.getVariable(), type);
         } else {
-            type = getLlvmTypeRef(variableDeclarationExpression.getType());
+            type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
         }
 
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
@@ -394,17 +450,19 @@ public class LLVMCompiler implements Compiler {
         return LLVMBuildStore(builder, val, ptr);
     }
 
-    private LLVMTypeRef getArrayLlvmTypeRef(ArrayTypeSymbol arrayTypeSymbol, int elementCount) {
+    private LLVMTypeRef getArrayLlvmTypeRef(ArrayTypeSymbol arrayTypeSymbol, LLVMContextRef context, int elementCount) {
 
-        return LLVMArrayType(getLlvmTypeRef(arrayTypeSymbol.getType()), elementCount);
+        return LLVMArrayType(getLlvmTypeRef(arrayTypeSymbol.getType(), context), elementCount);
     }
 
-    private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol) {
+    private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol, LLVMContextRef context) {
+        if (typeSymbol == VOID) {
+            return LLVMVoidTypeInContext(context);
+        }
         if (typeSymbol == INT) {
             return i32Type;
-        } else {
-            throw new UnsupportedOperationException("Variables of type `" + typeSymbol + "` are not yet implemented in LLVM");
         }
+        throw new UnsupportedOperationException("Variables of type `" + typeSymbol + "` are not yet implemented in LLVM");
     }
 
     private LLVMValueRef visit(BoundVariableExpression variableExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -507,5 +565,17 @@ public class LLVMCompiler implements Compiler {
         for (BoundExpression expression : mainMethodDeclaration.getBody().getExpressions()) {
             visit(expression, builder, context, function);
         }
+    }
+
+    private void visit(BoundFunctionDeclarationExpression functionDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        //TODO: Bind args
+
+        for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
+            visit(expression, builder, context, function);
+        }
+
+        //TODO: Not valid for non void returns
+        LLVMBuildRetVoid(builder);
     }
 }

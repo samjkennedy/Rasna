@@ -2,6 +2,7 @@ package com.skennedy.rasna.typebinding;
 
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class FunctionSymbol extends Symbol {
     private final TypeSymbol type;
@@ -33,4 +34,11 @@ public class FunctionSymbol extends Symbol {
     }
 
 
+    public String getSignature() {
+        return getName() + "(" + arguments.stream()
+                .map(BoundFunctionArgumentExpression::getType)
+                .map(TypeSymbol::getName)
+                .collect(Collectors.joining(", "))
+                + "): " + type;
+    }
 }
