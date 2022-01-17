@@ -305,7 +305,7 @@ public abstract class BoundProgramRewriter {
 
         if (returnExpression.getReturnValue() instanceof BoundIfExpression) {
 
-            List<BoundExpression> expressions = ((BoundBlockExpression) returnValue).getExpressions();
+            List<BoundExpression> expressions = (flatten(new BoundBlockExpression(returnValue))).getExpressions();
 
             for (int i = 0; i < expressions.size(); i++) {
                 BoundExpression expression = expressions.get(i);

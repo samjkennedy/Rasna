@@ -255,7 +255,10 @@ public class LLVMCompiler implements Compiler {
             case IF:
                 return visit((BoundIfExpression) expression, builder, context, function);
             case BLOCK:
-                return visit((BoundBlockExpression) expression, builder, context, function);
+                scope = new Scope(scope);
+                LLVMValueRef res = visit((BoundBlockExpression) expression, builder, context, function);
+                scope = scope.parentScope;
+                return res;
             case INCREMENT:
                 return visit((BoundIncrementExpression) expression, builder, context, function);
             case DO_WHILE:
@@ -338,7 +341,7 @@ public class LLVMCompiler implements Compiler {
 
         if (ifExpression.getElseBody() == null) {
             LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if-true");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "if-false");
+            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "end");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
             LLVMBuildCondBr(builder, condition, thenBlock, exitBlock);

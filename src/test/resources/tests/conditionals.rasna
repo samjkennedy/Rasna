@@ -1,3 +1,19 @@
+fn max(a: Int, b: Int): Int {
+    if (a > b) {
+        return a
+    } else {
+        if (a == b) {
+            return a
+        } else {
+            return b
+        }
+    }
+}
+
+fn puti(i: Int) {
+    print(i)
+}
+
 fn main() {
     if (true and false) {
         print("this is unreachable")
@@ -35,4 +51,7 @@ fn main() {
         print(r)
         r = r + 0.5
     }
+
+    i: Int = 2
+    puti(max(i, 3))
 }

@@ -1,20 +1,7 @@
 fn max(a: Int, b: Int): Int {
-    if (a > b) {
-        return a
-    } else {
-        if (a == b) {
-            return a
-        } else {
-            return b
-        }
-    }
-}
-
-fn puti(i: Int) {
-    print(i)
+    return(if (a > b) a else b)
 }
 
 fn main() {
-    i: Int = 2
-    puti(max(i, 3))
+    print(max(2, 1))
 }
