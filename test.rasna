@@ -1,0 +1,9 @@
+fn foo(): Int {
+
+    return 1
+    print("Unreachable!")
+}
+
+fn main() {
+    foo()
+}
