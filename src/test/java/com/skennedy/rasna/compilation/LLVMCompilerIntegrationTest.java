@@ -1,8 +1,8 @@
 package com.skennedy.rasna.compilation;
 
+import com.skennedy.rasna.compilation.llvm.LLVMCompiler;
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
-import com.skennedy.rasna.lowering.JVMLowerer;
 import com.skennedy.rasna.lowering.LLVMLowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;

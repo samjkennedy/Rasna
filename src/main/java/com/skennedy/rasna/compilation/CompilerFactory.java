@@ -1,5 +1,7 @@
 package com.skennedy.rasna.compilation;
 
+import com.skennedy.rasna.compilation.llvm.LLVMCompiler;
+
 public class CompilerFactory {
 
     public static Compiler create(CompileTarget target) {

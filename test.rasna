@@ -1,0 +1,7 @@
+fn max(a: Int, b: Int): Int {
+    return(if (a > b) a else b)
+}
+
+fn main() {
+    print(max(2, 1))
+}
