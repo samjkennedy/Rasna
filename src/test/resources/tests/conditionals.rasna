@@ -52,6 +52,6 @@ fn main() {
         r = r + 0.5
     }
 
-    i: Int = 2
-    puti(max(i, 3))
+    j: Int = 2
+    puti(max(j, 3))
 }

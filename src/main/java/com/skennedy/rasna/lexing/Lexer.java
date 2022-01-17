@@ -206,11 +206,40 @@ public class Lexer {
         next(); //Skip opening '"'
         int start = cursor;
 
-        while (cursor < line.length() && (charAhead(line, cursor) != '"' || charAhead(line, cursor - 1) == STRING_ESCAPE_CHAR)) {
+        StringBuilder sb = new StringBuilder();
+        while (cursor < line.length() && charAt(line, cursor) != '"') {
+            if (charAt(line, cursor) == STRING_ESCAPE_CHAR) {
+                switch (charAt(line, cursor + 1)) {
+                    case 'n':
+                        sb.append('\n');
+                        next();
+                        break;
+                    case 'r':
+                        sb.append('\r');
+                        next();
+                        break;
+                    case 't':
+                        sb.append('\t');
+                        next();
+                        break;
+                    case 'f':
+                        sb.append('\f');
+                        next();
+                        break;
+                    case '"':
+                        sb.append('\"');
+                        next();
+                        break;
+                    default:
+                        throw new IllegalStateException("Illegal escape character in string literal");
+                }
+            } else {
+                sb.append(charAt(line, cursor));
+            }
             next();
         }
         next();//Skip closing '"'
-        return line.substring(start, cursor - 1);
+        return sb.toString();
     }
 
     private Number parseNum(String line) {
@@ -218,7 +247,7 @@ public class Lexer {
         int start = cursor;
 
         next();
-        while (cursor < line.length() && (Character.isDigit(charAhead(line, cursor)) || (charAhead(line, cursor) == '.') && !Character.isAlphabetic(charAhead(line, cursor + 1)))) {
+        while (cursor < line.length() && (Character.isDigit(charAt(line, cursor)) || (charAt(line, cursor) == '.') && !Character.isAlphabetic(charAt(line, cursor + 1)))) {
             next();
         }
 
@@ -238,7 +267,7 @@ public class Lexer {
         }
     }
 
-    private char charAhead(String line, int i) {
+    private char charAt(String line, int i) {
         if (line.length() <= i) {
             return '\0';
         }
@@ -261,7 +290,7 @@ public class Lexer {
         if (index >= line.length()) {
             return '\0';
         }
-        return charAhead(line, index);
+        return charAt(line, index);
     }
 
     private void next() {
