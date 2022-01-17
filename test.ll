@@ -23,7 +23,7 @@ end:                                              ; preds = %if-false, %if-true
 
 define i32 @main() {
 entry:
-  %max = call i32 @max(i32 2, i32 1)
+  %max = call i32 @max(i32 5, i32 7)
   %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %max)
   ret i32 0
 }
