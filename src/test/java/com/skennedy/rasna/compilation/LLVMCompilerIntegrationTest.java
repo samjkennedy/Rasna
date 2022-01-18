@@ -8,6 +8,7 @@ import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
 import com.skennedy.rasna.typebinding.Binder;
 import com.skennedy.rasna.typebinding.BoundProgram;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -88,6 +89,26 @@ public class LLVMCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt").trim();
         String actualResult = read("results/compilation", "llvm/" + filename.split("\\.")[0] + "_result.txt").trim();
 
-        assertEquals(expectedResult, actualResult);
+        String[] expectedLines = expectedResult.split(StringUtils.LF);
+        String[] actualLines = actualResult.split(StringUtils.LF);
+
+        assertEquals(expectedLines.length, actualLines.length);
+
+        //This sucks but it works
+        for (int l = 0; l < expectedLines.length; l++) {
+            try {
+                int a = Integer.parseInt(actualLines[l]);
+                int e = Integer.parseInt(expectedLines[l]);
+                assertEquals(e, a);
+            } catch (NumberFormatException nfe) {
+                try {
+                    double a = Double.parseDouble(actualLines[l]);
+                    double e = Double.parseDouble(expectedLines[l]);
+                    assertEquals(e, a, 0.000001d);
+                } catch (NumberFormatException nfe2) {
+                    assertEquals(expectedLines[l], actualLines[l]);
+                }
+            }
+        }
     }
 }
