@@ -21,7 +21,9 @@ import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
+import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.VOID;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
@@ -32,6 +34,12 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildAnd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildBr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildCall;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildCondBr;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildFAdd;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildFCmp;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildFDiv;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildFMul;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildFRem;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildFSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalStringPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
@@ -46,6 +54,9 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstRealGetDouble;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstString;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -53,6 +64,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDeleteBasicBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeBuilder;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
+import static org.bytedeco.llvm.global.LLVM.LLVMDoubleTypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetBasicBlockTerminator;
@@ -77,6 +89,12 @@ import static org.bytedeco.llvm.global.LLVM.LLVMPointerType;
 import static org.bytedeco.llvm.global.LLVM.LLVMPositionBuilderAtEnd;
 import static org.bytedeco.llvm.global.LLVM.LLVMPrintMessageAction;
 import static org.bytedeco.llvm.global.LLVM.LLVMPrintModuleToFile;
+import static org.bytedeco.llvm.global.LLVM.LLVMRealOEQ;
+import static org.bytedeco.llvm.global.LLVM.LLVMRealOGE;
+import static org.bytedeco.llvm.global.LLVM.LLVMRealOGT;
+import static org.bytedeco.llvm.global.LLVM.LLVMRealOLE;
+import static org.bytedeco.llvm.global.LLVM.LLVMRealOLT;
+import static org.bytedeco.llvm.global.LLVM.LLVMRealONE;
 import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyModule;
@@ -90,6 +108,7 @@ public class LLVMCompiler implements Compiler {
     public static final BytePointer error = new BytePointer();
 
     private LLVMTypeRef i32Type;
+    private LLVMTypeRef realType;
     private LLVMTypeRef i1Type;
     private LLVMValueRef printf;
     private LLVMValueRef formatStr; //"%d\n"
@@ -113,6 +132,7 @@ public class LLVMCompiler implements Compiler {
         LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
 
         i32Type = LLVMInt32TypeInContext(context);
+        realType = LLVMDoubleTypeInContext(context);
         i1Type = LLVMInt1TypeInContext(context);
 
         //Declare printf function and string formatter once
@@ -432,6 +452,9 @@ public class LLVMCompiler implements Compiler {
         if (typeSymbol == INT) {
             return i32Type;
         }
+        if (typeSymbol == REAL) {
+            return realType;
+        }
         throw new UnsupportedOperationException("Variables of type `" + typeSymbol + "` are not yet implemented in LLVM");
     }
 
@@ -454,8 +477,62 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef lhs = visit(binaryExpression.getLeft(), builder, context, function);
         LLVMValueRef rhs = visit(binaryExpression.getRight(), builder, context, function);
 
-        switch (binaryExpression.getOperator().getBoundOpType()) {
+        if (binaryExpression.getLeft().getType() == INT && binaryExpression.getRight().getType() == INT) {
+            return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
+        }
+        if (binaryExpression.getLeft().getType() == REAL && binaryExpression.getRight().getType() == REAL) {
+            return visitRealBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
+        }
+        if (binaryExpression.getLeft().getType() == BOOL && binaryExpression.getRight().getType() == BOOL) {
+            switch (binaryExpression.getOperator().getBoundOpType()) {
+                case EQUALS:
+                    return LLVMBuildICmp(builder, LLVMIntEQ, lhs, rhs, "");
+                case NOT_EQUALS:
+                    return LLVMBuildICmp(builder, LLVMIntNE, lhs, rhs, "");
+                case BOOLEAN_OR:
+                    return LLVMBuildOr(builder, lhs, rhs, "ortmp");
+                case BOOLEAN_AND:
+                    return LLVMBuildAnd(builder, lhs, rhs, "andtmp");
+                case BOOLEAN_XOR:
+                    return LLVMBuildXor(builder, lhs, rhs, "xortmp");
+                default:
+                    throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM");
+            }
+        }
+        throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for types `" + binaryExpression.getLeft().getType() + "` and `" + binaryExpression.getRight().getType() + "`");
+    }
 
+    private LLVMValueRef visitRealBinop(LLVMBuilderRef builder, LLVMValueRef lhs, BoundBinaryOperator.BoundBinaryOperation op, LLVMValueRef rhs) {
+        switch (op) {
+            case ADDITION:
+                return LLVMBuildFAdd(builder, lhs, rhs, "saddtmp");
+            case SUBTRACTION:
+                return LLVMBuildFSub(builder, lhs, rhs, "ssubtmp");
+            case MULTIPLICATION:
+                return LLVMBuildFMul(builder, lhs, rhs, "smultmp");
+            case DIVISION:
+                return LLVMBuildFDiv(builder, lhs, rhs, "sdivtmp");
+            case REMAINDER:
+                return LLVMBuildFRem(builder, lhs, rhs, "sremtmp");
+            case GREATER_THAN:
+                return LLVMBuildFCmp(builder, LLVMRealOGT, lhs, rhs, "");
+            case LESS_THAN:
+                return LLVMBuildFCmp(builder, LLVMRealOLT, lhs, rhs, "");
+            case GREATER_THAN_OR_EQUAL:
+                return LLVMBuildFCmp(builder, LLVMRealOGE, lhs, rhs, "");
+            case LESS_THAN_OR_EQUAL:
+                return LLVMBuildFCmp(builder, LLVMRealOLE, lhs, rhs, "");
+            case EQUALS:
+                return LLVMBuildFCmp(builder, LLVMRealOEQ, lhs, rhs, "");
+            case NOT_EQUALS:
+                return LLVMBuildFCmp(builder, LLVMRealONE, lhs, rhs, "");
+            default:
+                throw new UnsupportedOperationException("Compilation for binary operation `" + op + "` is not yet supported for LLVM");
+        }
+    }
+
+    private LLVMValueRef visitIntBinop(LLVMBuilderRef builder, LLVMValueRef lhs, BoundBinaryOperator.BoundBinaryOperation op, LLVMValueRef rhs) {
+        switch (op) {
             case ADDITION:
                 return LLVMBuildAdd(builder, lhs, rhs, "saddtmp");
             case SUBTRACTION:
@@ -478,16 +555,8 @@ public class LLVMCompiler implements Compiler {
                 return LLVMBuildICmp(builder, LLVMIntEQ, lhs, rhs, "");
             case NOT_EQUALS:
                 return LLVMBuildICmp(builder, LLVMIntNE, lhs, rhs, "");
-            case BOOLEAN_OR:
-                return LLVMBuildOr(builder, lhs, rhs, "ortmp");
-            case BOOLEAN_AND:
-                return LLVMBuildAnd(builder, lhs, rhs, "andtmp");
-            case BOOLEAN_XOR:
-                return LLVMBuildXor(builder, lhs, rhs, "xortmp");
-            case ERROR:
-                throw new IllegalStateException("Unexpected binary operation ERROR");
             default:
-                throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM");
+                throw new UnsupportedOperationException("Compilation for binary operation `" + op + "` is not yet supported for LLVM");
         }
     }
 
@@ -498,6 +567,9 @@ public class LLVMCompiler implements Compiler {
         }
         if (literalExpression.getType() == TypeSymbol.BOOL) {
             return LLVMConstInt(i32Type, (boolean) literalExpression.getValue() ? 1 : 0, 0);
+        }
+        if (literalExpression.getType() == TypeSymbol.REAL) {
+            return LLVMConstReal(realType, (double) literalExpression.getValue());
         }
         if (literalExpression.getType() == TypeSymbol.STRING) {
             String value = (String) literalExpression.getValue();
@@ -518,6 +590,10 @@ public class LLVMCompiler implements Compiler {
         if (printExpression.getExpression().getType() == STRING) {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%s\n", "str"))
+                    .put(1, res);
+        } else if (printExpression.getExpression().getType() == REAL) {
+            printArgs = new PointerPointer<>(2)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%f\n", "real"))
                     .put(1, res);
         } else {
             printArgs = new PointerPointer<>(2)
