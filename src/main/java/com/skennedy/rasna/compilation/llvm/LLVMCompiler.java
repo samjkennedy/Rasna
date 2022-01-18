@@ -1,8 +1,6 @@
 package com.skennedy.rasna.compilation.llvm;
 
 import com.skennedy.rasna.compilation.Compiler;
-import com.skennedy.rasna.exceptions.FunctionAlreadyDeclaredException;
-import com.skennedy.rasna.exceptions.VariableAlreadyDeclaredException;
 import com.skennedy.rasna.lowering.BoundDoWhileExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
@@ -19,10 +17,9 @@ import org.bytedeco.llvm.LLVM.LLVMValueRef;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
@@ -60,6 +57,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetBasicBlockTerminator;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetParam;
@@ -172,7 +170,7 @@ public class LLVMCompiler implements Compiler {
                         LLVMDumpModule(module);
                         System.exit(1);
                     }
-                    scope = scope.parentScope;
+                    scope = scope.getParentScope();
                     scope.declareFunction(functionSymbol, func);
                 }
             }
@@ -257,7 +255,7 @@ public class LLVMCompiler implements Compiler {
             case BLOCK:
                 scope = new Scope(scope);
                 LLVMValueRef res = visit((BoundBlockExpression) expression, builder, context, function);
-                scope = scope.parentScope;
+                scope = scope.getParentScope();
                 return res;
             case INCREMENT:
                 return visit((BoundIncrementExpression) expression, builder, context, function);
@@ -323,25 +321,25 @@ public class LLVMCompiler implements Compiler {
 
         LLVMBasicBlockRef bodyBlock = LLVMGetInsertBlock(builder);
         LLVMBasicBlockRef latchBlock = LLVMAppendBasicBlockInContext(context, function, "latch");
-        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "exit-loop");
+        LLVMBasicBlockRef exitLoop = LLVMAppendBasicBlockInContext(context, function, "exit-loop");
 
         LLVMPositionBuilderAtEnd(builder, latchBlock);
         LLVMValueRef condition = visit(doWhileExpression.getCondition(), builder, context, function);
-        LLVMBuildCondBr(builder, condition, bodyBlock, exitBlock);
+        LLVMBuildCondBr(builder, condition, bodyBlock, exitLoop);
 
         LLVMPositionBuilderAtEnd(builder, bodyBlock);
         LLVMValueRef bodyVal = visit(doWhileExpression.getBody(), builder, context, function);
         LLVMBuildBr(builder, latchBlock);
 
-        LLVMPositionBuilderAtEnd(builder, exitBlock);
+        LLVMPositionBuilderAtEnd(builder, exitLoop);
         return bodyVal;
     }
 
     private LLVMValueRef visit(BoundIfExpression ifExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         if (ifExpression.getElseBody() == null) {
-            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if-true");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "end");
+            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.true");
+            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
             LLVMBuildCondBr(builder, condition, thenBlock, exitBlock);
@@ -351,14 +349,17 @@ public class LLVMCompiler implements Compiler {
             if (thenVal == null) {
                 throw new IllegalStateException("ThenVal must not be null");
             }
-            LLVMBuildBr(builder, exitBlock);
+            LLVMValueRef terminator = LLVMGetBasicBlockTerminator(thenBlock);
+            if (terminator == null) {
+                LLVMBuildBr(builder, exitBlock);
+            }
             LLVMPositionBuilderAtEnd(builder, exitBlock);
             return thenVal;
         }
 
-        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if-true");
-        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if-false");
-        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "end");
+        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.true");
+        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if.false");
+        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
         LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
         LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
@@ -520,7 +521,9 @@ public class LLVMCompiler implements Compiler {
         }
     }
 
-    private void visit(BoundFunctionDeclarationExpression functionDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+    private LLVMValueRef visit(BoundFunctionDeclarationExpression functionDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
 
         //Bind args
         List<BoundFunctionArgumentExpression> arguments = functionDeclarationExpression.getArguments();
@@ -530,95 +533,41 @@ public class LLVMCompiler implements Compiler {
             scope.declareVariable(argument.getArgument(), val);
         }
 
+        //Assign return value
+        LLVMTypeRef retValType = getLlvmTypeRef(functionSymbol.getType(), context);
+        LLVMValueRef retval = LLVMBuildAlloca(builder, retValType, functionSymbol.getName() + "-retval");
+        returnStack.push(retval);
+
+        //Create return block
+        LLVMBasicBlockRef returnBlock = LLVMAppendBasicBlockInContext(context, function, "return");
+        returnBlocks.push(returnBlock);
+
         //Visit body
-        LLVMValueRef last = null;
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
 
-            last = visit(expression, builder, context, function);
+            visit(expression, builder, context, function);
         }
 
         //Build return value
-        TypeSymbol returnType = functionDeclarationExpression.getFunctionSymbol().getType();
+        TypeSymbol returnType = functionSymbol.getType();
         if (returnType == VOID) {
             LLVMBuildRetVoid(builder);
-        } else {
-            LLVMBuildRet(builder, last);
         }
+
+        LLVMPositionBuilderAtEnd(builder, returnBlocks.pop());
+
+        return LLVMBuildRet(builder, LLVMBuildLoad(builder, returnStack.pop(), functionSymbol.getName() + "-retval"));
     }
 
     private LLVMValueRef visit(BoundReturnExpression returnExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        return visit(returnExpression.getReturnValue(), builder, context, function);
+        LLVMValueRef retVal = visit(returnExpression.getReturnValue(), builder, context, function);
+
+        LLVMBuildStore(builder, retVal, returnStack.peek());
+
+        return LLVMBuildBr(builder, returnBlocks.peek());
     }
 
-    private final class Scope {
-
-        private final Scope parentScope;
-
-        private Map<VariableSymbol, LLVMValueRef> definedVariables;
-        private Map<VariableSymbol, LLVMValueRef> definedPointers;
-        private Map<FunctionSymbol, LLVMValueRef> definedFunctions;
-
-        private Scope(Scope parentScope) {
-            this.parentScope = parentScope;
-
-            definedVariables = new HashMap<>();
-            definedPointers = new HashMap<>();
-            definedFunctions = new HashMap<>();
-        }
-
-        public Optional<LLVMValueRef> tryLookupVariable(VariableSymbol variable) {
-
-            if (definedVariables.containsKey(variable)) {
-                return Optional.of(definedVariables.get(variable));
-            }
-            if (parentScope != null) {
-                return parentScope.tryLookupVariable(variable);
-            }
-            return Optional.empty();
-        }
-
-        public void declareVariable(VariableSymbol variable, LLVMValueRef value) {
-            if (tryLookupVariable(variable).isPresent()) {
-                throw new VariableAlreadyDeclaredException(variable.getName());
-            }
-            definedVariables.put(variable, value);
-        }
-
-        public Optional<LLVMValueRef> tryLookupPointer(VariableSymbol variable) {
-
-            if (definedPointers.containsKey(variable)) {
-                return Optional.of(definedPointers.get(variable));
-            }
-            if (parentScope != null) {
-                return parentScope.tryLookupPointer(variable);
-            }
-            return Optional.empty();
-        }
-
-        public void declarePointer(VariableSymbol variable, LLVMValueRef ptr) {
-            if (tryLookupPointer(variable).isPresent()) {
-                throw new VariableAlreadyDeclaredException(variable.getName());
-            }
-            definedPointers.put(variable, ptr);
-        }
-
-        public Optional<LLVMValueRef> tryLookupFunction(FunctionSymbol function) {
-
-            if (definedFunctions.containsKey(function)) {
-                return Optional.of(definedFunctions.get(function));
-            }
-            if (parentScope != null) {
-                return parentScope.tryLookupFunction(function);
-            }
-            return Optional.empty();
-        }
-
-        public void declareFunction(FunctionSymbol function, LLVMValueRef ref) {
-            if (tryLookupFunction(function).isPresent()) {
-                throw new FunctionAlreadyDeclaredException(function.getName());
-            }
-            definedFunctions.put(function, ref);
-        }
-    }
+    private static Stack<LLVMValueRef> returnStack = new Stack<>();
+    private static Stack<LLVMBasicBlockRef> returnBlocks = new Stack<>();
 }
