@@ -1,7 +1,6 @@
 package com.skennedy.rasna.compilation.llvm;
 
 import com.skennedy.rasna.compilation.Compiler;
-import com.skennedy.rasna.lowering.BoundDoWhileExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,7 +25,6 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.VOID;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
-import static org.bytedeco.llvm.global.LLVM.LLVMAddIncoming;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAlloca;
@@ -39,7 +37,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
-import static org.bytedeco.llvm.global.LLVM.LLVMBuildPhi;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRet;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRetVoid;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSDiv;
@@ -52,6 +49,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
+import static org.bytedeco.llvm.global.LLVM.LLVMDeleteBasicBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeBuilder;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
@@ -59,7 +57,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetBasicBlockTerminator;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
-import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetParam;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
@@ -259,14 +256,16 @@ public class LLVMCompiler implements Compiler {
                 return res;
             case INCREMENT:
                 return visit((BoundIncrementExpression) expression, builder, context, function);
-            case DO_WHILE:
-                return visit((BoundDoWhileExpression) expression, builder, context, function);
+            case WHILE:
+                return visit((BoundWhileExpression) expression, builder, context, function);
             case ASSIGNMENT_EXPRESSION:
                 return visit((BoundAssignmentExpression) expression, builder, context, function);
             case FUNCTION_CALL:
                 return visit((BoundFunctionCallExpression) expression, builder, context, function);
             case RETURN:
                 return visit((BoundReturnExpression) expression, builder, context, function);
+            case C_STYLE_FOR_EXPRESSION:
+                return visit((BoundCStyleForExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
@@ -293,7 +292,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         VariableSymbol variableSymbol = assignmentExpression.getVariable();
-        LLVMValueRef ptr =scope.tryLookupPointer(variableSymbol)
+        LLVMValueRef ptr = scope.tryLookupPointer(variableSymbol)
                 .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
 
         LLVMValueRef val = visit(assignmentExpression.getExpression(), builder, context, function);
@@ -303,7 +302,7 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundIncrementExpression incrementExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
         VariableSymbol variableSymbol = incrementExpression.getVariableSymbol();
-        LLVMValueRef ptr =scope.tryLookupPointer(variableSymbol)
+        LLVMValueRef ptr = scope.tryLookupPointer(variableSymbol)
                 .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
 
         return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, variableSymbol.getName()), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
@@ -317,32 +316,62 @@ public class LLVMCompiler implements Compiler {
         return lastVal;
     }
 
-    private LLVMValueRef visit(BoundDoWhileExpression doWhileExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+    private LLVMValueRef visit(BoundWhileExpression whileExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        LLVMBasicBlockRef bodyBlock = LLVMGetInsertBlock(builder);
-        LLVMBasicBlockRef latchBlock = LLVMAppendBasicBlockInContext(context, function, "latch");
-        LLVMBasicBlockRef exitLoop = LLVMAppendBasicBlockInContext(context, function, "exit-loop");
+        LLVMBasicBlockRef cond = LLVMAppendBasicBlockInContext(context, function, "while.cond");
+        LLVMBasicBlockRef body = LLVMAppendBasicBlockInContext(context, function, "while.body");
+        LLVMBasicBlockRef exit = LLVMAppendBasicBlockInContext(context, function, "while.exit");
 
-        LLVMPositionBuilderAtEnd(builder, latchBlock);
-        LLVMValueRef condition = visit(doWhileExpression.getCondition(), builder, context, function);
-        LLVMBuildCondBr(builder, condition, bodyBlock, exitLoop);
+        LLVMBuildBr(builder, cond);
 
-        LLVMPositionBuilderAtEnd(builder, bodyBlock);
-        LLVMValueRef bodyVal = visit(doWhileExpression.getBody(), builder, context, function);
-        LLVMBuildBr(builder, latchBlock);
+        LLVMPositionBuilderAtEnd(builder, cond);
+        LLVMValueRef condition = visit(whileExpression.getCondition(), builder, context, function);
+        LLVMBuildCondBr(builder, condition, body, exit);
 
-        LLVMPositionBuilderAtEnd(builder, exitLoop);
-        return bodyVal;
+        LLVMPositionBuilderAtEnd(builder, body);
+        visit(whileExpression.getBody(), builder, context, function);
+        LLVMBuildBr(builder, cond);
+
+        LLVMPositionBuilderAtEnd(builder, exit);
+
+        return null;
+    }
+
+
+    private LLVMValueRef visit(BoundCStyleForExpression cStyleForExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMBasicBlockRef forCondBlock = LLVMAppendBasicBlockInContext(context, function, "for.cond");
+        LLVMBasicBlockRef forBodyBlock = LLVMAppendBasicBlockInContext(context, function, "for.body");
+        LLVMBasicBlockRef forIncrBlock = LLVMAppendBasicBlockInContext(context, function, "for.incr");
+        LLVMBasicBlockRef forExitBlock = LLVMAppendBasicBlockInContext(context, function, "for.exit");
+
+        visit(cStyleForExpression.getInitialisation(), builder, context, function);
+        LLVMBuildBr(builder, forCondBlock);
+
+        LLVMPositionBuilderAtEnd(builder, forCondBlock);
+        LLVMValueRef condition = visit(cStyleForExpression.getCondition(), builder, context, function);
+        LLVMBuildCondBr(builder, condition, forBodyBlock, forExitBlock);
+
+        LLVMPositionBuilderAtEnd(builder, forBodyBlock);
+        LLVMValueRef body = visit(cStyleForExpression.getBody(), builder, context, function);
+        LLVMBuildBr(builder, forIncrBlock);
+
+        LLVMPositionBuilderAtEnd(builder, forIncrBlock);
+        visit(cStyleForExpression.getPostStep(), builder, context, function);
+        LLVMBuildBr(builder, forCondBlock);
+
+        LLVMPositionBuilderAtEnd(builder, forExitBlock);
+        return body;
     }
 
     private LLVMValueRef visit(BoundIfExpression ifExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         if (ifExpression.getElseBody() == null) {
-            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.true");
-            LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
+            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.then");
+            LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
-            LLVMBuildCondBr(builder, condition, thenBlock, exitBlock);
+            LLVMBuildCondBr(builder, condition, thenBlock, endBlock);
 
             LLVMPositionBuilderAtEnd(builder, thenBlock);
             LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
@@ -351,45 +380,37 @@ public class LLVMCompiler implements Compiler {
             }
             LLVMValueRef terminator = LLVMGetBasicBlockTerminator(thenBlock);
             if (terminator == null) {
-                LLVMBuildBr(builder, exitBlock);
+                LLVMBuildBr(builder, endBlock);
             }
-            LLVMPositionBuilderAtEnd(builder, exitBlock);
+            LLVMPositionBuilderAtEnd(builder, endBlock);
             return thenVal;
         }
 
-        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.true");
-        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if.false");
-        LLVMBasicBlockRef exitBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
+        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.then");
+        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if.else");
+        LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
         LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
         LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
 
         LLVMPositionBuilderAtEnd(builder, thenBlock);
-        LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
-        if (thenVal == null) {
-            throw new IllegalStateException("ThenVal must not be null");
+        visit(ifExpression.getBody(), builder, context, function);
+
+        boolean thenTerminated = LLVMGetBasicBlockTerminator(thenBlock) != null;
+        if (!thenTerminated) {
+            LLVMBuildBr(builder, endBlock);
         }
-        LLVMBuildBr(builder, exitBlock);
-        thenBlock = LLVMGetInsertBlock(builder);
 
         LLVMPositionBuilderAtEnd(builder, elseBlock);
-        LLVMValueRef elseVal = visit(ifExpression.getElseBody(), builder, context, function);
-        if (elseVal == null) {
-            throw new IllegalStateException("ElseVal must not be null");
-        }
-        LLVMBuildBr(builder, exitBlock);
-        elseBlock = LLVMGetInsertBlock(builder);
+        visit(ifExpression.getElseBody(), builder, context, function);
 
-        LLVMPositionBuilderAtEnd(builder, exitBlock);
-        LLVMValueRef phi = LLVMBuildPhi(builder, i32Type, "");
-        PointerPointer<Pointer> phiValues = new PointerPointer<>(2)
-                .put(0, thenVal)
-                .put(1, elseVal);
-        PointerPointer<Pointer> phiBlocks = new PointerPointer<>(2)
-                .put(0, thenBlock)
-                .put(1, elseBlock);
-        LLVMAddIncoming(phi, phiValues, phiBlocks, /* pairCount */ 2);
-        return phi;
+        boolean elseTerminated = LLVMGetBasicBlockTerminator(elseBlock) != null;
+        if (!elseTerminated && !thenTerminated) {
+            LLVMBuildBr(builder, endBlock);
+        } else {
+            LLVMDeleteBasicBlock(endBlock);
+        }
+        return null;
     }
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -446,17 +467,17 @@ public class LLVMCompiler implements Compiler {
             case REMAINDER:
                 return LLVMBuildSRem(builder, lhs, rhs, "sremtmp");
             case GREATER_THAN:
-                return LLVMBuildICmp(builder, LLVMIntSGT, lhs, rhs, "sgttmp");
+                return LLVMBuildICmp(builder, LLVMIntSGT, lhs, rhs, "");
             case LESS_THAN:
-                return LLVMBuildICmp(builder, LLVMIntSLT, lhs, rhs, "slttmp");
+                return LLVMBuildICmp(builder, LLVMIntSLT, lhs, rhs, "");
             case GREATER_THAN_OR_EQUAL:
-                return LLVMBuildICmp(builder, LLVMIntSGE, lhs, rhs, "sgetmp");
+                return LLVMBuildICmp(builder, LLVMIntSGE, lhs, rhs, "");
             case LESS_THAN_OR_EQUAL:
-                return LLVMBuildICmp(builder, LLVMIntSLE, lhs, rhs, "sletmp");
+                return LLVMBuildICmp(builder, LLVMIntSLE, lhs, rhs, "");
             case EQUALS:
-                return LLVMBuildICmp(builder, LLVMIntEQ, lhs, rhs, "eqtmp");
+                return LLVMBuildICmp(builder, LLVMIntEQ, lhs, rhs, "");
             case NOT_EQUALS:
-                return LLVMBuildICmp(builder, LLVMIntNE, lhs, rhs, "netmp");
+                return LLVMBuildICmp(builder, LLVMIntNE, lhs, rhs, "");
             case BOOLEAN_OR:
                 return LLVMBuildOr(builder, lhs, rhs, "ortmp");
             case BOOLEAN_AND:
@@ -533,14 +554,15 @@ public class LLVMCompiler implements Compiler {
             scope.declareVariable(argument.getArgument(), val);
         }
 
-        //Assign return value
-        LLVMTypeRef retValType = getLlvmTypeRef(functionSymbol.getType(), context);
-        LLVMValueRef retval = LLVMBuildAlloca(builder, retValType, functionSymbol.getName() + "-retval");
-        returnStack.push(retval);
-
-        //Create return block
-        LLVMBasicBlockRef returnBlock = LLVMAppendBasicBlockInContext(context, function, "return");
-        returnBlocks.push(returnBlock);
+        if (functionSymbol.getType() != VOID) {
+            //Assign return value
+            LLVMTypeRef retValType = getLlvmTypeRef(functionSymbol.getType(), context);
+            LLVMValueRef retval = LLVMBuildAlloca(builder, retValType, functionSymbol.getName() + "-retval");
+            returnStack.push(retval);
+            //Create return block
+            LLVMBasicBlockRef returnBlock = LLVMAppendBasicBlockInContext(context, function, "return");
+            returnBlocks.push(returnBlock);
+        }
 
         //Visit body
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
@@ -551,7 +573,7 @@ public class LLVMCompiler implements Compiler {
         //Build return value
         TypeSymbol returnType = functionSymbol.getType();
         if (returnType == VOID) {
-            LLVMBuildRetVoid(builder);
+            return LLVMBuildRetVoid(builder);
         }
 
         LLVMPositionBuilderAtEnd(builder, returnBlocks.pop());
@@ -564,7 +586,6 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef retVal = visit(returnExpression.getReturnValue(), builder, context, function);
 
         LLVMBuildStore(builder, retVal, returnStack.peek());
-
         return LLVMBuildBr(builder, returnBlocks.peek());
     }
 

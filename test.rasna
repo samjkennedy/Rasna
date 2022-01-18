@@ -1,44 +1,71 @@
-//fn forloop(): Int {
-//
-//    for (i: Int = 0 to 10) {
-//        if (i == 2) {
-//            return i
+//fn max(a: Int, b: Int): Int {
+//    if (a > b) {
+//        return a
+//    } else {
+//        if (a == b) {
+//            return a
+//        } else {
+//            return b
 //        }
 //    }
-//    return 100
 //}
 //
-//fn whileloop(): Int {
+//fn puti(i: Int) {
+//    print(i)
+//}
+
+fn whileReturn(): Int {
+    n: Int = 0
+    while (n < 100) {
+        print(n)
+        n++
+        if (n > 10) {
+            return n
+        }
+    }
+    return 100
+}
+
+fn main() {
+//    if (true and false) {
+//        print("this is unreachable")
+//    } else {
+//        if (true or false) {
+//            if (true xor true) {
+//                print("this is also unreachable")
+//            } else {
+//                print("Hello there")
+//            }
+//        } else {
+//            print("this is unreachable too")
+//        }
+//    }
+//
+//    n: Int = 1
+//    while (n < 10) {
+//        print(n)
+//        n = n + n
+//    }
 //
 //    i: Int = 0
 //    while (i < 10) {
 //        print(i)
-//        i++
-////        if (i mod 4 == 0) {
-////            return i
-////        }
+//        j: Int = 0
+//        while (j < 10) {
+//            print(j)
+//            j = j + 1
+//        }
+//        i = i + 1
 //    }
-//    return 0
-//}
-
-//fn ifbreak(i: Int): Int {
 //
-//    if (i < 5) {
-//        return 1
-//    }
-//    return 2
-//}
+////    r: Real = 0.
+////    while (r <= 10.) {
+////        print(r)
+////        r = r + 0.5
+////    }
+////
+//    j: Int = 2
+//    puti(max(j, 3))
 
-fn main() {
-
-    i: Int = 0
-    while (i < 10) {
-        print(i)
-        i++
-    }
-
-//    print(forloop())
-//    print(whileloop())
-//    print(ifbreak(1))
-//    print(ifbreak(10))
+    print(whileReturn())
 }

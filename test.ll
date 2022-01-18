@@ -5,30 +5,48 @@ source_filename = "test"
 
 declare i32 @printf(i8*, ...)
 
-define i32 @ifbreak(i32 %0) {
+define i32 @whileReturn() {
 entry:
-  %ifbreak-retval = alloca i32, align 4
-  %slttmp = icmp slt i32 %0, 5
-  br i1 %slttmp, label %if.true, label %if.end
+  %whileReturn-retval = alloca i32, align 4
+  %n = alloca i32, align 4
+  store i32 0, i32* %n, align 4
+  br label %while.cond
 
-return:                                           ; preds = %if.end, %if.true
-  %ifbreak-retval1 = load i32, i32* %ifbreak-retval, align 4
-  ret i32 %ifbreak-retval1
+return:                                           ; preds = %while.exit, %if.then
+  %whileReturn-retval6 = load i32, i32* %whileReturn-retval, align 4
+  ret i32 %whileReturn-retval6
 
-if.true:                                          ; preds = %entry
-  store i32 1, i32* %ifbreak-retval, align 4
+while.cond:                                       ; preds = %if.end, %entry
+  %n1 = load i32, i32* %n, align 4
+  %0 = icmp slt i32 %n1, 100
+  br i1 %0, label %while.body, label %while.exit
+
+while.body:                                       ; preds = %while.cond
+  %n2 = load i32, i32* %n, align 4
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %n2)
+  %n3 = load i32, i32* %n, align 4
+  %incrtmp = add i32 %n3, 1
+  store i32 %incrtmp, i32* %n, align 4
+  %n4 = load i32, i32* %n, align 4
+  %1 = icmp sgt i32 %n4, 10
+  br i1 %1, label %if.then, label %if.end
+
+while.exit:                                       ; preds = %while.cond
+  store i32 100, i32* %whileReturn-retval, align 4
   br label %return
 
-if.end:                                           ; preds = %entry
-  store i32 2, i32* %ifbreak-retval, align 4
+if.then:                                          ; preds = %while.body
+  %n5 = load i32, i32* %n, align 4
+  store i32 %n5, i32* %whileReturn-retval, align 4
   br label %return
+
+if.end:                                           ; preds = %while.body
+  br label %while.cond
 }
 
 define i32 @main() {
 entry:
-  %ifbreak = call i32 @ifbreak(i32 1)
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %ifbreak)
-  %ifbreak1 = call i32 @ifbreak(i32 10)
-  %printcall2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %ifbreak1)
+  %whileReturn = call i32 @whileReturn()
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %whileReturn)
   ret i32 0
 }
