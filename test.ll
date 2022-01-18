@@ -5,25 +5,48 @@ source_filename = "test"
 
 declare i32 @printf(i8*, ...)
 
-define i32 @max(i32 %0, i32 %1) {
+define i32 @whileReturn() {
 entry:
-  %sgttmp = icmp sgt i32 %0, %1
-  br i1 %sgttmp, label %if-true, label %if-false
+  %whileReturn-retval = alloca i32, align 4
+  %n = alloca i32, align 4
+  store i32 0, i32* %n, align 4
+  br label %while.cond
 
-if-true:                                          ; preds = %entry
-  br label %end
+return:                                           ; preds = %while.exit, %if.then
+  %whileReturn-retval6 = load i32, i32* %whileReturn-retval, align 4
+  ret i32 %whileReturn-retval6
 
-if-false:                                         ; preds = %entry
-  br label %end
+while.cond:                                       ; preds = %if.end, %entry
+  %n1 = load i32, i32* %n, align 4
+  %0 = icmp slt i32 %n1, 100
+  br i1 %0, label %while.body, label %while.exit
 
-end:                                              ; preds = %if-false, %if-true
-  %2 = phi i32 [ %0, %if-true ], [ %1, %if-false ]
-  ret i32 %2
+while.body:                                       ; preds = %while.cond
+  %n2 = load i32, i32* %n, align 4
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %n2)
+  %n3 = load i32, i32* %n, align 4
+  %incrtmp = add i32 %n3, 1
+  store i32 %incrtmp, i32* %n, align 4
+  %n4 = load i32, i32* %n, align 4
+  %1 = icmp sgt i32 %n4, 10
+  br i1 %1, label %if.then, label %if.end
+
+while.exit:                                       ; preds = %while.cond
+  store i32 100, i32* %whileReturn-retval, align 4
+  br label %return
+
+if.then:                                          ; preds = %while.body
+  %n5 = load i32, i32* %n, align 4
+  store i32 %n5, i32* %whileReturn-retval, align 4
+  br label %return
+
+if.end:                                           ; preds = %while.body
+  br label %while.cond
 }
 
 define i32 @main() {
 entry:
-  %max = call i32 @max(i32 5, i32 7)
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %max)
+  %whileReturn = call i32 @whileReturn()
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %whileReturn)
   ret i32 0
 }

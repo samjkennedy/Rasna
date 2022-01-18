@@ -128,6 +128,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteCastExpression((BoundCastExpression) expression);
             case DO_WHILE:
                 return rewriteDoWhileExpression((BoundDoWhileExpression) expression);
+            case C_STYLE_FOR_EXPRESSION:
+                return expression;
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }

@@ -1,0 +1,36 @@
+fn forloop(): Int {
+
+    for (i: Int = 0 to 10) {
+        if (i == 2) {
+            return i
+        }
+    }
+    return 100
+}
+
+fn whileloop(): Int {
+
+    i: Int = 0
+    while (i < 10) {
+        i++
+        if (i mod 4 == 0) {
+            return i
+        }
+    }
+    return 0
+}
+
+fn ifbreak(i: Int): Int {
+
+    if (i < 5) {
+        return 1
+    }
+    return 2
+}
+
+fn main() {
+    print(forloop())
+    print(whileloop())
+    print(ifbreak(1))
+    print(ifbreak(10))
+}
