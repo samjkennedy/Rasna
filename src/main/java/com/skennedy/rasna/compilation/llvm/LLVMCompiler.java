@@ -173,12 +173,9 @@ public class LLVMCompiler implements Compiler {
                     scope = new Scope(scope);
                     FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
 
-                    List<TypeSymbol> argumentTypes = functionSymbol.getArguments().stream()
-                            .map(BoundFunctionArgumentExpression::getType)
-                            .collect(Collectors.toList());
                     TypeSymbol returnType = functionSymbol.getType();
 
-                    LLVMTypeRef functionType = buildFunctionType(argumentTypes, returnType, context);
+                    LLVMTypeRef functionType = buildFunctionType(functionSymbol.getArguments(), returnType, context);
 
                     LLVMValueRef func = LLVMAddFunction(module, functionSymbol.getName(), functionType);
                     LLVMSetFunctionCallConv(func, LLVMCCallConv);
@@ -244,7 +241,11 @@ public class LLVMCompiler implements Compiler {
         LLVMContextDispose(context);
     }
 
-    private LLVMTypeRef buildFunctionType(List<TypeSymbol> argumentTypes, TypeSymbol returnType, LLVMContextRef context) {
+    private LLVMTypeRef buildFunctionType(List<BoundFunctionArgumentExpression> arguments, TypeSymbol returnType, LLVMContextRef context) {
+
+        List<TypeSymbol> argumentTypes = arguments.stream()
+                .map(BoundFunctionArgumentExpression::getType)
+                .collect(Collectors.toList());
 
         LLVMTypeRef llvmReturnType = getLlvmTypeRef(returnType, context);
 
@@ -255,7 +256,11 @@ public class LLVMCompiler implements Compiler {
         PointerPointer<Pointer> llvmArgumentTypes = new PointerPointer<>(argumentTypes.size());
         for (int i = 0; i < argumentTypes.size(); i++) {
             TypeSymbol argumentType = argumentTypes.get(i);
-            llvmArgumentTypes.put(i, getLlvmTypeRef(argumentType, context));
+            LLVMTypeRef llvmTypeRef = getLlvmTypeRef(argumentType, context);
+            if (arguments.get(i).isReference()) {
+                llvmTypeRef = LLVMPointerType(llvmTypeRef, 0);
+            }
+            llvmArgumentTypes.put(i, llvmTypeRef);
         }
 
         return LLVMFunctionType(llvmReturnType, llvmArgumentTypes, argumentTypes.size(), 0);
@@ -310,11 +315,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundMemberAccessorExpression memberAccessorExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef owner = visit(memberAccessorExpression.getOwner(), builder, context, function);
-        if (LLVMGetTypeKind(LLVMTypeOf(owner)) != LLVMPointerTypeKind) {
-            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(memberAccessorExpression.getOwner().getType(), context), "access.tmp");
-            LLVMBuildStore(builder, owner, ptr);
-            owner = ptr;
-        }
+        owner = ref(builder, owner, memberAccessorExpression.getOwner().getType(), context);
         assert memberAccessorExpression.getMember() instanceof BoundVariableExpression;
         BoundVariableExpression member = (BoundVariableExpression) memberAccessorExpression.getMember();
 
@@ -327,11 +328,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundMemberAssignmentExpression memberAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef owner = visit(memberAssignmentExpression.getMemberAccessorExpression().getOwner(), builder, context, function);
-        if (LLVMGetTypeKind(LLVMTypeOf(owner)) != LLVMPointerTypeKind) {
-            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(memberAssignmentExpression.getMemberAccessorExpression().getOwner().getType(), context), "access.tmp");
-            LLVMBuildStore(builder, owner, ptr);
-            owner = ptr;
-        }
+        owner = ref(builder, owner, memberAssignmentExpression.getMemberAccessorExpression().getOwner().getType(), context);
 
         assert memberAssignmentExpression.getMemberAccessorExpression().getMember() instanceof BoundVariableExpression;
         BoundVariableExpression member = (BoundVariableExpression) memberAssignmentExpression.getMemberAccessorExpression().getMember();
@@ -391,7 +388,9 @@ public class LLVMCompiler implements Compiler {
         List<BoundExpression> boundArguments = functionCallExpression.getBoundArguments();
         for (int i = 0; i < boundArguments.size(); i++) {
             LLVMValueRef arg = visit(boundArguments.get(i), builder, context, function);
-            arg = dereference(builder, arg, "arg");
+            if (!functionSymbol.getArguments().get(i).isReference()) {
+                arg = dereference(builder, arg, "arg");
+            }
             args.put(i, arg);
         }
 
@@ -405,9 +404,19 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundAssignmentExpression assignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        VariableSymbol variableSymbol = assignmentExpression.getVariable();
-        LLVMValueRef ptr = scope.tryLookupPointer(variableSymbol)
-                .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
+        VariableSymbol variable = assignmentExpression.getVariable();
+        LLVMValueRef ptr = null;
+        Optional<LLVMValueRef> variableRef = scope.tryLookupVariable(variable);
+        if (variableRef.isPresent()) {
+            ptr = variableRef.get().getPointer();
+        }
+        Optional<LLVMValueRef> pointerRef = scope.tryLookupPointer(variable);
+        if (pointerRef.isPresent()) {
+            ptr = pointerRef.get();
+        }
+        if (ptr == null) {
+            throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
+        }
 
         LLVMValueRef val = visit(assignmentExpression.getExpression(), builder, context, function);
         val = dereference(builder, val, "val");
@@ -415,12 +424,34 @@ public class LLVMCompiler implements Compiler {
         return LLVMBuildStore(builder, val, ptr);
     }
 
+    //TODO: You cannot mutate a function argument
+    /*
+    define void @foo(i32 %0) {
+    entry:
+      %access.tmp = alloca i32, align 4
+      store i32 %0, i32* %access.tmp, align 4
+      %load = load i32, i32* %access.tmp, align 4
+      %incrtmp = add i32 %load, 1
+      store i32 %incrtmp, i32* %access.tmp, align 4
+      %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %0)
+      ret void
+     */
     private LLVMValueRef visit(BoundIncrementExpression incrementExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-        VariableSymbol variableSymbol = incrementExpression.getVariableSymbol();
-        LLVMValueRef ptr = scope.tryLookupPointer(variableSymbol)
-                .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
+        VariableSymbol variable = incrementExpression.getVariableSymbol();
+        LLVMValueRef ptr = null;
+        Optional<LLVMValueRef> variableRef = scope.tryLookupVariable(variable);
+        if (variableRef.isPresent()) {
+            ptr = ref(builder, variableRef.get(), INT, context);
+        }
+        Optional<LLVMValueRef> pointerRef = scope.tryLookupPointer(variable);
+        if (pointerRef.isPresent()) {
+            ptr = pointerRef.get();
+        }
+        if (ptr == null) {
+            throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
+        }
 
-        return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, variableSymbol.getName()), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
+        return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr,"load"), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
     }
 
     private LLVMValueRef visit(BoundBlockExpression blockExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -782,6 +813,15 @@ public class LLVMCompiler implements Compiler {
             value = LLVMBuildLoad(builder, value, name);
         }
         return value;
+    }
+
+    private LLVMValueRef ref(LLVMBuilderRef builder, LLVMValueRef val, TypeSymbol type, LLVMContextRef context) {
+        if (LLVMGetTypeKind(LLVMTypeOf(val)) != LLVMPointerTypeKind) {
+            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(type, context), "access.tmp");
+            LLVMBuildStore(builder, val, ptr);
+            val = ptr;
+        }
+        return val;
     }
 
     private static Stack<LLVMValueRef> returnStack = new Stack<>();

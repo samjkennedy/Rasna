@@ -72,6 +72,7 @@ public enum TokenType {
     NAMESPACE_KEYWORD("namespace"),
     AS_KEYWORD("as"),
     IS_KEYWORD("is"),
+    REF_KEYWORD("ref"),
 
     //Types
     ANY_KEYWORD("Any"),

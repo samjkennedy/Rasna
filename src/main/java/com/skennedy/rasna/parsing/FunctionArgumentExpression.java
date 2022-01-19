@@ -6,16 +6,19 @@ import com.skennedy.rasna.parsing.model.SyntaxNode;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Objects;
 
 public class FunctionArgumentExpression extends Expression {
 
+    private IdentifierExpression refKeyword;
     private final IdentifierExpression constKeyword;
     private final TypeExpression typeExpression;
     private final IdentifierExpression identifier;
     private final IdentifierExpression bar;
     private final Expression guard;
 
-    public FunctionArgumentExpression(IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
+    public FunctionArgumentExpression(IdentifierExpression refKeyword, IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
+        this.refKeyword = refKeyword;
         this.constKeyword = constKeyword;
         this.typeExpression = typeExpression;
         this.identifier = identifier;
@@ -30,7 +33,13 @@ public class FunctionArgumentExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)typeExpression, identifier, bar, guard).iterator();
+        return Arrays.asList((SyntaxNode)refKeyword, typeExpression, identifier, bar, guard).stream()
+                .filter(Objects::nonNull)
+                .iterator();
+    }
+
+    public IdentifierExpression getRefKeyword() {
+        return refKeyword;
     }
 
     public IdentifierExpression getConstKeyword() {

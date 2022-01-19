@@ -5,11 +5,11 @@ struct Vector {
 }
 
 fn add(a: Vector, b: Vector): Vector {
-    return Vector(a.x + b.x, a.y + b.y)
+    return Vector{a.x + b.x, a.y + b.y}
 }
 
 fn scale(v: Vector, s: Int): Vector {
-    return Vector(v.x * s, v.y * s)
+    return Vector{v.x * s, v.y * s}
 }
 
 fn isqrt(x: Int): Int {
@@ -44,8 +44,8 @@ fn negate(b: Bool): Bool {
 
 fn main() {
 
-    v1: Vector = {1, 2}
-    v2: Vector = {3, 4}
+    v1: Vector = Vector{1, 2}
+    v2: Vector = Vector{3, 4}
 
     //all the following are correct and equivalent
     v3: Vector = add(v1, v2)
