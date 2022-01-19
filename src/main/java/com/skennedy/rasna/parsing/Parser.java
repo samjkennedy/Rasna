@@ -9,7 +9,6 @@ import com.skennedy.rasna.lexing.model.TokenType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.parsing.model.OperatorPrecedence;
-import com.skennedy.rasna.typebinding.TypeSymbol;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -159,6 +158,8 @@ public class Parser {
                 return parseImportStatement();
             case NAMESPACE_KEYWORD:
                 return parseNamespaceExpression();
+            case EOF_TOKEN:
+
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
@@ -308,13 +309,14 @@ public class Parser {
     private Expression parseMatchExpression() {
 
         IdentifierExpression matchKeyword = matchToken(TokenType.MATCH_KEYWORD);
-        Expression identifier = parseExpression();
+        Expression identifier = parseParenthesisedExpression();
         IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<MatchCaseExpression> caseExpressions = new ArrayList<>();
-        while (
-                current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
-                        && current().getTokenType() != TokenType.ELSE_KEYWORD) {
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+                && current().getTokenType() != TokenType.ELSE_KEYWORD
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN) {
 
             Expression caseExpression = parseExpression();
 
@@ -334,26 +336,24 @@ public class Parser {
             IdentifierExpression arrow = matchToken(TokenType.ARROW);
             Expression thenExpression = parseExpression();
 
-            IdentifierExpression comma = matchToken(TokenType.COMMA);
-
             //TODO: This is a concern of the rewriter, not the parser. A case could be infinitely nested ors
             if (caseExpression instanceof BinaryExpression) {
                 if (((BinaryExpression) caseExpression).getOperation() == OpType.LOR) {
 
-                    caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression, comma));
-                    caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression, comma));
+                    caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getLeft(), arrow, thenExpression));
+                    caseExpressions.add(new MatchCaseExpression(((BinaryExpression) caseExpression).getRight(), arrow, thenExpression));
                 } else {
-                    caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
+                    caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression));
                 }
             } else {
-                caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression, comma));
+                caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression));
             }
         }
         IdentifierExpression elseKeyword = matchToken(TokenType.ELSE_KEYWORD);
         IdentifierExpression arrow = matchToken(TokenType.ARROW);
         Expression thenExpression = parseExpression();
 
-        caseExpressions.add(new MatchCaseExpression(elseKeyword, arrow, thenExpression, null));
+        caseExpressions.add(new MatchCaseExpression(elseKeyword, arrow, thenExpression));
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
         return new MatchExpression(matchKeyword, identifier, openCurly, caseExpressions, closeCurly);
@@ -952,6 +952,7 @@ public class Parser {
         while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
                 && current().getTokenType() != TokenType.EOF_TOKEN
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
+
             expressions.add(parseExpression());
 
             if (current().getTokenType() == TokenType.COMMA) {
@@ -1022,6 +1023,7 @@ public class Parser {
             position++;
             return new IdentifierExpression(token, token.getTokenType(), token.getValue());
         }
+        position++;
         errors.add(Error.raiseUnexpectedToken(tokenType, token));
         return new IdentifierExpression(token, TokenType.BAD_TOKEN, null);
     }

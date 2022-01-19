@@ -311,7 +311,7 @@ public class LLVMCompiler implements Compiler {
 
         LLVMValueRef owner = visit(memberAccessorExpression.getOwner(), builder, context, function);
         if (LLVMGetTypeKind(LLVMTypeOf(owner)) != LLVMPointerTypeKind) {
-            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(memberAccessorExpression.getOwner().getType(), context), "tmp");
+            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(memberAccessorExpression.getOwner().getType(), context), "access.tmp");
             LLVMBuildStore(builder, owner, ptr);
             owner = ptr;
         }
@@ -337,6 +337,7 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef element = LLVMBuildStructGEP(builder, owner, idx, member.getVariable().getName());
 
         LLVMValueRef value = visit(memberAssignmentExpression.getAssignment(), builder, context, function);
+        value = dereference(builder, value, "value");
 
         return LLVMBuildStore(builder, value, element);
     }
@@ -385,9 +386,7 @@ public class LLVMCompiler implements Compiler {
         List<BoundExpression> boundArguments = functionCallExpression.getBoundArguments();
         for (int i = 0; i < boundArguments.size(); i++) {
             LLVMValueRef arg = visit(boundArguments.get(i), builder, context, function);
-            if (LLVMGetTypeKind(LLVMTypeOf(arg)) == LLVMPointerTypeKind) {
-                arg = LLVMBuildLoad(builder, arg, "arg");
-            }
+            arg = dereference(builder, arg, "arg");
             args.put(i, arg);
         }
 
@@ -406,6 +405,7 @@ public class LLVMCompiler implements Compiler {
                 .orElseThrow(() -> new IllegalStateException("Variable `" + variableSymbol.getName() + "` has not been declared"));
 
         LLVMValueRef val = visit(assignmentExpression.getExpression(), builder, context, function);
+        val = dereference(builder, val, "val");
 
         return LLVMBuildStore(builder, val, ptr);
     }
@@ -515,10 +515,14 @@ public class LLVMCompiler implements Compiler {
         visit(ifExpression.getElseBody(), builder, context, function);
 
         boolean elseTerminated = LLVMGetBasicBlockTerminator(elseBlock) != null;
-        if (!elseTerminated && !thenTerminated) {
+        if (!elseTerminated) {
             LLVMBuildBr(builder, endBlock);
-        } else {
+        }
+
+        if (elseTerminated && thenTerminated) {
             LLVMDeleteBasicBlock(endBlock);
+        } else {
+            LLVMPositionBuilderAtEnd(builder, endBlock);
         }
         return null;
     }
@@ -530,7 +534,7 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
 
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
-
+        val = dereference(builder, val, "val");
         scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
         return LLVMBuildStore(builder, val, ptr);
@@ -573,13 +577,9 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundBinaryExpression binaryExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef lhs = visit(binaryExpression.getLeft(), builder, context, function);
-        if (LLVMGetTypeKind(LLVMTypeOf(lhs)) == LLVMPointerTypeKind) {
-            lhs = LLVMBuildLoad(builder, lhs, "lhs");
-        }
+        lhs = dereference(builder, lhs, "lhs");
         LLVMValueRef rhs = visit(binaryExpression.getRight(), builder, context, function);
-        if (LLVMGetTypeKind(LLVMTypeOf(rhs)) == LLVMPointerTypeKind) {
-            rhs = LLVMBuildLoad(builder, rhs, "rhs");
-        }
+        rhs = dereference(builder, rhs, "rhs");
 
         if (binaryExpression.getLeft().getType() == INT && binaryExpression.getRight().getType() == INT) {
             return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
@@ -689,7 +689,7 @@ public class LLVMCompiler implements Compiler {
         }
 
         LLVMValueRef res = visit(printExpression.getExpression(), builder, context, function);
-        if (LLVMGetTypeKind(LLVMTypeOf(res)) == LLVMPointerTypeKind) {
+        if (printExpression.getExpression().getType() != STRING && LLVMGetTypeKind(LLVMTypeOf(res)) == LLVMPointerTypeKind) {
             res = LLVMBuildLoad(builder, res, "print");
         }
 
@@ -767,9 +767,16 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundReturnExpression returnExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef retVal = visit(returnExpression.getReturnValue(), builder, context, function);
-
+        retVal = dereference(builder, retVal, "retVal");
         LLVMBuildStore(builder, retVal, returnStack.peek());
         return LLVMBuildBr(builder, returnBlocks.peek());
+    }
+
+    private LLVMValueRef dereference(LLVMBuilderRef builder, LLVMValueRef value, String name) {
+        if (LLVMGetTypeKind(LLVMTypeOf(value)) == LLVMPointerTypeKind) {
+            value = LLVMBuildLoad(builder, value, name);
+        }
+        return value;
     }
 
     private static Stack<LLVMValueRef> returnStack = new Stack<>();
