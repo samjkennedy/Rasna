@@ -30,7 +30,7 @@ fn mag3(v: V3R): Real {
 }
 
 fn V2RR(r: Real): V2R {
-    return V2R(r, r)
+    return V2R{r, r}
 }
 
 struct S {
@@ -54,12 +54,12 @@ struct foo {
 }
 
 fn main() {
-    v2: V2R = V2RR(1.0)
+    v2: V2R = V2RR{1.0}
     print(v2.x)
     print(v2.y)
     print(mag2(v2))
 
-    v3: V3R = V3R(1.0, 2.0, 3.0)
+    v3: V3R = V3R{1.0, 2.0, 3.0}
     //v: V2R = {1.0, 2.0} //This should also be allowed
     print(v3.x)
     print(v3.y)
@@ -85,7 +85,7 @@ fn main() {
     print(r.r)
 
     f1: foo = {1, 1.0, true, "Hi"}
-    f2: foo = foo(1, 1.0, true, "Hi")
+    f2: foo = foo{1, 1.0, true, "Hi"}
 
     print(f1.int)
     print(f1.real)

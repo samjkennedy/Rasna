@@ -29,7 +29,7 @@ public class BoundVariableExpression implements BoundExpression {
 
     @Override
     public boolean isConstExpression() {
-        return false;
+        return variable.isReadOnly();
     }
 
     public VariableSymbol getVariable() {

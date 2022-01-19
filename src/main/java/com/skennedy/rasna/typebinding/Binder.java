@@ -149,7 +149,7 @@ public class Binder {
 
         List<VariableSymbol> values = new ArrayList<>(type.get().getFields().values());
         if (values.size() != structLiteralExpression.getMembers().size()) {
-            errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownStruct((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
@@ -415,6 +415,9 @@ public class Binder {
             return new BoundErrorExpression();
         }
         BoundMemberAccessorExpression boundMemberAccessorExpression = (BoundMemberAccessorExpression) boundExpression;
+        if (boundMemberAccessorExpression.getOwner().isConstExpression()) {
+            errors.add(BindingError.raise("Member belongs to const expression, cannot be modified", memberAssignmentExpression.getMemberAccessorExpression().getSpan()));
+        }
 
         BoundExpression assignment = bind(memberAssignmentExpression.getAssignment());
 

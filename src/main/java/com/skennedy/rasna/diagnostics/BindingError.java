@@ -68,6 +68,17 @@ public class BindingError {
                         .collect(Collectors.joining(", ")) + "):", span);
     }
 
+    public static BindingError raiseUnknownStruct(String type, List<BoundExpression> members, TextSpan span) {
+
+        return new BindingError("Struct " + type + " is not defined in the scope for members of type (" +
+                members.stream()
+                        .filter(Objects::nonNull)
+                        .map(BoundExpression::getType)
+                        .filter(Objects::nonNull)
+                        .map(TypeSymbol::toString)
+                        .collect(Collectors.joining(", ")) + "):", span);
+    }
+
     public static BindingError raiseUnknownMember(String member, TypeSymbol type, TextSpan span) {
 
         return new BindingError("No such member " + member + " for type " + type.getName(), span);

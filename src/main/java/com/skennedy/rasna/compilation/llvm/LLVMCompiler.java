@@ -327,6 +327,11 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundMemberAssignmentExpression memberAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef owner = visit(memberAssignmentExpression.getMemberAccessorExpression().getOwner(), builder, context, function);
+        if (LLVMGetTypeKind(LLVMTypeOf(owner)) != LLVMPointerTypeKind) {
+            LLVMValueRef ptr = LLVMBuildAlloca(builder, getLlvmTypeRef(memberAssignmentExpression.getMemberAccessorExpression().getOwner().getType(), context), "access.tmp");
+            LLVMBuildStore(builder, owner, ptr);
+            owner = ptr;
+        }
 
         assert memberAssignmentExpression.getMemberAccessorExpression().getMember() instanceof BoundVariableExpression;
         BoundVariableExpression member = (BoundVariableExpression) memberAssignmentExpression.getMemberAccessorExpression().getMember();

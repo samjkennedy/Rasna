@@ -377,7 +377,7 @@ public class Parser {
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
 
             if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
-                StructLiteralExpression structLiteralExpression = parseStructLiteralExpression(null);
+                Expression structLiteralExpression = parseStructLiteralExpression(null);
                 arguments.add(structLiteralExpression);
             } else {
                 arguments.add(parseExpression());
@@ -945,7 +945,7 @@ public class Parser {
         return new TypeofExpression(typeofKeyword, openParen, expression, closeParen);
     }
 
-    private StructLiteralExpression parseStructLiteralExpression(TypeExpression typeExpression) {
+    private Expression parseStructLiteralExpression(TypeExpression typeExpression) {
         IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<Expression> expressions = new ArrayList<>();
@@ -961,7 +961,11 @@ public class Parser {
         }
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
-        return new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
+        StructLiteralExpression structLiteralExpression = new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
+        if (current().getTokenType() == TokenType.DOT) {
+            return parseMemberAccessorExpression(structLiteralExpression);
+        }
+        return structLiteralExpression;
     }
 
     private BlockExpression parseBlockExpression() {

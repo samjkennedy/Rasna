@@ -1,0 +1,14 @@
+struct Vec {
+    x: Real
+    y: Real
+}
+
+fn mut(mut v: Vec) {
+    v.x = 1.0
+}
+
+fn main() {
+    const v: Vec = Vec{2.0, 3.0}
+    v = Vec{1.0, 2.0}
+    mut(v)
+}

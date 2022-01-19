@@ -38,6 +38,7 @@ public class StructLiteralExpression extends Expression {
     @Override
     public Iterator<SyntaxNode> getChildren() {
         List<SyntaxNode> children = new ArrayList<>();
+        children.add(typeExpression);
         children.add(openCurly);
         children.addAll(members);
         children.add(closeCurly);
