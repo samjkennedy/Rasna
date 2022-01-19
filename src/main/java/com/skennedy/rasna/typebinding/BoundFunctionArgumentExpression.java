@@ -5,10 +5,12 @@ import java.util.Iterator;
 
 public class BoundFunctionArgumentExpression implements BoundExpression {
 
+    private final boolean reference;
     private final VariableSymbol argument;
     private final BoundExpression guard;
 
-    public BoundFunctionArgumentExpression(VariableSymbol argument, BoundExpression guard) {
+    public BoundFunctionArgumentExpression(boolean reference, VariableSymbol argument, BoundExpression guard) {
+        this.reference = reference;
 
         this.argument = argument;
         this.guard = guard;
@@ -27,6 +29,10 @@ public class BoundFunctionArgumentExpression implements BoundExpression {
     @Override
     public Iterator<BoundExpression> getChildren() {
         return Collections.singleton(guard).iterator();
+    }
+
+    public boolean isReference() {
+        return reference;
     }
 
     public VariableSymbol getArgument() {

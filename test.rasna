@@ -1,0 +1,10 @@
+fn foo(i: Int) {
+    i = i + 1
+    print(i)
+}
+
+fn main() {
+    n: Int = 1
+    foo(n)
+    print(n)
+}

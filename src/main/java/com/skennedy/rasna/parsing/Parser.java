@@ -377,7 +377,7 @@ public class Parser {
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
 
             if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
-                StructLiteralExpression structLiteralExpression = parseStructLiteralExpression(null);
+                Expression structLiteralExpression = parseStructLiteralExpression(null);
                 arguments.add(structLiteralExpression);
             } else {
                 arguments.add(parseExpression());
@@ -671,7 +671,7 @@ public class Parser {
             if (current().getTokenType() == TokenType.BAR) {
                 throw new UnsupportedOperationException("Lambda variable guards are not yet supported");
             }
-            functionArgumentExpressions.add(new FunctionArgumentExpression(null, typeExpression, identifier, null, null));
+            functionArgumentExpressions.add(new FunctionArgumentExpression(null, null, typeExpression, identifier, null, null));
         }
         IdentifierExpression arrow = matchToken(TokenType.ARROW);
         Expression expression = parseExpression();
@@ -760,6 +760,11 @@ public class Parser {
 
     private FunctionArgumentExpression parseFunctionArgumentExpression() {
 
+        IdentifierExpression refKeyword = null;
+        if (current().getTokenType() == TokenType.REF_KEYWORD) {
+            refKeyword = matchToken(TokenType.REF_KEYWORD);
+        }
+
         VariableDeclarationExpression variableDeclarationExpression = parseVariableDeclarationExpression();
 
         if (variableDeclarationExpression.getInitialiser() != null) {
@@ -767,6 +772,7 @@ public class Parser {
         }
 
         return new FunctionArgumentExpression(
+                refKeyword,
                 variableDeclarationExpression.getConstKeyword(),
                 variableDeclarationExpression.getTypeExpression(),
                 variableDeclarationExpression.getIdentifier(),
@@ -945,7 +951,7 @@ public class Parser {
         return new TypeofExpression(typeofKeyword, openParen, expression, closeParen);
     }
 
-    private StructLiteralExpression parseStructLiteralExpression(TypeExpression typeExpression) {
+    private Expression parseStructLiteralExpression(TypeExpression typeExpression) {
         IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
 
         List<Expression> expressions = new ArrayList<>();
@@ -961,7 +967,11 @@ public class Parser {
         }
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
-        return new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
+        StructLiteralExpression structLiteralExpression = new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
+        if (current().getTokenType() == TokenType.DOT) {
+            return parseMemberAccessorExpression(structLiteralExpression);
+        }
+        return structLiteralExpression;
     }
 
     private BlockExpression parseBlockExpression() {
