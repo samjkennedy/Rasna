@@ -6,6 +6,7 @@ import com.skennedy.rasna.typebinding.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class JVMLowerer extends Lowerer {
 
@@ -255,6 +256,12 @@ public class JVMLowerer extends Lowerer {
         BoundBlockExpression result = new BoundBlockExpression(expressions);
 
         return flatten(rewriteBlockExpression(result));
+    }
+
+    @Override
+    protected BoundExpression rewriteStructDeclarationExpression(BoundStructDeclarationExpression boundStructDeclarationExpression) {
+
+        throw new UnsupportedOperationException("As of now, structs are no longer supported by the JVM compiler");
     }
 
     private static BoundLabel generateLabel() {

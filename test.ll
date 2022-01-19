@@ -1,78 +1,89 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
+%Vec = type { i32, i32 }
+
 @formatStr = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@real = private unnamed_addr constant [4 x i8] c"%f\0A\00", align 1
-@real.1 = private unnamed_addr constant [4 x i8] c"%f\0A\00", align 1
-@real.2 = private unnamed_addr constant [4 x i8] c"%f\0A\00", align 1
-@real.3 = private unnamed_addr constant [4 x i8] c"%f\0A\00", align 1
 
 declare i32 @printf(i8*, ...)
 
-define double @sqrt(double %0) {
+define %Vec @scale(%Vec %0, i32 %1) {
 entry:
-  %sqrt-retval = alloca double, align 8
-  %iterations = alloca i32, align 4
-  store i32 100, i32* %iterations, align 4
-  %sdivtmp = fdiv double %0, 1.000000e+01
-  %x0 = alloca double, align 8
-  store double %sdivtmp, double* %x0, align 8
-  %x01 = load double, double* %x0, align 8
-  %x02 = load double, double* %x0, align 8
-  %sdivtmp3 = fdiv double %0, %x02
-  %saddtmp = fadd double %x01, %sdivtmp3
-  %sdivtmp4 = fdiv double %saddtmp, 2.000000e+00
-  %x1 = alloca double, align 8
-  store double %sdivtmp4, double* %x1, align 8
-  %i = alloca i32, align 4
-  store i32 1, i32* %i, align 4
-  br label %for.cond
-
-return:                                           ; preds = %for.exit
-  %sqrt-retval17 = load double, double* %sqrt-retval, align 8
-  ret double %sqrt-retval17
-
-for.cond:                                         ; preds = %for.incr, %entry
-  %i5 = load i32, i32* %i, align 4
-  %iterations6 = load i32, i32* %iterations, align 4
-  %1 = icmp slt i32 %i5, %iterations6
-  br i1 %1, label %for.body, label %for.exit
-
-for.body:                                         ; preds = %for.cond
-  %x07 = load double, double* %x0, align 8
-  %tmp = alloca double, align 8
-  store double %x07, double* %tmp, align 8
-  %x18 = load double, double* %x1, align 8
-  %x19 = load double, double* %x1, align 8
-  %sdivtmp10 = fdiv double %0, %x19
-  %saddtmp11 = fadd double %x18, %sdivtmp10
-  %sdivtmp12 = fdiv double %saddtmp11, 2.000000e+00
-  store double %sdivtmp12, double* %x0, align 8
-  %tmp13 = load double, double* %tmp, align 8
-  store double %tmp13, double* %x1, align 8
-  br label %for.incr
-
-for.incr:                                         ; preds = %for.body
-  %i14 = load i32, i32* %i, align 4
-  %saddtmp15 = add i32 %i14, 1
-  store i32 %saddtmp15, i32* %i, align 4
-  br label %for.cond
-
-for.exit:                                         ; preds = %for.cond
-  %x016 = load double, double* %x0, align 8
-  store double %x016, double* %sqrt-retval, align 8
+  %scale-retval = alloca %Vec, align 8
+  %tmp.Vec = alloca %Vec, align 8
+  %x = getelementptr inbounds %Vec, %Vec* %tmp.Vec, i32 0, i32 0
+  %tmp = alloca %Vec, align 8
+  store %Vec %0, %Vec* %tmp, align 4
+  %x1 = getelementptr inbounds %Vec, %Vec* %tmp, i32 0, i32 0
+  %lhs = load i32, i32* %x1, align 4
+  %smultmp = mul i32 %lhs, %1
+  store i32 %smultmp, i32* %x, align 4
+  %y = getelementptr inbounds %Vec, %Vec* %tmp.Vec, i32 0, i32 1
+  %tmp2 = alloca %Vec, align 8
+  store %Vec %0, %Vec* %tmp2, align 4
+  %y3 = getelementptr inbounds %Vec, %Vec* %tmp2, i32 0, i32 1
+  %lhs4 = load i32, i32* %y3, align 4
+  %smultmp5 = mul i32 %lhs4, %1
+  store i32 %smultmp5, i32* %y, align 4
+  %tmp.Vec6 = load %Vec, %Vec* %tmp.Vec, align 4
+  store %Vec %tmp.Vec6, %Vec* %scale-retval, align 4
   br label %return
+
+return:                                           ; preds = %entry
+  %scale-retval7 = load %Vec, %Vec* %scale-retval, align 4
+  ret %Vec %scale-retval7
+}
+
+define i32 @sum(%Vec %0) {
+entry:
+  %sum-retval = alloca i32, align 4
+  %tmp = alloca %Vec, align 8
+  store %Vec %0, %Vec* %tmp, align 4
+  %x = getelementptr inbounds %Vec, %Vec* %tmp, i32 0, i32 0
+  %lhs = load i32, i32* %x, align 4
+  %tmp1 = alloca %Vec, align 8
+  store %Vec %0, %Vec* %tmp1, align 4
+  %y = getelementptr inbounds %Vec, %Vec* %tmp1, i32 0, i32 1
+  %rhs = load i32, i32* %y, align 4
+  %saddtmp = add i32 %lhs, %rhs
+  store i32 %saddtmp, i32* %sum-retval, align 4
+  br label %return
+
+return:                                           ; preds = %entry
+  %sum-retval2 = load i32, i32* %sum-retval, align 4
+  ret i32 %sum-retval2
+}
+
+define void @printX(%Vec %0) {
+entry:
+  %tmp = alloca %Vec, align 8
+  store %Vec %0, %Vec* %tmp, align 4
+  %x = getelementptr inbounds %Vec, %Vec* %tmp, i32 0, i32 0
+  %print = load i32, i32* %x, align 4
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %print)
+  ret void
 }
 
 define i32 @main() {
 entry:
-  %sqrt = call double @sqrt(double 4.000000e+00)
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real, i32 0, i32 0), double %sqrt)
-  %sqrt1 = call double @sqrt(double 5.000000e+00)
-  %printcall2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real.1, i32 0, i32 0), double %sqrt1)
-  %sqrt3 = call double @sqrt(double 3.520000e+01)
-  %printcall4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real.2, i32 0, i32 0), double %sqrt3)
-  %sqrt5 = call double @sqrt(double 1.253480e+05)
-  %printcall6 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real.3, i32 0, i32 0), double %sqrt5)
+  %v = alloca %Vec, align 8
+  %tmp.Vec = alloca %Vec, align 8
+  %x = getelementptr inbounds %Vec, %Vec* %tmp.Vec, i32 0, i32 0
+  store i32 2, i32* %x, align 4
+  %y = getelementptr inbounds %Vec, %Vec* %tmp.Vec, i32 0, i32 1
+  store i32 3, i32* %y, align 4
+  %tmp.Vec1 = load %Vec, %Vec* %tmp.Vec, align 4
+  store %Vec %tmp.Vec1, %Vec* %v, align 4
+  %x2 = getelementptr inbounds %Vec, %Vec* %v, i32 0, i32 0
+  store i32 5, i32* %x2, align 4
+  %arg = load %Vec, %Vec* %v, align 4
+  call void @printX(%Vec %arg)
+  %sum = alloca i32, align 4
+  %arg3 = load %Vec, %Vec* %v, align 4
+  %scale = call %Vec @scale(%Vec %arg3, i32 2)
+  %sum4 = call i32 @sum(%Vec %scale)
+  store i32 %sum4, i32* %sum, align 4
+  %print = load i32, i32* %sum, align 4
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %print)
   ret i32 0
 }

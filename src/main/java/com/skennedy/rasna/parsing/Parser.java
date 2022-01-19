@@ -9,6 +9,7 @@ import com.skennedy.rasna.lexing.model.TokenType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.parsing.model.OperatorPrecedence;
+import com.skennedy.rasna.typebinding.TypeSymbol;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -139,6 +140,11 @@ public class Parser {
                 }
                 if (nextToken().getTokenType() == TokenType.COLON_COLON) {
                     return parseNamespaceAccessorExpression();
+                }
+                if (nextToken().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
+                    IdentifierExpression typeKeyword = parseTypeKeyword();
+                    TypeExpression typeExpression = new TypeExpression(null, typeKeyword, null, null);
+                    return parseStructLiteralExpression(typeExpression);
                 }
                 return parseAssignmentExpression();
             case RETURN_KEYWORD:

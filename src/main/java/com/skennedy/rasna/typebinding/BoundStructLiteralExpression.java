@@ -3,7 +3,6 @@ package com.skennedy.rasna.typebinding;
 import java.util.Iterator;
 import java.util.List;
 
-//TODO: Allow these to be made literally e.g. {1, 2}
 public class BoundStructLiteralExpression implements BoundExpression {
 
     private TypeSymbol type;
