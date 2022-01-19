@@ -2,10 +2,10 @@ fn main() {
     t: Tuple = ("Hello", 1, true, 3.14)
 
     for (v: Any in t) {
-        match v {
-            s: String -> print(s),
-            i: Int -> print(i),
-            b: Bool -> print(b),
+        match (v) {
+            s: String -> print(s)
+            i: Int -> print(i)
+            b: Bool -> print(b)
             else -> print("I don't know what type this is...")
         }
     }

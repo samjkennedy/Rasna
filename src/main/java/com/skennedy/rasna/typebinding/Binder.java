@@ -14,6 +14,7 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
@@ -140,29 +141,21 @@ public class Binder {
             return new BoundErrorExpression();
         }
 
-        Optional<FunctionSymbol> constructor = currentScope.tryLookupFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
-        if (constructor.isEmpty()) {
-            //This should never happen
-            errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
-            return new BoundErrorExpression();
-        }
-
         List<BoundExpression> members = new ArrayList<>();
         List<Expression> structLiteralExpressionMembers = structLiteralExpression.getMembers();
         for (Expression member : structLiteralExpressionMembers) {
             members.add(bind(member));
         }
 
-        if (constructor.get().getArguments().size() != structLiteralExpression.getMembers().size()) {
-            //This could be a little misleading, need signature info in the functionsymbol
+        List<VariableSymbol> values = new ArrayList<>(type.get().getFields().values());
+        if (values.size() != structLiteralExpression.getMembers().size()) {
             errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
-
         for (int i = 0; i < structLiteralExpressionMembers.size(); i++) {
             BoundExpression boundMember = members.get(i);
-            TypeSymbol expectedType = constructor.get().getArguments().get(i).getType();
+            TypeSymbol expectedType = values.get(i).getType();
             if (!expectedType.isAssignableFrom(boundMember.getType())) {
 
                 //TODO: Can be argType mismatch, e.g. expected type X in position Y of function Z
@@ -170,7 +163,7 @@ public class Binder {
             }
         }
 
-        if (constructor.get().getArguments().size() != members.size()) {
+        if (values.size() != members.size()) {
             //This could be a little misleading, need signature info in the functionsymbol
             errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
@@ -807,32 +800,7 @@ public class Binder {
         //TODO: The defined functions and variables have no knowledge of their owner, two types with the same method may cause issues
         TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedFunctions, definedVariables);
 
-        //Define constructor as a function
-        List<BoundFunctionArgumentExpression> args = new ArrayList<>();
-        for (Expression member : structDeclarationExpression.getMembers()) {
-            IdentifierExpression memberIdentifier = ((VariableDeclarationExpression) member).getIdentifier();
-
-            VariableSymbol variable = currentScope.tryLookupVariable((String) memberIdentifier.getValue())
-                    .orElseThrow(() -> new IllegalStateException("Only variable members allowed in structs"));
-
-            args.add(new BoundFunctionArgumentExpression(variable, variable.getGuard()));
-        }
-
-        FunctionSymbol constructor = new FunctionSymbol((String) identifier.getValue(), type, args, null);
-
-        //Generate constructor
-        List<BoundExpression> variableExpressions = args.stream()
-                .map(BoundFunctionArgumentExpression::getArgument)
-                .map(BoundVariableExpression::new)
-                .collect(Collectors.toList());
-
-        BoundFunctionDeclarationExpression constructorExpression = new BoundFunctionDeclarationExpression(constructor, args,
-                new BoundBlockExpression(new BoundReturnExpression(new BoundStructLiteralExpression(type, variableExpressions)))
-        );
-
         currentScope = currentScope.getParentScope();
-
-        currentScope.declareFunction((String) identifier.getValue(), constructor);
 
         try {
             currentScope.declareType((String) identifier.getValue(), type);
@@ -840,7 +808,7 @@ public class Binder {
             errors.add(BindingError.raiseTypeAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
         }
 
-        return new BoundBlockExpression(constructorExpression, new BoundStructDeclarationExpression(type, members));
+        return new BoundStructDeclarationExpression(type, members);
     }
 
     private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {

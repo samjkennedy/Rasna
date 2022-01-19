@@ -13,14 +13,12 @@ public class MatchCaseExpression extends Expression {
     private final Expression caseExpression;
     private final IdentifierExpression arrow;
     private final Expression thenExpression;
-    private final IdentifierExpression comma;
 
-    public MatchCaseExpression(Expression caseExpression, IdentifierExpression arrow, Expression thenExpression, IdentifierExpression comma) {
+    public MatchCaseExpression(Expression caseExpression, IdentifierExpression arrow, Expression thenExpression) {
 
         this.caseExpression = caseExpression;
         this.arrow = arrow;
         this.thenExpression = thenExpression;
-        this.comma = comma;
     }
 
     @Override
@@ -35,7 +33,6 @@ public class MatchCaseExpression extends Expression {
         children.add(caseExpression);
         children.add(arrow);
         children.add(thenExpression);
-        children.add(comma);
 
         return children.iterator();
     }
@@ -50,9 +47,5 @@ public class MatchCaseExpression extends Expression {
 
     public Expression getThenExpression() {
         return thenExpression;
-    }
-
-    public IdentifierExpression getComma() {
-        return comma;
     }
 }
