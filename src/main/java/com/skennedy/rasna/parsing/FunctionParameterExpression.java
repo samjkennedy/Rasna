@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Objects;
 
-public class FunctionArgumentExpression extends Expression {
+public class FunctionParameterExpression extends Expression {
 
     private IdentifierExpression refKeyword;
     private final IdentifierExpression constKeyword;
@@ -17,7 +17,7 @@ public class FunctionArgumentExpression extends Expression {
     private final IdentifierExpression bar;
     private final Expression guard;
 
-    public FunctionArgumentExpression(IdentifierExpression refKeyword, IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
+    public FunctionParameterExpression(IdentifierExpression refKeyword, IdentifierExpression constKeyword, TypeExpression typeExpression, IdentifierExpression identifier, IdentifierExpression bar, Expression guard) {
         this.refKeyword = refKeyword;
         this.constKeyword = constKeyword;
         this.typeExpression = typeExpression;

@@ -15,6 +15,7 @@ public enum ExpressionType {
     FOR_IN_EXPR,
     FUNC_ARG_EXPR,
     FUNC_CALL_EXPR,
+    FUNC_CALL_PARAM_EXPR,
     FUNC_DECLARATION_EXPR,
     IDENTIFIER_EXPR,
     IF_EXPR,

@@ -3,13 +3,13 @@ package com.skennedy.rasna.typebinding;
 import java.util.Collections;
 import java.util.Iterator;
 
-public class BoundFunctionArgumentExpression implements BoundExpression {
+public class BoundFunctionParameterExpression implements BoundExpression {
 
     private final boolean reference;
     private final VariableSymbol argument;
     private final BoundExpression guard;
 
-    public BoundFunctionArgumentExpression(boolean reference, VariableSymbol argument, BoundExpression guard) {
+    public BoundFunctionParameterExpression(boolean reference, VariableSymbol argument, BoundExpression guard) {
         this.reference = reference;
 
         this.argument = argument;
@@ -41,5 +41,13 @@ public class BoundFunctionArgumentExpression implements BoundExpression {
 
     public BoundExpression getGuard() {
         return guard;
+    }
+
+    String getSignature() {
+        if (isReference()) {
+            return "ref " + getType();
+        } else {
+            return getType().toString();
+        }
     }
 }

@@ -13,12 +13,12 @@ public class FunctionDeclarationExpression extends Expression {
     private final IdentifierExpression fnKeyword;
     private final IdentifierExpression identifier;
     private final IdentifierExpression openParen;
-    private final List<FunctionArgumentExpression> arguments;
+    private final List<FunctionParameterExpression> arguments;
     private final IdentifierExpression closeParen;
     private final TypeExpression typeExpression;
     private final BlockExpression body;
 
-    public FunctionDeclarationExpression(IdentifierExpression fnKeyword, IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionArgumentExpression> argumentExpressions, IdentifierExpression closeParen, TypeExpression typeExpression, BlockExpression body) {
+    public FunctionDeclarationExpression(IdentifierExpression fnKeyword, IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionParameterExpression> argumentExpressions, IdentifierExpression closeParen, TypeExpression typeExpression, BlockExpression body) {
 
         this.fnKeyword = fnKeyword;
         this.identifier = identifier;
@@ -51,7 +51,7 @@ public class FunctionDeclarationExpression extends Expression {
         return openParen;
     }
 
-    public List<FunctionArgumentExpression> getArguments() {
+    public List<FunctionParameterExpression> getArguments() {
         return arguments;
     }
 

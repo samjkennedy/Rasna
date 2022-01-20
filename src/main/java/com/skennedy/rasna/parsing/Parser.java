@@ -131,7 +131,7 @@ public class Parser {
                         && lookAhead(3).getTokenType() == TokenType.IDENTIFIER) {
                     return parseVariableDeclarationExpression();
                 }
-                if (nextToken().getTokenType() == TokenType.DOT) {
+                if (nextToken().getTokenType() == TokenType.DOT || nextToken().getTokenType() == TokenType.ARROW) {
                     return parseMemberAccessorExpression(matchToken(TokenType.IDENTIFIER));
                 }
                 if (nextToken().getTokenType() == TokenType.COLON) {
@@ -266,14 +266,21 @@ public class Parser {
 
     private Expression parseMemberAccessorExpression(Expression owner) {
 
-        IdentifierExpression dot = matchToken(TokenType.DOT);
+        IdentifierExpression accessor;
+        if (current().getTokenType() == TokenType.DOT) {
+            accessor = matchToken(TokenType.DOT);
+        } else if (current().getTokenType() == TokenType.ARROW) {
+            accessor = matchToken(TokenType.ARROW);
+        } else {
+            accessor = matchToken(TokenType.BAD_TOKEN);
+        }
 
         Expression member;
         IdentifierExpression identifierExpression = matchToken(TokenType.IDENTIFIER);
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) { //Function call
             IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
-            List<Expression> arguments = parseArgumentList();
+            List<FunctionCallArgumentExpression> arguments = parseArgumentList();
 
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
@@ -281,7 +288,7 @@ public class Parser {
         } else {
             member = identifierExpression;
         }
-        MemberAccessorExpression memberAccessorExpression = new MemberAccessorExpression(owner, dot, member);
+        MemberAccessorExpression memberAccessorExpression = new MemberAccessorExpression(owner, accessor, member);
 
         if (current().getTokenType() == TokenType.EQUALS) {
             IdentifierExpression equals = matchToken(TokenType.EQUALS);
@@ -290,7 +297,7 @@ public class Parser {
             return new MemberAssignmentExpression(memberAccessorExpression, equals, assignment);
         }
 
-        if (current().getTokenType() == TokenType.DOT) {
+        if (current().getTokenType() == TokenType.DOT || current().getTokenType() == TokenType.ARROW) {
             return parseMemberAccessorExpression(memberAccessorExpression);
         }
 
@@ -363,24 +370,28 @@ public class Parser {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
-        List<Expression> arguments = parseArgumentList();
+        List<FunctionCallArgumentExpression> arguments = parseArgumentList();
 
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
         return new FunctionCallExpression(identifier, openParen, arguments, closeParen);
     }
 
-    private List<Expression> parseArgumentList() {
-        List<Expression> arguments = new ArrayList<>();
+    private List<FunctionCallArgumentExpression> parseArgumentList() {
+        List<FunctionCallArgumentExpression> arguments = new ArrayList<>();
         while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
                 && current().getTokenType() != TokenType.EOF_TOKEN
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
 
+            IdentifierExpression refKeyword = null;
+            if (current().getTokenType() == TokenType.REF_KEYWORD) {
+                refKeyword = matchToken(TokenType.REF_KEYWORD);
+            }
+
             if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
-                Expression structLiteralExpression = parseStructLiteralExpression(null);
-                arguments.add(structLiteralExpression);
+                arguments.add(new FunctionCallArgumentExpression(refKeyword, parseStructLiteralExpression(null)));
             } else {
-                arguments.add(parseExpression());
+                arguments.add(new FunctionCallArgumentExpression(refKeyword, parseExpression()));
             }
 
             if (current().getTokenType() == TokenType.CLOSE_PARENTHESIS) {
@@ -553,7 +564,7 @@ public class Parser {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
-        List<FunctionArgumentExpression> argumentExpressions = new ArrayList<>();
+        List<FunctionParameterExpression> argumentExpressions = new ArrayList<>();
         while (current().getTokenType() != TokenType.EOF_TOKEN
                 && current().getTokenType() != TokenType.BAD_TOKEN
                 && current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
@@ -648,14 +659,14 @@ public class Parser {
 
     private Expression parseLambdaExpression() {
 
-        List<FunctionArgumentExpression> functionArgumentExpressions = new ArrayList<>();
+        List<FunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
         //Multi-variable lambda, TODO:
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
             IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
             while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
                     && current().getTokenType() != TokenType.EOF_TOKEN
                     && current().getTokenType() != TokenType.BAD_TOKEN) {
-                functionArgumentExpressions.add(parseFunctionArgumentExpression());
+                functionParameterExpressions.add(parseFunctionArgumentExpression());
 
                 if (current().getTokenType() == TokenType.COMMA) {
                     matchToken(TokenType.COMMA);
@@ -671,12 +682,12 @@ public class Parser {
             if (current().getTokenType() == TokenType.BAR) {
                 throw new UnsupportedOperationException("Lambda variable guards are not yet supported");
             }
-            functionArgumentExpressions.add(new FunctionArgumentExpression(null, null, typeExpression, identifier, null, null));
+            functionParameterExpressions.add(new FunctionParameterExpression(null, null, typeExpression, identifier, null, null));
         }
         IdentifierExpression arrow = matchToken(TokenType.ARROW);
         Expression expression = parseExpression();
 
-        return new LambdaExpression(functionArgumentExpressions, arrow, expression);
+        return new LambdaExpression(functionParameterExpressions, arrow, expression);
     }
 
     private Expression parseParenthesisedExpression() {
@@ -758,7 +769,7 @@ public class Parser {
         return typeKeyword;
     }
 
-    private FunctionArgumentExpression parseFunctionArgumentExpression() {
+    private FunctionParameterExpression parseFunctionArgumentExpression() {
 
         IdentifierExpression refKeyword = null;
         if (current().getTokenType() == TokenType.REF_KEYWORD) {
@@ -771,7 +782,7 @@ public class Parser {
             errors.add(Error.raise("Default values for function arguments are not yet supported", variableDeclarationExpression.getEquals().getToken()));
         }
 
-        return new FunctionArgumentExpression(
+        return new FunctionParameterExpression(
                 refKeyword,
                 variableDeclarationExpression.getConstKeyword(),
                 variableDeclarationExpression.getTypeExpression(),
@@ -831,11 +842,19 @@ public class Parser {
                 throw new UnsupportedOperationException("Nested namespace accessors are not yet supported");
                 //return parseAhead(new NamespaceAccessorExpression(parsed, namespaceAccessor, expression));
             case DOT:
-                IdentifierExpression dot = matchToken(TokenType.DOT);
+            case ARROW:
+                IdentifierExpression accessor;
+                if (current().getTokenType() == TokenType.DOT) {
+                    accessor = matchToken(TokenType.DOT);
+                } else if (current().getTokenType() == TokenType.ARROW) {
+                    accessor = matchToken(TokenType.ARROW);
+                } else {
+                    accessor = matchToken(TokenType.BAD_TOKEN);
+                }
 
                 Expression member = parseExpression();
 
-                return parseAhead(new MemberAccessorExpression(parsed, dot, member));
+                return parseAhead(new MemberAccessorExpression(parsed, accessor, member));
             case AS_KEYWORD:
                 IdentifierExpression asKeyword = matchToken(TokenType.AS_KEYWORD);
 
@@ -968,7 +987,7 @@ public class Parser {
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
         StructLiteralExpression structLiteralExpression = new StructLiteralExpression(typeExpression, openCurly, expressions, closeCurly);
-        if (current().getTokenType() == TokenType.DOT) {
+        if (current().getTokenType() == TokenType.DOT || current().getTokenType() == TokenType.ARROW) {
             return parseMemberAccessorExpression(structLiteralExpression);
         }
         return structLiteralExpression;

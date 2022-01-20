@@ -7,13 +7,14 @@ import com.skennedy.rasna.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.rasna.exceptions.TypeMismatchException;
 import com.skennedy.rasna.exceptions.UndefinedVariableException;
 import com.skennedy.rasna.exceptions.VariableAlreadyDeclaredException;
+import com.skennedy.rasna.lexing.model.Location;
+import com.skennedy.rasna.lexing.model.Token;
 import com.skennedy.rasna.lexing.model.TokenType;
 import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
 import com.skennedy.rasna.parsing.*;
 import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
-import javax.naming.Binding;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -247,8 +248,26 @@ public class Binder {
             //UFCS https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax
             FunctionCallExpression functionCallExpression = (FunctionCallExpression) member;
 
-            List<Expression> ufscArgs = new ArrayList<>();
-            ufscArgs.add(memberAccessorExpression.getOwner());
+            Optional<FunctionSymbol> function = currentScope.tryLookupFunction((String) functionCallExpression.getIdentifier().getValue());
+            IdentifierExpression dummyRefKeyword = null;
+            if (function.isPresent()) {
+                BoundFunctionParameterExpression firstArg = function.get().getArguments().get(0);
+                if (firstArg.isReference()) {
+                    if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.DOT) {
+                        errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by reference. Perhaps you meant to use `->` instead of `.`", memberAccessorExpression.getAccessor().getSpan()));
+                    }
+                    //Add the dummy anyway to avoid irrelevant errors
+                    Location dummyLocation = Location.fromOffset(
+                            functionCallExpression.getIdentifier().getSpan().getStart(),
+                            //This looks ridiculous, but it's calculating the start of the member owner
+                            //minus the dot     |                minus the function identifier              |                                                    minus the length of the owner
+                            -1 - ((String) functionCallExpression.getIdentifier().getValue()).length() - (memberAccessorExpression.getOwner().getSpan().getEnd().getColumn() - memberAccessorExpression.getOwner().getSpan().getStart().getColumn()));
+                    dummyRefKeyword = new IdentifierExpression(new Token(TokenType.REF_KEYWORD, dummyLocation), TokenType.REF_KEYWORD, "ref");
+                }
+            }
+
+            List<FunctionCallArgumentExpression> ufscArgs = new ArrayList<>();
+            ufscArgs.add(new FunctionCallArgumentExpression(dummyRefKeyword, memberAccessorExpression.getOwner()));
             ufscArgs.addAll(functionCallExpression.getArguments());
 
             FunctionCallExpression ufcsFunctionCallExpression = new FunctionCallExpression(
@@ -605,22 +624,22 @@ public class Binder {
         try {
             BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
 
-            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-
-                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
-
-                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-
-                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-
-                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-
-                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
-            }
+//            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+//
+//                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+//
+//                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+//
+//                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+//
+//                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+//
+//                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
+//            }
 
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {
@@ -824,8 +843,8 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
 
         //Declare the arguments within the function's scope
-        List<BoundFunctionArgumentExpression> arguments = new ArrayList<>();
-        for (FunctionArgumentExpression argumentExpression : functionDeclarationExpression.getArguments()) {
+        List<BoundFunctionParameterExpression> arguments = new ArrayList<>();
+        for (FunctionParameterExpression argumentExpression : functionDeclarationExpression.getArguments()) {
             arguments.add(bindFunctionArgumentExpression(argumentExpression));
         }
 
@@ -857,15 +876,15 @@ public class Binder {
         if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.VOID) {
             errors.add(BindingError.raiseTypeMismatch(TypeSymbol.VOID, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
         }
-        List<BoundFunctionArgumentExpression> arguments = boundMainFunction.getArguments();
+        List<BoundFunctionParameterExpression> arguments = boundMainFunction.getArguments();
         if (!arguments.isEmpty()) {
             if (arguments.size() == 1) {
-                BoundFunctionArgumentExpression argumentExpression = arguments.get(0);
+                BoundFunctionParameterExpression argumentExpression = arguments.get(0);
                 if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
                     errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
                 }
             } else {
-                BoundFunctionArgumentExpression argumentExpression = arguments.get(0);
+                BoundFunctionParameterExpression argumentExpression = arguments.get(0);
                 if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
                     errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
                 }
@@ -883,8 +902,8 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
 
         //Declare the arguments within the function's scope
-        List<BoundFunctionArgumentExpression> boundArguments = new ArrayList<>();
-        for (FunctionArgumentExpression argumentExpression : lambdaExpression.getArgumentExpressions()) {
+        List<BoundFunctionParameterExpression> boundArguments = new ArrayList<>();
+        for (FunctionParameterExpression argumentExpression : lambdaExpression.getArgumentExpressions()) {
             boundArguments.add(bindFunctionArgumentExpression(argumentExpression));
         }
 
@@ -909,7 +928,7 @@ public class Binder {
         return new BoundLambdaExpression(boundArguments, boundBody);
     }
 
-    private BoundFunctionArgumentExpression bindFunctionArgumentExpression(FunctionArgumentExpression argumentExpression) {
+    private BoundFunctionParameterExpression bindFunctionArgumentExpression(FunctionParameterExpression argumentExpression) {
 
         boolean reference = argumentExpression.getRefKeyword() != null;
 
@@ -936,7 +955,7 @@ public class Binder {
 
         currentScope.reassignVariable((String) identifier.getValue(), argument);
 
-        return new BoundFunctionArgumentExpression(reference, argument, guard);
+        return new BoundFunctionParameterExpression(reference, argument, guard);
     }
 
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
@@ -946,9 +965,10 @@ public class Binder {
         if (scopedFunction.isEmpty()) {
             //TODO: Get arguments somehow
             List<BoundExpression> boundArguments = new ArrayList<>();
-            List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+            List<FunctionCallArgumentExpression> functionCallExpressionArguments = functionCallExpression.getArguments();
 
-            for (Expression functionCallExpressionArgument : functionCallExpressionArguments) {
+            for (FunctionCallArgumentExpression functionCallExpressionArgumentExpression : functionCallExpressionArguments) {
+                Expression functionCallExpressionArgument = functionCallExpressionArgumentExpression.getExpression();
                 if (functionCallExpressionArgument.getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
                     List<BoundExpression> boundMembers = new ArrayList<>();
                     for (Expression member : ((StructLiteralExpression) functionCallExpressionArgument).getMembers()) {
@@ -966,9 +986,10 @@ public class Binder {
         FunctionSymbol function = scopedFunction.get();
 
         List<BoundExpression> boundArguments = new ArrayList<>();
-        List<Expression> functionCallExpressionArguments = functionCallExpression.getArguments();
+        List<FunctionCallArgumentExpression> functionCallExpressionArguments = functionCallExpression.getArguments();
         for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
-            Expression arg = functionCallExpressionArguments.get(i);
+            FunctionCallArgumentExpression argumentExpression = functionCallExpressionArguments.get(i);
+            Expression arg = argumentExpression.getExpression();
             if (arg.getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
 
                 //TODO: This is permissible for now since there is only one possible method for the name, once overloading is possible (if overloading will be possible) this will no longer work
@@ -992,14 +1013,22 @@ public class Binder {
             return new BoundFunctionCallExpression(function, boundArguments);
         }
 
-        List<BoundFunctionArgumentExpression> arguments = function.getArguments();
+        List<BoundFunctionParameterExpression> parameters = function.getArguments();
         for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
             BoundExpression boundArgument = boundArguments.get(i);
-            if (!arguments.get(i).getType().isAssignableFrom(boundArgument.getType())) {
-                errors.add(BindingError.raiseTypeMismatch(arguments.get(i).getType(), boundArgument.getType(), functionCallExpressionArguments.get(i).getSpan()));
+            if (!parameters.get(i).getType().isAssignableFrom(boundArgument.getType())) {
+                errors.add(BindingError.raiseTypeMismatch(parameters.get(i).getType(), boundArgument.getType(), functionCallExpressionArguments.get(i).getSpan()));
             }
-            if (arguments.get(i).isReference() && (boundArgument instanceof BoundLiteralExpression || boundArgument instanceof BoundStructLiteralExpression)) {
-                errors.add(BindingError.raise("Literals cannot be passed by reference", functionCallExpressionArguments.get(i).getSpan()));
+            boolean passByRef = functionCallExpressionArguments.get(i).getRefKeyword() != null;
+            if (parameters.get(i).isReference()) {
+                if (boundArgument instanceof BoundLiteralExpression || boundArgument instanceof BoundStructLiteralExpression) {
+                    errors.add(BindingError.raise("Literals cannot be passed by reference:", functionCallExpressionArguments.get(i).getSpan()));
+                }
+                if (!passByRef) {
+                    errors.add(BindingError.raise("Argument " + i + " of `" + function.getSignature() + "` must be passed with the `ref` keyword", functionCallExpressionArguments.get(i).getSpan()));
+                }
+            } else if (passByRef) {
+                errors.add(BindingError.raise("Argument " + i + " of `" + function.getSignature() + "` is not passed with the `ref` keyword", functionCallExpressionArguments.get(i).getSpan()));
             }
         }
 

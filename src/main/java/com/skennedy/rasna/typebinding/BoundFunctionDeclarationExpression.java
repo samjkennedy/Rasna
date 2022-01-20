@@ -6,10 +6,10 @@ import java.util.List;
 public class BoundFunctionDeclarationExpression implements BoundExpression {
 
     private final FunctionSymbol functionSymbol;
-    private List<BoundFunctionArgumentExpression> arguments;
+    private List<BoundFunctionParameterExpression> arguments;
     private final BoundBlockExpression body;
 
-    public BoundFunctionDeclarationExpression(FunctionSymbol functionSymbol, List<BoundFunctionArgumentExpression> arguments, BoundBlockExpression body) {
+    public BoundFunctionDeclarationExpression(FunctionSymbol functionSymbol, List<BoundFunctionParameterExpression> arguments, BoundBlockExpression body) {
         this.functionSymbol = functionSymbol;
         this.arguments = arguments;
         this.body = body;
@@ -34,7 +34,7 @@ public class BoundFunctionDeclarationExpression implements BoundExpression {
         return functionSymbol;
     }
 
-    public List<BoundFunctionArgumentExpression> getArguments() {
+    public List<BoundFunctionParameterExpression> getArguments() {
         return arguments;
     }
 

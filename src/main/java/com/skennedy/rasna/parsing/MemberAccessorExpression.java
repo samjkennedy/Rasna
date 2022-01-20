@@ -10,12 +10,12 @@ import java.util.Iterator;
 public class MemberAccessorExpression extends Expression {
 
     private final Expression owner;
-    private final IdentifierExpression dot;
+    private final IdentifierExpression accessor;
     private final Expression member;
 
-    public MemberAccessorExpression(Expression owner, IdentifierExpression dot, Expression member) {
+    public MemberAccessorExpression(Expression owner, IdentifierExpression accessor, Expression member) {
         this.owner = owner;
-        this.dot = dot;
+        this.accessor = accessor;
         this.member = member;
     }
 
@@ -23,8 +23,8 @@ public class MemberAccessorExpression extends Expression {
         return owner;
     }
 
-    public IdentifierExpression getDot() {
-        return dot;
+    public IdentifierExpression getAccessor() {
+        return accessor;
     }
 
     public Expression getMember() {
@@ -38,6 +38,6 @@ public class MemberAccessorExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)owner, dot, member).iterator();
+        return Arrays.asList((SyntaxNode)owner, accessor, member).iterator();
     }
 }
