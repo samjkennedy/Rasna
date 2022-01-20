@@ -44,10 +44,15 @@ public class BoundFunctionParameterExpression implements BoundExpression {
     }
 
     String getSignature() {
+        StringBuilder sb = new StringBuilder();
         if (isReference()) {
-            return "ref " + getType();
-        } else {
-            return getType().toString();
+            sb.append("ref ");
         }
+        if (argument.isReadOnly()) {
+            sb.append("const ");
+        }
+        sb.append(getType());
+
+        return sb.toString();
     }
 }

@@ -593,6 +593,11 @@ public class Parser {
             constKeyword = matchToken(TokenType.CONST_KEYWORD);
         }
 
+        if (constKeyword != null && current().getTokenType() == TokenType.REF_KEYWORD) {
+            errors.add(Error.raise("Expected ref before const", current()));
+            matchToken(TokenType.REF_KEYWORD);
+        }
+
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
         TypeExpression typeExpression = parseTypeExpression();
