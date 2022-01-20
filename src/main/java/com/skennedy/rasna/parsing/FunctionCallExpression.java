@@ -12,10 +12,10 @@ public class FunctionCallExpression extends Expression {
 
     private final IdentifierExpression identifier;
     private final IdentifierExpression openParen;
-    private final List<Expression> arguments;
+    private final List<FunctionCallArgumentExpression> arguments;
     private final IdentifierExpression closeParen;
 
-    public FunctionCallExpression(IdentifierExpression identifier, IdentifierExpression openParen, List<Expression> arguments, IdentifierExpression closeParen) {
+    public FunctionCallExpression(IdentifierExpression identifier, IdentifierExpression openParen, List<FunctionCallArgumentExpression> arguments, IdentifierExpression closeParen) {
 
         this.identifier = identifier;
         this.openParen = openParen;
@@ -47,7 +47,7 @@ public class FunctionCallExpression extends Expression {
         return openParen;
     }
 
-    public List<Expression> getArguments() {
+    public List<FunctionCallArgumentExpression> getArguments() {
         return arguments;
     }
 

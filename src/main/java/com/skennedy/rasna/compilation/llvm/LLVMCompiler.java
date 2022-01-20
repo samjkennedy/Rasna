@@ -241,10 +241,10 @@ public class LLVMCompiler implements Compiler {
         LLVMContextDispose(context);
     }
 
-    private LLVMTypeRef buildFunctionType(List<BoundFunctionArgumentExpression> arguments, TypeSymbol returnType, LLVMContextRef context) {
+    private LLVMTypeRef buildFunctionType(List<BoundFunctionParameterExpression> arguments, TypeSymbol returnType, LLVMContextRef context) {
 
         List<TypeSymbol> argumentTypes = arguments.stream()
-                .map(BoundFunctionArgumentExpression::getType)
+                .map(BoundFunctionParameterExpression::getType)
                 .collect(Collectors.toList());
 
         LLVMTypeRef llvmReturnType = getLlvmTypeRef(returnType, context);
@@ -385,11 +385,13 @@ public class LLVMCompiler implements Compiler {
         FunctionSymbol functionSymbol = functionCallExpression.getFunction();
 
         PointerPointer<Pointer> args = new PointerPointer<>(functionCallExpression.getBoundArguments().size());
-        List<BoundExpression> boundArguments = functionCallExpression.getBoundArguments();
-        for (int i = 0; i < boundArguments.size(); i++) {
-            LLVMValueRef arg = visit(boundArguments.get(i), builder, context, function);
+        List<BoundExpression> arguments = functionCallExpression.getBoundArguments();
+        for (int i = 0; i < arguments.size(); i++) {
+            LLVMValueRef arg = visit(arguments.get(i), builder, context, function);
             if (!functionSymbol.getArguments().get(i).isReference()) {
                 arg = dereference(builder, arg, "arg");
+            } else {
+                arg = ref(builder, arg, arguments.get(i).getType(), context);
             }
             args.put(i, arg);
         }
@@ -749,7 +751,7 @@ public class LLVMCompiler implements Compiler {
 
     private void visitMainMethod(BoundFunctionDeclarationExpression mainMethodDeclaration, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
         List<TypeSymbol> argumentTypes = mainMethodDeclaration.getArguments().stream()
-                .map(BoundFunctionArgumentExpression::getType)
+                .map(BoundFunctionParameterExpression::getType)
                 .collect(Collectors.toList());
 
         if (argumentTypes.size() == 1) {
@@ -766,9 +768,9 @@ public class LLVMCompiler implements Compiler {
         FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
 
         //Bind args
-        List<BoundFunctionArgumentExpression> arguments = functionDeclarationExpression.getArguments();
+        List<BoundFunctionParameterExpression> arguments = functionDeclarationExpression.getArguments();
         for (int i = 0; i < arguments.size(); i++) {
-            BoundFunctionArgumentExpression argument = arguments.get(i);
+            BoundFunctionParameterExpression argument = arguments.get(i);
             LLVMValueRef val = LLVMGetParam(function, i);
             scope.declareVariable(argument.getArgument(), val);
         }

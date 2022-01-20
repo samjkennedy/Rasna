@@ -10,17 +10,17 @@ import java.util.List;
 
 public class LambdaExpression extends Expression {
 
-    private final List<FunctionArgumentExpression> argumentExpressions;
+    private final List<FunctionParameterExpression> argumentExpressions;
     private final IdentifierExpression arrow;
     private final Expression expression;
 
-    public LambdaExpression(List<FunctionArgumentExpression> argumentExpressions, IdentifierExpression arrow, Expression expression) {
+    public LambdaExpression(List<FunctionParameterExpression> argumentExpressions, IdentifierExpression arrow, Expression expression) {
         this.argumentExpressions = argumentExpressions;
         this.arrow = arrow;
         this.expression = expression;
     }
 
-    public List<FunctionArgumentExpression> getArgumentExpressions() {
+    public List<FunctionParameterExpression> getArgumentExpressions() {
         return argumentExpressions;
     }
 

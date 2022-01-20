@@ -19,7 +19,7 @@ import com.skennedy.rasna.typebinding.BoundBinaryExpression;
 import com.skennedy.rasna.typebinding.BoundBinaryOperator;
 import com.skennedy.rasna.typebinding.BoundConstDeclarationExpression;
 import com.skennedy.rasna.typebinding.BoundExpression;
-import com.skennedy.rasna.typebinding.BoundFunctionArgumentExpression;
+import com.skennedy.rasna.typebinding.BoundFunctionParameterExpression;
 import com.skennedy.rasna.typebinding.BoundFunctionCallExpression;
 import com.skennedy.rasna.typebinding.BoundFunctionDeclarationExpression;
 import com.skennedy.rasna.typebinding.BoundIncrementExpression;
@@ -244,9 +244,9 @@ public class Simulator {
         scope = new Scope(scope, null);
 
         List<BoundExpression> argumentInitialisers = functionCallExpression.getBoundArguments();
-        List<BoundFunctionArgumentExpression> arguments = functionCallExpression.getFunction().getArguments();
+        List<BoundFunctionParameterExpression> arguments = functionCallExpression.getFunction().getArguments();
         for (int arg = 0; arg < argumentInitialisers.size(); arg++) {
-            BoundFunctionArgumentExpression argument = arguments.get(arg);
+            BoundFunctionParameterExpression argument = arguments.get(arg);
             BoundExpression initialiser = argumentInitialisers.get(arg);
             BoundVariableDeclarationExpression variableDeclarationExpression = new BoundVariableDeclarationExpression(
                     argument.getArgument(),

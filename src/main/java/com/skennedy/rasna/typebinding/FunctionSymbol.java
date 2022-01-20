@@ -6,10 +6,10 @@ import java.util.stream.Collectors;
 
 public class FunctionSymbol extends Symbol {
     private final TypeSymbol type;
-    private final List<BoundFunctionArgumentExpression> arguments;
+    private final List<BoundFunctionParameterExpression> arguments;
     private final BoundExpression guard;
 
-    public FunctionSymbol(String name, TypeSymbol type, List<BoundFunctionArgumentExpression> arguments, BoundExpression guard) {
+    public FunctionSymbol(String name, TypeSymbol type, List<BoundFunctionParameterExpression> arguments, BoundExpression guard) {
         super(name);
         this.type = type;
         this.arguments = arguments;
@@ -25,7 +25,7 @@ public class FunctionSymbol extends Symbol {
         return type;
     }
 
-    public List<BoundFunctionArgumentExpression> getArguments() {
+    public List<BoundFunctionParameterExpression> getArguments() {
         return arguments;
     }
 
@@ -36,8 +36,7 @@ public class FunctionSymbol extends Symbol {
 
     public String getSignature() {
         return getName() + "(" + arguments.stream()
-                .map(BoundFunctionArgumentExpression::getType)
-                .map(TypeSymbol::getName)
+                .map(BoundFunctionParameterExpression::getSignature)
                 .collect(Collectors.joining(", "))
                 + "): " + type;
     }

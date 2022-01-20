@@ -6,15 +6,15 @@ import java.util.List;
 
 public class BoundLambdaExpression implements BoundExpression {
 
-    private final List<BoundFunctionArgumentExpression> arguments;
+    private final List<BoundFunctionParameterExpression> arguments;
     private final BoundExpression body;
 
-    public BoundLambdaExpression(List<BoundFunctionArgumentExpression> arguments, BoundExpression body) {
+    public BoundLambdaExpression(List<BoundFunctionParameterExpression> arguments, BoundExpression body) {
         this.arguments = arguments;
         this.body = body;
     }
 
-    public List<BoundFunctionArgumentExpression> getArguments() {
+    public List<BoundFunctionParameterExpression> getArguments() {
         return arguments;
     }
 

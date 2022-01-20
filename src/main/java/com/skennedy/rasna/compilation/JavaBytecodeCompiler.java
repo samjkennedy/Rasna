@@ -1495,11 +1495,11 @@ public class JavaBytecodeCompiler implements Compiler {
     private void visitMainMethod(BoundFunctionDeclarationExpression mainMethodDeclaration, MethodVisitor mainMethodVisitor) {
 
         List<TypeSymbol> argumentTypes = mainMethodDeclaration.getArguments().stream()
-                .map(BoundFunctionArgumentExpression::getType)
+                .map(BoundFunctionParameterExpression::getType)
                 .collect(Collectors.toList());
 
         if (argumentTypes.size() == 1) {
-            BoundFunctionArgumentExpression args = mainMethodDeclaration.getArguments().get(0);
+            BoundFunctionParameterExpression args = mainMethodDeclaration.getArguments().get(0);
             variables.put(args.getArgument().getName(), 0);
         }
 
@@ -1520,7 +1520,7 @@ public class JavaBytecodeCompiler implements Compiler {
         FunctionSymbol functionSymbol = functionDeclarationExpression.getFunctionSymbol();
 
         List<TypeSymbol> argumentTypes = functionDeclarationExpression.getArguments().stream()
-                .map(BoundFunctionArgumentExpression::getType)
+                .map(BoundFunctionParameterExpression::getType)
                 .collect(Collectors.toList());
 
         MethodVisitor methodVisitor = classWriter.visitMethod(
@@ -1540,7 +1540,7 @@ public class JavaBytecodeCompiler implements Compiler {
 
         int globalVariableIndex = variableIndex;
         variableIndex = 0;
-        for (BoundFunctionArgumentExpression argument : functionDeclarationExpression.getArguments()) {
+        for (BoundFunctionParameterExpression argument : functionDeclarationExpression.getArguments()) {
             variables.put(argument.getArgument().getName(), variableIndex);
             scope.declareVariable(argument.getArgument(), variableIndex);
             scope.pushLocal(argument.getArgument().getType());
