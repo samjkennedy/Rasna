@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class Parser {
 
@@ -273,6 +274,16 @@ public class Parser {
             accessor = matchToken(TokenType.ARROW);
         } else {
             accessor = matchToken(TokenType.BAD_TOKEN);
+        }
+
+        if (current().getTokenType() == TokenType.NUM_LITERAL) {
+            if (accessor.getTokenType() == TokenType.ARROW) {
+                errors.add(Error.raiseUnexpectedToken(TokenType.DOT, accessor.getToken()));
+            }
+            IdentifierExpression numLiteral = matchToken(TokenType.NUM_LITERAL);
+            LiteralExpression index = new LiteralExpression(numLiteral.getToken(), numLiteral.getValue());
+
+            return new TupleIndexExpression(owner, accessor, index);
         }
 
         Expression member;
@@ -608,9 +619,7 @@ public class Parser {
             //Variable declared but not assigned yet
             equals = matchToken(TokenType.EQUALS);
 
-            if (typeExpression.getIdentifier().getTokenType() == TokenType.FUNCTION_KEYWORD) {
-                initialiser = parseLambdaExpression();
-            } else if (TokenType.typeTokens.contains(current().getTokenType())) {
+            if (TokenType.typeTokens.contains(current().getTokenType())) {
                 initialiser = parseArrayDeclarationExpression();
             } else if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
                 initialiser = parseStructLiteralExpression(typeExpression);
@@ -642,9 +651,6 @@ public class Parser {
                 break;
             case STRING_KEYWORD:
                 typeKeyword = matchToken(TokenType.STRING_KEYWORD);
-                break;
-            case TUPLE_KEYWORD:
-                typeKeyword = matchToken(TokenType.TUPLE_KEYWORD);
                 break;
             case FUNCTION_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
@@ -727,20 +733,45 @@ public class Parser {
 
         IdentifierExpression colon = matchToken(TokenType.COLON);
 
-        IdentifierExpression typeKeyword;
 
-        Expression namespaceExpression = null;
-        if (current().getTokenType() == TokenType.IDENTIFIER && nextToken().getTokenType() == TokenType.COLON_COLON) {
-            namespaceExpression = parseNamespaceAccessorExpression();
+        Expression typeExpression;
+        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+            IdentifierExpression openParenthesis = matchToken(TokenType.OPEN_PARENTHESIS);
+            List<DelimitedExpression<IdentifierExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeKeyword, TokenType.CLOSE_PARENTHESIS);
+            IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+            typeExpression = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
+        } else {
+            typeExpression = parseTypeKeyword();
         }
-        typeKeyword = parseTypeKeyword();
         IdentifierExpression openSquareBrace = null;
         IdentifierExpression closeSquareBrace = null;
         if (current().getTokenType() == TokenType.OPEN_SQUARE_BRACE) {
             openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
             closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
         }
-        return new TypeExpression(colon, typeKeyword, openSquareBrace, closeSquareBrace);
+        return new TypeExpression(colon, typeExpression, openSquareBrace, closeSquareBrace);
+    }
+
+    private <T extends Expression> List<DelimitedExpression<T>> parseDelimitedList(TokenType delimiter, Supplier<T> supplier, TokenType terminator) {
+        List<DelimitedExpression<T>> expressions = new ArrayList<>();
+        while (current().getTokenType() != terminator
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN) {
+
+            T expression = supplier.get();
+
+            IdentifierExpression delim = null;
+            if (current().getTokenType() == delimiter) {
+                delim = matchToken(delimiter);
+            }
+            expressions.add(new DelimitedExpression<>(expression, delim));
+
+            if (delim == null) {
+                return expressions;
+            }
+        }
+        return expressions;
     }
 
     private IdentifierExpression parseTypeKeyword() {
@@ -757,9 +788,6 @@ public class Parser {
                 break;
             case STRING_KEYWORD:
                 typeKeyword = matchToken(TokenType.STRING_KEYWORD);
-                break;
-            case TUPLE_KEYWORD:
-                typeKeyword = matchToken(TokenType.TUPLE_KEYWORD);
                 break;
             case FUNCTION_KEYWORD:
                 typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);

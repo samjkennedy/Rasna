@@ -1,6 +1,5 @@
 package com.skennedy.rasna.typebinding;
 
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
@@ -12,7 +11,7 @@ public class ArrayTypeSymbol extends TypeSymbol {
 
     public ArrayTypeSymbol(TypeSymbol type) {
         super(type.getName(),
-                Collections.emptyMap(),    //TODO: split, reduce, etc etc
+                //TODO: split, reduce, etc etc
                 new LinkedHashMap<>()
         );
         this.type = type;

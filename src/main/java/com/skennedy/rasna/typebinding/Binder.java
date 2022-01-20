@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class Binder {
 
@@ -120,9 +121,22 @@ public class Binder {
                 return bindStructLiteralExpression((StructLiteralExpression) expression);
             case TYPE_TEST_EXPR:
                 return bindTypeTestExpression((TypeTestExpression) expression);
+            case TUPLE_INDEX_EXPR:
+                return bindTupleIndexExpression((TupleIndexExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindTupleIndexExpression(TupleIndexExpression tupleIndexExpression) {
+        BoundExpression boundTuple = bind(tupleIndexExpression.getTuple());
+        if (!(boundTuple.getType() instanceof TupleTypeSymbol)) {
+            errors.add(BindingError.raise("Expected a tuple type but got `" + boundTuple.getType() + "` instead", tupleIndexExpression.getTuple().getSpan()));
+        }
+        if (((TupleTypeSymbol)boundTuple.getType()).getTypes().size() <= (int)tupleIndexExpression.getIndex().getValue()) {
+            errors.add(BindingError.raiseOutOfBounds((int)tupleIndexExpression.getIndex().getValue(), (TupleTypeSymbol)boundTuple.getType(), tupleIndexExpression.getSpan()));
+        }
+        return new BoundTupleIndexExpression(boundTuple, new BoundLiteralExpression(tupleIndexExpression.getIndex().getValue()));
     }
 
     private BoundExpression bindTypeTestExpression(TypeTestExpression typeTestExpression) {
@@ -134,10 +148,15 @@ public class Binder {
 
     private BoundExpression bindStructLiteralExpression(StructLiteralExpression structLiteralExpression) {
 
-        Optional<TypeSymbol> type = currentScope.tryLookupType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue());
+        if (structLiteralExpression.getTypeExpression().getIdentifier() instanceof TupleTypeExpression) {
+            throw new UnsupportedOperationException("TupleTypeSymbol types are not yet supported in struct literals");
+        }
+        IdentifierExpression typeExpression = (IdentifierExpression) structLiteralExpression.getTypeExpression().getIdentifier();
+
+        Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getValue());
         if (type.isEmpty()) {
             //This should never happen
-            errors.add(BindingError.raiseUnknownType((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), structLiteralExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownType((String) typeExpression.getValue(), structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
@@ -149,7 +168,7 @@ public class Binder {
 
         List<VariableSymbol> values = new ArrayList<>(type.get().getFields().values());
         if (values.size() != structLiteralExpression.getMembers().size()) {
-            errors.add(BindingError.raiseUnknownStruct((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownStruct((String) typeExpression.getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
@@ -165,7 +184,7 @@ public class Binder {
 
         if (values.size() != members.size()) {
             //This could be a little misleading, need signature info in the functionsymbol
-            errors.add(BindingError.raiseUnknownFunction((String) structLiteralExpression.getTypeExpression().getIdentifier().getValue(), members, structLiteralExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownFunction((String) typeExpression.getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
@@ -234,7 +253,7 @@ public class Binder {
         }
 
         TypeSymbol type;
-        if (TypeSymbol.getPrimitives().contains(boundOwner.getType())) {
+        if (TypeSymbol.getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
             type = boundOwner.getType();
         } else if (boundOwner.getType() != null) {
             Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
@@ -423,8 +442,8 @@ public class Binder {
         BoundPositionalAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
 
         BoundExpression array = boundArrayAccessExpression.getArray();
-        if (array.getType() == TypeSymbol.TUPLE) {
-            errors.add(BindingError.raise("Type `Tuple` is immutable and does not support member reassignment", arrayAssignmentExpression.getSpan()));
+        if (array.getType() instanceof TupleTypeSymbol) {
+            errors.add(BindingError.raise("Type `TupleTypeSymbol` is immutable and does not support member reassignment", arrayAssignmentExpression.getSpan()));
         }
 
         BoundExpression assignment = bind(arrayAssignmentExpression.getAssignment());
@@ -508,7 +527,7 @@ public class Binder {
 
         BoundExpression iterable = bind(forInExpression.getIterable());
 //        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && iterable.getType() != TypeSymbol.TUPLE) {
-//            throw new IllegalStateException("For-in expression only applicable to Array or Tuple types");
+//            throw new IllegalStateException("For-in expression only applicable to Array or TupleTypeSymbol types");
 //        }
 
         TypeSymbol type = parseType(forInExpression.getTypeExpression());
@@ -542,7 +561,15 @@ public class Binder {
         if (typeExpression == null) {
             return TypeSymbol.VOID;
         }
-        IdentifierExpression identifier = typeExpression.getIdentifier();
+        if (typeExpression.getIdentifier() instanceof TupleTypeExpression) {
+            List<TypeSymbol> boundTypes = ((TupleTypeExpression) typeExpression.getIdentifier()).getTypeExpressions()
+                    .stream()
+                    .map(DelimitedExpression::getExpression)
+                    .map(this::getTypeSymbol)
+                    .collect(Collectors.toList());
+            return new TupleTypeSymbol(boundTypes);
+        }
+        IdentifierExpression identifier = (IdentifierExpression) typeExpression.getIdentifier();
 
         TypeSymbol typeSymbol = getTypeSymbol(identifier);
 
@@ -570,9 +597,6 @@ public class Binder {
                 break;
             case FUNCTION_KEYWORD:
                 typeSymbol = TypeSymbol.FUNCTION;
-                break;
-            case TUPLE_KEYWORD:
-                typeSymbol = TypeSymbol.TUPLE;
                 break;
             case ANY_KEYWORD:
                 typeSymbol = TypeSymbol.ANY;
@@ -825,7 +849,7 @@ public class Binder {
         LinkedHashMap<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
 
         //TODO: The defined functions and variables have no knowledge of their owner, two types with the same method may cause issues
-        TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedFunctions, definedVariables);
+        TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedVariables);
 
         currentScope = currentScope.getParentScope();
 
@@ -1065,7 +1089,11 @@ public class Binder {
 
         TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
         if (type == null) {
-            errors.add(BindingError.raiseUnknownType((String) variableDeclarationExpression.getTypeExpression().getIdentifier().getValue(), variableDeclarationExpression.getTypeExpression().getSpan()));
+            if (variableDeclarationExpression.getTypeExpression().getIdentifier() instanceof TupleTypeExpression) {
+                throw new UnsupportedOperationException("TupleTypeSymbol types are not yet supported in variable declarations");
+            }
+            IdentifierExpression typeExpression = (IdentifierExpression) variableDeclarationExpression.getTypeExpression().getIdentifier();
+            errors.add(BindingError.raiseUnknownType((String) typeExpression.getValue(), variableDeclarationExpression.getTypeExpression().getSpan()));
             return new BoundErrorExpression();
         }
 

@@ -1,41 +1,31 @@
 package com.skennedy.rasna.typebinding;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class TypeSymbol extends Symbol {
 
-    //TODO: Built in type functions
-    public static final TypeSymbol VOID = new TypeSymbol("Void", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol BOOL = new TypeSymbol("Bool", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol INT = new TypeSymbol("Int", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol REAL = new TypeSymbol("Real", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol STRING = new TypeSymbol("String", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol TYPE = new TypeSymbol("Type", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol TUPLE = new TypeSymbol("Tuple", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol ANY = new TypeSymbol("Any", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol ERROR = new TypeSymbol("Error", Collections.emptyMap(), new LinkedHashMap<>());
-    public static final TypeSymbol FUNCTION = new TypeSymbol("Function", Collections.emptyMap(), new LinkedHashMap<>()); //TODO: Should be similar to ArrayTypeSymbol
+    public static final TypeSymbol VOID = new TypeSymbol("Void", new LinkedHashMap<>());
+    public static final TypeSymbol BOOL = new TypeSymbol("Bool", new LinkedHashMap<>());
+    public static final TypeSymbol INT = new TypeSymbol("Int", new LinkedHashMap<>());
+    public static final TypeSymbol REAL = new TypeSymbol("Real", new LinkedHashMap<>());
+    public static final TypeSymbol STRING = new TypeSymbol("String", new LinkedHashMap<>());
+    public static final TypeSymbol TYPE = new TypeSymbol("Type", new LinkedHashMap<>());
+    public static final TypeSymbol ANY = new TypeSymbol("Any", new LinkedHashMap<>());
+    public static final TypeSymbol ERROR = new TypeSymbol("Error", new LinkedHashMap<>());
+    public static final TypeSymbol FUNCTION = new TypeSymbol("Function", new LinkedHashMap<>()); //TODO: Should be similar to ArrayTypeSymbol
 
-    private final Map<String, FunctionSymbol> functions;
     private final LinkedHashMap<String, VariableSymbol> fields;
 
-    public TypeSymbol(String name, Map<String, FunctionSymbol> functions, LinkedHashMap<String, VariableSymbol> fields) {
+    public TypeSymbol(String name, LinkedHashMap<String, VariableSymbol> fields) {
         super(name);
-        this.functions = functions;
         this.fields = fields;
     }
 
     public static List<TypeSymbol> getPrimitives() {
-        return Arrays.asList(BOOL, INT, REAL, STRING, TYPE, TUPLE, ANY);
-    }
-
-    public Map<String, FunctionSymbol> getFunctions() {
-        return functions;
+        return Arrays.asList(BOOL, INT, REAL, STRING, TYPE, ANY);
     }
 
     public Map<String, VariableSymbol> getFields() {

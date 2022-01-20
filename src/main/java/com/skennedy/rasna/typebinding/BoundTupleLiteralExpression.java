@@ -1,14 +1,21 @@
 package com.skennedy.rasna.typebinding;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 public class BoundTupleLiteralExpression implements BoundExpression {
 
-    private List<BoundExpression> elements;
+    private final List<TypeSymbol> types;
+    private final List<BoundExpression> elements;
 
     public BoundTupleLiteralExpression(List<BoundExpression> elements) {
         this.elements = elements;
+
+        types = new ArrayList<>();
+        for (BoundExpression el : elements) {
+            types.add(el.getType());
+        }
     }
 
     @Override
@@ -18,7 +25,7 @@ public class BoundTupleLiteralExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.TUPLE;
+        return new TupleTypeSymbol(types);
     }
 
     @Override

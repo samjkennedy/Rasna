@@ -4,6 +4,7 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.SyntaxNode;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -26,7 +27,12 @@ public class TupleLiteralExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return null;
+        List<SyntaxNode> children = new ArrayList<>();
+        children.add(openParen);
+        children.addAll(elements);
+        children.add(closeParen);
+
+        return children.iterator();
     }
 
     public IdentifierExpression getOpenParen() {

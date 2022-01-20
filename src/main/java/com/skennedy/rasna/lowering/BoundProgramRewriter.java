@@ -1,6 +1,5 @@
 package com.skennedy.rasna.lowering;
 
-import com.skennedy.rasna.compilation.Compiler;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.*;
 
@@ -130,9 +129,20 @@ public abstract class BoundProgramRewriter {
                 return rewriteDoWhileExpression((BoundDoWhileExpression) expression);
             case C_STYLE_FOR_EXPRESSION:
                 return expression;
+            case TUPLE_INDEX_EXPRESSION:
+                return rewriteTupleIndexExpression((BoundTupleIndexExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundExpression rewriteTupleIndexExpression(BoundTupleIndexExpression tupleIndexExpression) {
+        BoundExpression rewrittenTupleExpression = rewriteExpression(tupleIndexExpression.getTuple());
+
+        if (rewrittenTupleExpression == tupleIndexExpression.getTuple()) {
+            return tupleIndexExpression;
+        }
+        return new BoundTupleIndexExpression(rewrittenTupleExpression, tupleIndexExpression.getIndex());
     }
 
     private BoundExpression rewriteDoWhileExpression(BoundDoWhileExpression doWhileExpression) {
