@@ -229,6 +229,9 @@ public class Binder {
 
     private BoundExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
         BoundExpression boundOwner = bind(memberAccessorExpression.getOwner());
+        if (boundOwner instanceof BoundErrorExpression) {
+            return boundOwner;
+        }
 
         TypeSymbol type;
         if (TypeSymbol.getPrimitives().contains(boundOwner.getType())) {
@@ -255,6 +258,7 @@ public class Binder {
                 if (firstArg.isReference()) {
                     if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.DOT) {
                         errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by reference. Perhaps you meant to use `->` instead of `.`", memberAccessorExpression.getAccessor().getSpan()));
+                        return new BoundErrorExpression();
                     }
                     //Add the dummy anyway to avoid irrelevant errors
                     Location dummyLocation = Location.fromOffset(
