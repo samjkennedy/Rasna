@@ -13,10 +13,10 @@ import static com.skennedy.rasna.parsing.model.ExpressionType.TYPE_EXPR;
 public class TupleTypeExpression extends Expression {
 
     private final IdentifierExpression openParenthesis;
-    private List<DelimitedExpression<IdentifierExpression>> typeExpressions;
+    private List<DelimitedExpression<TypeExpression>> typeExpressions;
     private final IdentifierExpression closeParenthesis;
 
-    public TupleTypeExpression(IdentifierExpression openParenthesis, List<DelimitedExpression<IdentifierExpression>> typeExpressions, IdentifierExpression closeParenthesis) {
+    public TupleTypeExpression(IdentifierExpression openParenthesis, List<DelimitedExpression<TypeExpression>> typeExpressions, IdentifierExpression closeParenthesis) {
         this.openParenthesis = openParenthesis;
         this.typeExpressions = typeExpressions;
         this.closeParenthesis = closeParenthesis;
@@ -26,7 +26,7 @@ public class TupleTypeExpression extends Expression {
         return openParenthesis;
     }
 
-    public List<DelimitedExpression<IdentifierExpression>> getTypeExpressions() {
+    public List<DelimitedExpression<TypeExpression>> getTypeExpressions() {
         return typeExpressions;
     }
 

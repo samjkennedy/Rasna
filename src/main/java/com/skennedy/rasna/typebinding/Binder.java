@@ -133,8 +133,8 @@ public class Binder {
         if (!(boundTuple.getType() instanceof TupleTypeSymbol)) {
             errors.add(BindingError.raise("Expected a tuple type but got `" + boundTuple.getType() + "` instead", tupleIndexExpression.getTuple().getSpan()));
         }
-        if (((TupleTypeSymbol)boundTuple.getType()).getTypes().size() <= (int)tupleIndexExpression.getIndex().getValue()) {
-            errors.add(BindingError.raiseOutOfBounds((int)tupleIndexExpression.getIndex().getValue(), (TupleTypeSymbol)boundTuple.getType(), tupleIndexExpression.getSpan()));
+        if (((TupleTypeSymbol) boundTuple.getType()).getTypes().size() <= (int) tupleIndexExpression.getIndex().getValue()) {
+            errors.add(BindingError.raiseOutOfBounds((int) tupleIndexExpression.getIndex().getValue(), (TupleTypeSymbol) boundTuple.getType(), tupleIndexExpression.getSpan()));
         }
         return new BoundTupleIndexExpression(boundTuple, new BoundLiteralExpression(tupleIndexExpression.getIndex().getValue()));
     }
@@ -561,6 +561,7 @@ public class Binder {
 
     private TypeSymbol parseType(TypeExpression typeExpression) {
 
+        TypeSymbol typeSymbol;
         if (typeExpression == null) {
             return TypeSymbol.VOID;
         }
@@ -568,13 +569,14 @@ public class Binder {
             List<TypeSymbol> boundTypes = ((TupleTypeExpression) typeExpression.getIdentifier()).getTypeExpressions()
                     .stream()
                     .map(DelimitedExpression::getExpression)
-                    .map(this::getTypeSymbol)
+                    .map(this::parseType)
                     .collect(Collectors.toList());
-            return new TupleTypeSymbol(boundTypes);
-        }
-        IdentifierExpression identifier = (IdentifierExpression) typeExpression.getIdentifier();
+            typeSymbol = new TupleTypeSymbol(boundTypes);
+        } else {
+            IdentifierExpression identifier = (IdentifierExpression) typeExpression.getIdentifier();
 
-        TypeSymbol typeSymbol = getTypeSymbol(identifier);
+            typeSymbol = getTypeSymbol(identifier);
+        }
 
         //TODO: This doesn't do N-Dimensional arrays yet
         if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
@@ -655,22 +657,22 @@ public class Binder {
         try {
             BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
 
-//            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-//
-//                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
-//
-//                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-//
-//                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-//
-//                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-//
-//                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
-//            }
+            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+
+                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+
+                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+
+                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+
+                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+
+                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
+            }
 
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {

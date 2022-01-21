@@ -39,7 +39,7 @@ public class TypeSymbol extends Symbol {
 
     public boolean isAssignableFrom(TypeSymbol other) {
 
-        if (this.getName().equals(other.getName())) {
+        if (this.toString().equals(other.toString())) {
             return true;
         }
         //TODO: More sophisticated casting -> all INTs are REALs

@@ -143,7 +143,7 @@ public class Parser {
                 }
                 if (nextToken().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
                     IdentifierExpression typeKeyword = parseTypeKeyword();
-                    TypeExpression typeExpression = new TypeExpression(null, typeKeyword, null, null);
+                    TypeExpression typeExpression = new TypeExpression(typeKeyword, null, null);
                     return parseStructLiteralExpression(typeExpression);
                 }
                 return parseAssignmentExpression();
@@ -449,6 +449,8 @@ public class Parser {
 
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
+        matchToken(TokenType.COLON);
+
         TypeExpression declarationKeyword = parseTypeExpression();
 
         if (current().getTokenType() == TokenType.EQUALS) {
@@ -589,6 +591,7 @@ public class Parser {
 
         TypeExpression typeExpression = null;
         if (current().getTokenType() == TokenType.COLON) {
+            matchToken(TokenType.COLON);
             typeExpression = parseTypeExpression();
         }
 
@@ -610,6 +613,8 @@ public class Parser {
         }
 
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+
+        IdentifierExpression colon = matchToken(TokenType.COLON);
 
         TypeExpression typeExpression = parseTypeExpression();
 
@@ -634,7 +639,7 @@ public class Parser {
             guard = parseGuardExpression();
         }
 
-        return new VariableDeclarationExpression(constKeyword, typeExpression, identifier, bar, guard, equals, initialiser);
+        return new VariableDeclarationExpression(constKeyword, typeExpression, colon, identifier, bar, guard, equals, initialiser);
     }
 
     private Expression parseArrayDeclarationExpression() {
@@ -665,7 +670,7 @@ public class Parser {
         Expression elementCount = parseExpression();
         IdentifierExpression closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
 
-        return new ArrayDeclarationExpression(new TypeExpression(null, typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
+        return new ArrayDeclarationExpression(new TypeExpression(typeKeyword, null, null), openSquareBrace, elementCount, closeSquareBrace);
     }
 
     private Expression parseLambdaExpression() {
@@ -731,19 +736,17 @@ public class Parser {
 
     private TypeExpression parseTypeExpression() {
 
-        IdentifierExpression colon = matchToken(TokenType.COLON);
-
-        Expression typeExpression;
+        Expression type;
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
             IdentifierExpression openParenthesis = matchToken(TokenType.OPEN_PARENTHESIS);
 
             //TODO: This should parse typeexpressions to allow nested tuples of arrays and more tuples
-            List<DelimitedExpression<IdentifierExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeKeyword, TokenType.CLOSE_PARENTHESIS);
+            List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
             IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
 
-            typeExpression = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
+            type = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
         } else {
-            typeExpression = parseTypeKeyword();
+            type = parseTypeKeyword();
         }
         IdentifierExpression openSquareBrace = null;
         IdentifierExpression closeSquareBrace = null;
@@ -751,7 +754,7 @@ public class Parser {
             openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
             closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
         }
-        return new TypeExpression(colon, typeExpression, openSquareBrace, closeSquareBrace);
+        return new TypeExpression(type, openSquareBrace, closeSquareBrace);
     }
 
     private <T extends Expression> List<DelimitedExpression<T>> parseDelimitedList(TokenType delimiter, Supplier<T> supplier, TokenType terminator) {
@@ -877,18 +880,8 @@ public class Parser {
                 //return parseAhead(new NamespaceAccessorExpression(parsed, namespaceAccessor, expression));
             case DOT:
             case ARROW:
-                IdentifierExpression accessor;
-                if (current().getTokenType() == TokenType.DOT) {
-                    accessor = matchToken(TokenType.DOT);
-                } else if (current().getTokenType() == TokenType.ARROW) {
-                    accessor = matchToken(TokenType.ARROW);
-                } else {
-                    accessor = matchToken(TokenType.BAD_TOKEN);
-                }
 
-                Expression member = parseExpression();
-
-                return parseAhead(new MemberAccessorExpression(parsed, accessor, member));
+                return parseAhead(parseMemberAccessorExpression(parsed));
             case AS_KEYWORD:
                 IdentifierExpression asKeyword = matchToken(TokenType.AS_KEYWORD);
 
@@ -905,7 +898,7 @@ public class Parser {
                     openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
                     closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
                 }
-                TypeExpression typeExpression = new TypeExpression(asKeyword, typeKeyword, openSquareBrace, closeSquareBrace);
+                TypeExpression typeExpression = new TypeExpression(typeKeyword, openSquareBrace, closeSquareBrace);
 
                 return parseAhead(new CastExpression(parsed, typeExpression));
 //            case EQUALS:

@@ -9,7 +9,7 @@ public class TupleTypeSymbol extends TypeSymbol {
     private final List<TypeSymbol> types;
 
     public TupleTypeSymbol(List<TypeSymbol> types) {
-        super("Tuple", new LinkedHashMap<>());
+        super(buildName(types), new LinkedHashMap<>());
         this.types = types;
     }
 
@@ -19,9 +19,7 @@ public class TupleTypeSymbol extends TypeSymbol {
 
     @Override
     public String toString() {
-        return "(" + types.stream()
-                .map(TypeSymbol::toString)
-                .collect(Collectors.joining(", ")) + ")";
+        return getName();
     }
 
     @Override
@@ -45,5 +43,11 @@ public class TupleTypeSymbol extends TypeSymbol {
             }
         }
         return true;
+    }
+
+    private static String buildName(List<TypeSymbol> types) {
+        return "(" + types.stream()
+                .map(TypeSymbol::toString)
+                .collect(Collectors.joining(", ")) + ")";
     }
 }

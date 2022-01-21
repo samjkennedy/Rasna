@@ -1,5 +1,5 @@
 import inline "lib2.rasna"
 
 fn square(a: A): A {
-    return A(a.i * a.i)
+    return A{a.i * a.i}
 }
