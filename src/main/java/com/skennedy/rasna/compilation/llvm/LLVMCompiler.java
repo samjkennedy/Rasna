@@ -101,6 +101,8 @@ import static org.bytedeco.llvm.global.LLVM.LLVMRealONE;
 import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructCreateNamed;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructSetBody;
+import static org.bytedeco.llvm.global.LLVM.LLVMStructType;
+import static org.bytedeco.llvm.global.LLVM.LLVMStructTypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMTypeOf;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyModule;
@@ -307,6 +309,10 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundMemberAccessorExpression) expression, builder, context, function);
             case MEMBER_ASSIGNMENT_EXPRESSION:
                 return visit((BoundMemberAssignmentExpression) expression, builder, context, function);
+            case TUPLE_LITERAL_EXPRESSION:
+                return visit((BoundTupleLiteralExpression) expression, builder, context, function);
+            case TUPLE_INDEX_EXPRESSION:
+                return visit((BoundTupleIndexExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
@@ -323,6 +329,16 @@ public class LLVMCompiler implements Compiler {
         int idx = members.indexOf(member.getVariable());
 
         return LLVMBuildStructGEP(builder, owner, idx, member.getVariable().getName());
+    }
+
+    private LLVMValueRef visit(BoundTupleIndexExpression tupleIndexExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMValueRef tuple = visit(tupleIndexExpression.getTuple(), builder, context, function);
+        tuple = ref(builder, tuple, tupleIndexExpression.getTuple().getType(), context);
+
+        BoundLiteralExpression index = tupleIndexExpression.getIndex();
+
+        return LLVMBuildStructGEP(builder, tuple, (int)index.getValue(), index.getValue().toString());
     }
 
     private LLVMValueRef visit(BoundMemberAssignmentExpression memberAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -378,6 +394,22 @@ public class LLVMCompiler implements Compiler {
             idx++;
         }
         return LLVMBuildLoad(builder, ptr, "tmp." + structLiteralExpression.getType().getName());
+    }
+
+    private LLVMValueRef visit(BoundTupleLiteralExpression tupleLiteralExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        //Allocate a tmp variable for this... not the best but what we have to do
+        LLVMTypeRef type = getLlvmTypeRef(tupleLiteralExpression.getType(), context);
+        LLVMValueRef ptr = LLVMBuildAlloca(builder, type, "tmp." + tupleLiteralExpression.getType().getName());
+
+        Collection<BoundExpression> elements = tupleLiteralExpression.getElements();
+        int idx = 0;
+        for (BoundExpression element : elements) {
+            LLVMValueRef elementRef = LLVMBuildStructGEP(builder, ptr, idx, "");
+            LLVMValueRef valueRef = visit(element, builder, context, function);
+            LLVMBuildStore(builder, dereference(builder, valueRef, ""), elementRef);
+            idx++;
+        }
+        return LLVMBuildLoad(builder, ptr, "tmp." + tupleLiteralExpression.getType().getName());
     }
 
     private LLVMValueRef visit(BoundFunctionCallExpression functionCallExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -453,7 +485,7 @@ public class LLVMCompiler implements Compiler {
             throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
         }
 
-        return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr,"load"), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
+        return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, "load"), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
     }
 
     private LLVMValueRef visit(BoundBlockExpression blockExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -587,6 +619,18 @@ public class LLVMCompiler implements Compiler {
         }
         if (typeSymbol == REAL) {
             return realType;
+        }
+        if (typeSymbol instanceof TupleTypeSymbol) {
+            TupleTypeSymbol tupleTypeSymbol = (TupleTypeSymbol) typeSymbol;
+
+            PointerPointer<Pointer> llvmTypes = new PointerPointer<>(tupleTypeSymbol.getTypes().size());
+            List<TypeSymbol> types = tupleTypeSymbol.getTypes();
+            for (int i = 0; i < types.size(); i++) {
+                TypeSymbol type = types.get(i);
+                LLVMTypeRef llvmTypeRef = getLlvmTypeRef(type, context);
+                llvmTypes.put(i, llvmTypeRef);
+            }
+            return LLVMStructTypeInContext(context, llvmTypes, types.size(), 0);
         }
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {

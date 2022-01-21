@@ -11,13 +11,13 @@ import java.util.Objects;
 public class TypeExpression extends Expression {
 
     private IdentifierExpression colon;
-    private final IdentifierExpression identifier;
+    private final Expression identifier;
     private final IdentifierExpression openSquareBracket;
     private final IdentifierExpression closeSquareBracket;
 
-    public TypeExpression(IdentifierExpression colon, IdentifierExpression identifier, IdentifierExpression openSquareBracket, IdentifierExpression closeSquareBracket) {
+    public TypeExpression(IdentifierExpression colon, Expression typeExpression, IdentifierExpression openSquareBracket, IdentifierExpression closeSquareBracket) {
         this.colon = colon;
-        this.identifier = identifier;
+        this.identifier = typeExpression;
         this.openSquareBracket = openSquareBracket;
         this.closeSquareBracket = closeSquareBracket;
     }
@@ -26,7 +26,7 @@ public class TypeExpression extends Expression {
         return colon;
     }
 
-    public IdentifierExpression getIdentifier() {
+    public Expression getIdentifier() {
         return identifier;
     }
 

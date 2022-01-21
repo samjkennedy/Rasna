@@ -82,8 +82,6 @@ public enum TokenType {
     STRING_KEYWORD("String"),
     FUNCTION_KEYWORD("Function"),
 
-    TUPLE_KEYWORD("Tuple"),
-
     //Intrinsics
     PRINT_INTR("print"),
     LEN_INTR("len"),
@@ -101,8 +99,7 @@ public enum TokenType {
             INT_KEYWORD,
             REAL_KEYWORD,
             STRING_KEYWORD,
-            FUNCTION_KEYWORD,
-            TUPLE_KEYWORD
+            FUNCTION_KEYWORD
     );
 
     TokenType(String text) {

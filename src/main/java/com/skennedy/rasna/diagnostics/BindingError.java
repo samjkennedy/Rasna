@@ -4,6 +4,7 @@ import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.BoundExpression;
+import com.skennedy.rasna.typebinding.TupleTypeSymbol;
 import com.skennedy.rasna.typebinding.TypeSymbol;
 import com.skennedy.rasna.typebinding.VariableSymbol;
 
@@ -122,6 +123,11 @@ public class BindingError {
     public static BindingError raiseUnreachableExpression(TextSpan span) {
 
         return new BindingError("Unreachable expression:", span);
+    }
+
+    public static BindingError raiseOutOfBounds(int index, TupleTypeSymbol type, TextSpan span) {
+
+        return new BindingError("Index [" + index + "] out of bounds for tuple of type `" + type + "`", span);
     }
 
     public String getMessage() {
