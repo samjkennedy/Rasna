@@ -1,4 +1,0 @@
-fn main() {
-
-    nested: (Int, (Real, Int)) = (1, (2.0, 1))
-}
