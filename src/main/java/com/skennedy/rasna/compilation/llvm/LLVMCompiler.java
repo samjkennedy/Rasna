@@ -1,6 +1,7 @@
 package com.skennedy.rasna.compilation.llvm;
 
 import com.skennedy.rasna.compilation.Compiler;
+import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,6 +32,7 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.VOID;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
+import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAlloca;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAnd;
@@ -46,6 +48,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildFRem;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildFSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalStringPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildInBoundsGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
@@ -79,9 +82,9 @@ import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeTarget;
-import static org.bytedeco.llvm.global.LLVM.LLVMInt128TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt1TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt32TypeInContext;
+import static org.bytedeco.llvm.global.LLVM.LLVMInt64TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt8TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMIntEQ;
 import static org.bytedeco.llvm.global.LLVM.LLVMIntNE;
@@ -122,6 +125,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMTypeRef i1Type;
     private LLVMTypeRef i8Type;
     private LLVMTypeRef i32Type;
+    private LLVMTypeRef i64Type;
     private LLVMTypeRef realType;
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
@@ -148,6 +152,7 @@ public class LLVMCompiler implements Compiler {
         i1Type = LLVMInt1TypeInContext(context);
         i8Type = LLVMInt8TypeInContext(context);
         i32Type = LLVMInt32TypeInContext(context);
+        i64Type = LLVMInt64TypeInContext(context);
         realType = LLVMDoubleTypeInContext(context);
 
         //Declare printf function and string formatter once
@@ -350,9 +355,78 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundTupleLiteralExpression) expression, builder, context, function);
             case TUPLE_INDEX_EXPRESSION:
                 return visit((BoundTupleIndexExpression) expression, builder, context, function);
+            case ARRAY_LITERAL_EXPRESSION:
+                return visit((BoundArrayLiteralExpression) expression, builder, context, function);
+            case POSITIONAL_ACCESS_EXPRESSION:
+                return visit((BoundPositionalAccessExpression) expression, builder, context, function);
+            case ARRAY_LENGTH_EXPRESSION:
+                return visit((BoundArrayLengthExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
+    }
+
+    /*
+        Impl Note: Arrays are implemented in Rasna as an anonymous struct:
+        struct _<T> {
+            i32 size
+            T*  data
+        }
+     */
+    private LLVMValueRef visit(BoundArrayLiteralExpression arrayLiteralExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMTypeRef arrayStructType = getLlvmTypeRef(arrayLiteralExpression.getType(), context);
+        LLVMTypeRef dataType = LLVMPointerType(getLlvmTypeRef(arrayLiteralExpression.getType(), context), 0);
+
+        LLVMValueRef arr = LLVMBuildAlloca(builder, dataType, "arr");
+
+        int elementCount = arrayLiteralExpression.getElements().size();
+
+        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(((ArrayTypeSymbol) arrayLiteralExpression.getType()).getType(), context), elementCount);
+        LLVMValueRef compoundliteral = LLVMBuildAlloca(builder, sizeInBytes, ".compoundliteral");
+
+        List<BoundExpression> elements = arrayLiteralExpression.getElements();
+
+        if (elements.isEmpty()) {
+            return arr;
+        }
+
+        //Populate the array
+        BoundExpression init = elements.get(0);
+        PointerPointer<Pointer> indices = new PointerPointer<>(2)
+                .put(0, LLVMConstInt(i64Type, 0, 0))
+                .put(1, LLVMConstInt(i64Type, 0, 0));
+        LLVMValueRef prev = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arrayinit.begin");
+        LLVMBuildStore(builder, visit(init, builder, context, function), prev);
+
+        for (int i = 1; i < elements.size(); i++) {
+            BoundExpression element = elements.get(i);
+            indices = new PointerPointer<>(1)
+                    .put(0, LLVMConstInt(i64Type, 1, 0));
+            prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
+            LLVMBuildStore(builder, visit(element, builder, context, function), prev);
+        }
+        indices = new PointerPointer<>(2)
+                .put(0, LLVMConstInt(i64Type, 0, 0))
+                .put(1, LLVMConstInt(i64Type, 0, 0));
+        LLVMValueRef arraydecay = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arraydecay");
+
+        //Build the struct that houses the array
+        LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
+
+        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
+        LLVMValueRef sizeVal = LLVMConstInt(i32Type, arrayLiteralExpression.getElements().size(), 0);
+        LLVMBuildStore(builder, sizeVal, sizePtr);
+        LLVMValueRef dataPtrPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
+        LLVMBuildStore(builder, arraydecay, dataPtrPtr);
+
+        return structPtr;
+    }
+
+    private LLVMValueRef visit(BoundArrayLengthExpression arrayLengthExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        LLVMValueRef struct = visit(arrayLengthExpression.getIterable(), builder, context, function);
+
+        return LLVMBuildStructGEP(builder, struct, 0, "size");
     }
 
     private LLVMValueRef visit(BoundMemberAccessorExpression memberAccessorExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -376,6 +450,20 @@ public class LLVMCompiler implements Compiler {
         BoundLiteralExpression index = tupleIndexExpression.getIndex();
 
         return LLVMBuildStructGEP(builder, tuple, (int) index.getValue(), index.getValue().toString());
+    }
+
+    private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        LLVMValueRef struct = visit(positionalAccessExpression.getArray(), builder, context, function);
+
+        LLVMValueRef index = dereference(builder, visit(positionalAccessExpression.getIndex(), builder, context, function), "idx");
+
+        LLVMValueRef array = dereference(builder, LLVMBuildStructGEP(builder, struct, 1, "arr"), "arr");
+
+        PointerPointer<Pointer> indices = new PointerPointer<>(1)
+                .put(0, index);
+        LLVMValueRef arrayidx = LLVMBuildInBoundsGEP(builder, array, indices, 1, "arrayidx");
+
+        return LLVMBuildLoad(builder, arrayidx, "");
     }
 
     private LLVMValueRef visit(BoundMemberAssignmentExpression memberAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -649,6 +737,7 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
 
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
+
         val = dereference(builder, val, "val");
         scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
@@ -682,6 +771,17 @@ public class LLVMCompiler implements Compiler {
                 llvmTypes.put(i, llvmTypeRef);
             }
             return LLVMStructTypeInContext(context, llvmTypes, types.size(), 0);
+        }
+        if (typeSymbol instanceof ArrayTypeSymbol) {
+            ArrayTypeSymbol arrayTypeSymbol = (ArrayTypeSymbol) typeSymbol;
+
+            LLVMTypeRef dataType = LLVMPointerType(getLlvmTypeRef(arrayTypeSymbol.getType(), context), 0);
+
+            PointerPointer<Pointer> llvmTypes = new PointerPointer<>(2)
+                    .put(0, i32Type)
+                    .put(1, dataType);
+
+            return LLVMStructTypeInContext(context, llvmTypes, 2, 0);
         }
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {

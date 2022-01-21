@@ -15,6 +15,7 @@ import com.skennedy.rasna.parsing.*;
 import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -408,8 +409,19 @@ public class Binder {
     private BoundExpression bindArrayLiteralExpression(ArrayLiteralExpression arrayLiteralExpression) {
 
         List<BoundExpression> boundElements = new ArrayList<>();
-        for (Expression element : arrayLiteralExpression.getElements()) {
-            boundElements.add(bind(element));
+        TypeSymbol type = null;
+        List<Expression> elements = arrayLiteralExpression.getElements();
+        for (int i = 0; i < elements.size(); i++) {
+            Expression element = elements.get(i);
+            BoundExpression boundElement = bind(element);
+            if (type == null) {
+                type = boundElement.getType();
+            } else {
+                if (!type.isAssignableFrom(boundElement.getType())) {
+                    errors.add(BindingError.raiseTypeMismatch(type, boundElement.getType(), arrayLiteralExpression.getElements().get(i).getSpan()));
+                }
+            }
+            boundElements.add(boundElement);
         }
 
         return new BoundArrayLiteralExpression(boundElements);
@@ -529,14 +541,15 @@ public class Binder {
         currentScope = new BoundScope(currentScope);
 
         BoundExpression iterable = bind(forInExpression.getIterable());
-//        if (!iterable.getType().isAssignableFrom(TypeSymbol.INT_ARRAY) && iterable.getType() != TypeSymbol.TUPLE) {
-//            throw new IllegalStateException("For-in expression only applicable to Array or TupleTypeSymbol types");
-//        }
 
         TypeSymbol type = parseType(forInExpression.getTypeExpression());
 
-        if (!type.isAssignableFrom(iterable.getType())) {
-            errors.add(BindingError.raiseTypeMismatch(type, iterable.getType(), forInExpression.getIterable().getSpan()));
+        if (!(iterable.getType() instanceof ArrayTypeSymbol)) {
+            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+            return new BoundErrorExpression();
+        }
+        if (!type.isAssignableFrom(((ArrayTypeSymbol)iterable.getType()).getType())) {
+            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
         }
         VariableSymbol variable = buildVariableSymbol(type, forInExpression.getIdentifier(), null, false, forInExpression);
 

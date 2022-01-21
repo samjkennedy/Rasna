@@ -46,17 +46,25 @@ public class LLVMLowerer extends Lowerer {
         BoundVariableExpression iteratorExpression = new BoundVariableExpression(iterator);
 
         BoundBinaryExpression condition;
+        BoundExpression postStep;
         if (iteratorExpression.getType() == TypeSymbol.INT) {
             condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
+            postStep = new BoundAssignmentExpression(iterator, null,
+                    new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getStep() == null ? new BoundLiteralExpression(1) : rangeExpression.getStep())
+            );
         } else if (iteratorExpression.getType() == TypeSymbol.CHAR) {
             condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LTEQ, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
+            postStep = new BoundAssignmentExpression(iterator, null,
+                    new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getStep() == null ? new BoundLiteralExpression(1) : rangeExpression.getStep())
+            );
+        } else if (iteratorExpression.getType() == TypeSymbol.REAL) {
+            condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.REAL, TypeSymbol.REAL), rangeExpression.getUpperBound());
+            postStep = new BoundAssignmentExpression(iterator, null,
+                    new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.REAL, TypeSymbol.REAL), rangeExpression.getStep() == null ? new BoundLiteralExpression(1.0D) : rangeExpression.getStep())
+            );
         } else {
             throw new UnsupportedOperationException("No such operation for types `" + iteratorExpression.getType() + "` and `" + rangeExpression.getUpperBound().getType() + "`");
         }
-
-        BoundExpression postStep = new BoundAssignmentExpression(iterator, null,
-                new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getStep() == null ? new BoundLiteralExpression(1) : rangeExpression.getStep())
-        );
 
         return new BoundCStyleForExpression(initialisation, condition, postStep, rewriteExpression(forExpression.getBody()));
     }

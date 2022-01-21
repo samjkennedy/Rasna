@@ -1,0 +1,12 @@
+fn main() {
+    xs: Int[] = [0, 1, 2, 3]
+    print(xs[0])
+    print(xs[1])
+    print(xs[2])
+
+    print(len(xs))
+
+    for (x: Int in xs) {
+        print(x)
+    }
+}
