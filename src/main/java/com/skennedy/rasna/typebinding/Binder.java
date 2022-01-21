@@ -588,6 +588,9 @@ public class Binder {
     private TypeSymbol getTypeSymbol(IdentifierExpression identifier) {
         TypeSymbol typeSymbol;
         switch (identifier.getTokenType()) {
+            case CHAR_KEYWORD:
+                typeSymbol = TypeSymbol.CHAR;
+                break;
             case INT_KEYWORD:
                 typeSymbol = TypeSymbol.INT;
                 break;
@@ -762,7 +765,9 @@ public class Binder {
 
     private BoundExpression bindIdentifierExpression(IdentifierExpression identifierExpression) {
 
-        if (identifierExpression.getTokenType() == TokenType.NUM_LITERAL || identifierExpression.getTokenType() == TokenType.STRING_LITERAL) {
+        if (identifierExpression.getTokenType() == TokenType.NUM_LITERAL
+                || identifierExpression.getTokenType() == TokenType.STRING_LITERAL
+                || identifierExpression.getTokenType() == TokenType.CHAR_LITERAL) {
             return new BoundLiteralExpression(identifierExpression.getValue());
 
         } else if (identifierExpression.getTokenType() == TokenType.TRUE_KEYWORD) {

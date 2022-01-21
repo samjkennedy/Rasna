@@ -9,6 +9,7 @@ public class TypeSymbol extends Symbol {
 
     public static final TypeSymbol VOID = new TypeSymbol("Void", new LinkedHashMap<>());
     public static final TypeSymbol BOOL = new TypeSymbol("Bool", new LinkedHashMap<>());
+    public static final TypeSymbol CHAR = new TypeSymbol("Char", new LinkedHashMap<>());
     public static final TypeSymbol INT = new TypeSymbol("Int", new LinkedHashMap<>());
     public static final TypeSymbol REAL = new TypeSymbol("Real", new LinkedHashMap<>());
     public static final TypeSymbol STRING = new TypeSymbol("String", new LinkedHashMap<>());
@@ -25,7 +26,7 @@ public class TypeSymbol extends Symbol {
     }
 
     public static List<TypeSymbol> getPrimitives() {
-        return Arrays.asList(BOOL, INT, REAL, STRING, TYPE, ANY);
+        return Arrays.asList(BOOL, CHAR, INT, REAL, STRING, TYPE, ANY);
     }
 
     public Map<String, VariableSymbol> getFields() {

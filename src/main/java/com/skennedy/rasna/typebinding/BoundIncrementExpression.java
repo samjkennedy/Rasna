@@ -24,7 +24,7 @@ public class BoundIncrementExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.INT;
+        return variableSymbol.getType();
     }
 
     @Override

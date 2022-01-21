@@ -58,10 +58,10 @@ public class Rasna {
 
         Mode mode;
         if ("sim".equals(modeFlag.getValue())) {
-            log.info("Rasna is in simulation mode");
+            log.debug("Rasna is in simulation mode");
             mode = Mode.SIMULATION;
         } else if ("com".equals(modeFlag.getValue())) {
-            log.info("Rasna is in compilation mode");
+            log.debug("Rasna is in compilation mode");
             mode = Mode.COMPILATION;
         } else {
             Flags.usage();
@@ -133,7 +133,7 @@ public class Rasna {
             boolean graphProgram = false;
             //Write first in case of errors in compilation or simulation
             if (graphProgram) {
-                log.info("Writing high level AST graph");
+                log.debug("Writing high level AST graph");
                 HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
                 highLevelTreeGrapher.graphAST(boundProgram);
             }
@@ -143,7 +143,7 @@ public class Rasna {
             boundProgram = rewriter.rewrite(boundProgram);
 
             if (graphProgram) {
-                log.info("Writing low level AST graph");
+                log.debug("Writing low level AST graph");
                 LowLevelTreeGrapher lowLevelTreeGrapher = new LowLevelTreeGrapher();
                 lowLevelTreeGrapher.graphAST(boundProgram);
             }
@@ -157,18 +157,18 @@ public class Rasna {
 
             switch (mode) {
                 case SIMULATION:
-                    log.info("Simulating program {}", fileNameWithExt);
+                    log.debug("Simulating program {}", fileNameWithExt);
                     Simulator simulator = new Simulator();
                     System.out.print(ConsoleColors.GREEN_BOLD_BRIGHT);
                     simulator.simulate(boundProgram);
                     System.out.print(ConsoleColors.RESET);
                     break;
                 case COMPILATION:
-                    log.info("Compiling file {} for {}", fileNameWithExt, compileTarget.name());
+                    log.debug("Compiling file {} for {}", fileNameWithExt, compileTarget.name());
                     Compiler compiler = CompilerFactory.create(compileTarget);
                     compiler.compile(boundProgram, fileName);
                     Instant end = Instant.now();
-                    log.info("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
+                    log.debug("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 
                     //TODO: only do this with a -r flag
                     Process process;

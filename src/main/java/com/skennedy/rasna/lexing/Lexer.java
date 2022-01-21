@@ -172,7 +172,10 @@ public class Lexer {
                             next();
                             break;
                         case '"':
-                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor+1), parseString(line)));
+                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor + 1), parseString(line)));
+                            break;
+                        case '\'':
+                            tokens.add(new Token(TokenType.CHAR_LITERAL, new Location(filePath, lineNumber, cursor), parseChar(line)));
                             break;
                         case '.':
                             tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));
@@ -200,10 +203,42 @@ public class Lexer {
         return tokens;
     }
 
+    private char parseChar(String line) {
+        matchNext(line, '\''); //skip '
+        char c;
+        if (charAt(line, cursor) == STRING_ESCAPE_CHAR) {
+            next();
+            switch (charAt(line, cursor)) {
+                case 'n':
+                    c = '\n';
+                    break;
+                case 'r':
+                    c = '\r';
+                    break;
+                case 't':
+                    c = '\t';
+                    break;
+                case 'f':
+                    c = '\f';
+                    break;
+                case '"':
+                    c = '\"';
+                    break;
+                default:
+                    throw new IllegalStateException("Illegal escape character in char literal");
+            }
+        } else {
+            c = charAt(line, cursor);
+            next();
+        }
+        matchNext(line, '\'');
+        return c;
+    }
+
     //TODO: Multi-line Strings
     private String parseString(String line) {
 
-        next(); //Skip opening '"'
+        matchNext(line, '"'); //Skip opening '"'
 
         StringBuilder sb = new StringBuilder();
         while (cursor < line.length() && charAt(line, cursor) != '"') {
@@ -234,10 +269,10 @@ public class Lexer {
                 }
             } else {
                 sb.append(charAt(line, cursor));
+                next();
             }
-            next();
         }
-        next();//Skip closing '"'
+        matchNext(line, '"');//Skip closing '"'
         return sb.toString();
     }
 
@@ -294,5 +329,12 @@ public class Lexer {
 
     private void next() {
         cursor++;
+    }
+
+    private void matchNext(String line, char expected) {
+        if (charAt(line, cursor) != expected) {
+            throw new IllegalStateException("Expected `" + expected + "` but got `" + charAt(line, cursor) + "`");
+        }
+        next();
     }
 }
