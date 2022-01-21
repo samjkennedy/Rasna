@@ -52,12 +52,13 @@ for.cond:                                         ; preds = %for.incr, %entry
 for.body:                                         ; preds = %for.cond
   %arg = load i8, i8* %c, align 1
   %next = call i8 @next(i8 %arg)
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real, i32 0, i32 0), i8 %next)
+  %next1 = call i8 @next(i8 %next)
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real, i32 0, i32 0), i8 %next1)
   br label %for.incr
 
 for.incr:                                         ; preds = %for.body
-  %lhs1 = load i8, i8* %c, align 1
-  %saddtmp = add i8 %lhs1, 1
+  %lhs2 = load i8, i8* %c, align 1
+  %saddtmp = add i8 %lhs2, 1
   store i8 %saddtmp, i8* %c, align 1
   br label %for.cond
 
