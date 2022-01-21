@@ -286,6 +286,9 @@ public class Binder {
                             //minus the dot     |                minus the function identifier              |                                                    minus the length of the owner
                             -1 - ((String) functionCallExpression.getIdentifier().getValue()).length() - (memberAccessorExpression.getOwner().getSpan().getEnd().getColumn() - memberAccessorExpression.getOwner().getSpan().getStart().getColumn()));
                     dummyRefKeyword = new IdentifierExpression(new Token(TokenType.REF_KEYWORD, dummyLocation), TokenType.REF_KEYWORD, "ref");
+                } else if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.ARROW) {
+                    errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by value. Perhaps you meant to use `.` instead of `->`", memberAccessorExpression.getAccessor().getSpan()));
+                    return new BoundErrorExpression();
                 }
             }
 
