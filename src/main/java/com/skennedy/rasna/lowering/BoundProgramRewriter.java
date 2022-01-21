@@ -524,13 +524,13 @@ public abstract class BoundProgramRewriter {
         BoundExpression condition = rewriteExpression(boundIfExpression.getCondition());
         BoundExpression body = rewriteExpression(boundIfExpression.getBody());
 
-        if (condition.isConstExpression()) {
-            if ((boolean) condition.getConstValue()) {
-                return body;
-            } else {
-                return boundIfExpression.getElseBody() != null ? rewriteExpression(boundIfExpression.getElseBody()) : new BoundNoOpExpression();
-            }
-        }
+//        if (condition.isConstExpression()) {
+//                if ((boolean) condition.getConstValue()) {
+//                    return body;
+//                } else {
+//                    return boundIfExpression.getElseBody() != null ? rewriteExpression(boundIfExpression.getElseBody()) : new BoundNoOpExpression();
+//                }
+//        }
 
         BoundExpression elseBody = null;
         if (boundIfExpression.getElseBody() != null) {
