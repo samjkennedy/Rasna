@@ -1,0 +1,9 @@
+fn main() {
+
+    a: Char = 'a'
+    print(a)
+
+//    for (c: Char = 'a' to 'z') {
+//        print(c)
+//    }
+}

@@ -24,6 +24,7 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
+import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
@@ -59,7 +60,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -78,6 +78,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeTarget;
+import static org.bytedeco.llvm.global.LLVM.LLVMInt128TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt1TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt32TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt8TypeInContext;
@@ -116,9 +117,10 @@ public class LLVMCompiler implements Compiler {
 
     public static final BytePointer error = new BytePointer();
 
+    private LLVMTypeRef i1Type;
+    private LLVMTypeRef i8Type;
     private LLVMTypeRef i32Type;
     private LLVMTypeRef realType;
-    private LLVMTypeRef i1Type;
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
@@ -141,9 +143,10 @@ public class LLVMCompiler implements Compiler {
         LLVMModuleRef module = LLVMModuleCreateWithNameInContext(outputFileName, context);
         LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
 
+        i1Type = LLVMInt1TypeInContext(context);
+        i8Type = LLVMInt128TypeInContext(context);
         i32Type = LLVMInt32TypeInContext(context);
         realType = LLVMDoubleTypeInContext(context);
-        i1Type = LLVMInt1TypeInContext(context);
 
         //Declare printf function and string formatter once
         printf = LLVMAddFunction(module, "printf", LLVMFunctionType(i32Type, LLVMPointerType(LLVMInt8TypeInContext(context), 0), 1, 1));//No idea what AddressSpace is for yet
@@ -651,6 +654,9 @@ public class LLVMCompiler implements Compiler {
         if (typeSymbol == BOOL) {
             return i1Type;
         }
+        if (typeSymbol == CHAR) {
+            return i8Type;
+        }
         if (typeSymbol == INT) {
             return i32Type;
         }
@@ -785,11 +791,14 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundLiteralExpression literalExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        if (literalExpression.getType() == INT) {
-            return LLVMConstInt(i32Type, (int) literalExpression.getValue(), 0);
-        }
         if (literalExpression.getType() == TypeSymbol.BOOL) {
             return LLVMConstInt(i1Type, (boolean) literalExpression.getValue() ? 1 : 0, 0);
+        }
+        if (literalExpression.getType() == CHAR) {
+            return LLVMConstInt(i8Type, (char) literalExpression.getValue(), 0);
+        }
+        if (literalExpression.getType() == INT) {
+            return LLVMConstInt(i32Type, (int) literalExpression.getValue(), 0);
         }
         if (literalExpression.getType() == TypeSymbol.REAL) {
             return LLVMConstReal(realType, (double) literalExpression.getValue());
@@ -816,6 +825,10 @@ public class LLVMCompiler implements Compiler {
         if (printExpression.getExpression().getType() == STRING) {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%s\n", "str"))
+                    .put(1, res);
+        } else if (printExpression.getExpression().getType() == CHAR) {
+            printArgs = new PointerPointer<>(2)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%c\n", "real"))
                     .put(1, res);
         } else if (printExpression.getExpression().getType() == REAL) {
             printArgs = new PointerPointer<>(2)

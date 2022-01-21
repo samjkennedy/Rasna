@@ -10,6 +10,7 @@ public enum TokenType {
     WHITESPACE(null),
     LINE_BREAK("\n"),
     NUM_LITERAL(null),
+    CHAR_LITERAL(null),
     STRING_LITERAL(null),
     IDENTIFIER(null),
     COMMENT(null),
@@ -77,6 +78,7 @@ public enum TokenType {
     //Types
     ANY_KEYWORD("Any"),
     BOOL_KEYWORD("Bool"),
+    CHAR_KEYWORD("Char"),
     INT_KEYWORD("Int"),
     REAL_KEYWORD("Real"),
     STRING_KEYWORD("String"),

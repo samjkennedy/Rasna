@@ -79,6 +79,11 @@ public class Parser {
                     return parseMemberAccessorExpression(matchToken(TokenType.NUM_LITERAL));
                 }
                 return matchToken(TokenType.NUM_LITERAL);
+            case CHAR_LITERAL:
+                if (nextToken().getTokenType() == TokenType.DOT) {
+                    return parseMemberAccessorExpression(matchToken(TokenType.CHAR_LITERAL));
+                }
+                return matchToken(TokenType.CHAR_LITERAL);
             case STRING_LITERAL:
                 if (nextToken().getTokenType() == TokenType.DOT) {
                     return parseMemberAccessorExpression(matchToken(TokenType.STRING_LITERAL));
@@ -786,6 +791,9 @@ public class Parser {
                 break;
             case BOOL_KEYWORD:
                 typeKeyword = matchToken(TokenType.BOOL_KEYWORD);
+                break;
+            case CHAR_KEYWORD:
+                typeKeyword = matchToken(TokenType.CHAR_KEYWORD);
                 break;
             case REAL_KEYWORD:
                 typeKeyword = matchToken(TokenType.REAL_KEYWORD);
