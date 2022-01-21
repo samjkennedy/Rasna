@@ -51,6 +51,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildRet;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRetVoid;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSDiv;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSRem;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildSelect;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildStore;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildStructGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
@@ -58,6 +59,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -101,7 +103,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMRealONE;
 import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructCreateNamed;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructSetBody;
-import static org.bytedeco.llvm.global.LLVM.LLVMStructType;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructTypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMTypeOf;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyFunction;
@@ -119,6 +120,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMTypeRef realType;
     private LLVMTypeRef i1Type;
     private LLVMValueRef printf;
+    private LLVMValueRef printB; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
 
     private Scope scope;
@@ -145,6 +147,8 @@ public class LLVMCompiler implements Compiler {
 
         //Declare printf function and string formatter once
         printf = LLVMAddFunction(module, "printf", LLVMFunctionType(i32Type, LLVMPointerType(LLVMInt8TypeInContext(context), 0), 1, 1));//No idea what AddressSpace is for yet
+
+        buildPrintbMethod(context, module, builder);
 
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
@@ -243,6 +247,34 @@ public class LLVMCompiler implements Compiler {
         LLVMContextDispose(context);
     }
 
+    private void buildPrintbMethod(LLVMContextRef context, LLVMModuleRef module, LLVMBuilderRef builder) {
+        printB = LLVMAddFunction(module, "printb", LLVMFunctionType(LLVMVoidTypeInContext(context), i1Type, 1, 0));
+        LLVMSetFunctionCallConv(printB, LLVMCCallConv);
+        LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, printB, "entry");
+        LLVMPositionBuilderAtEnd(builder, entry);
+
+        LLVMValueRef x = LLVMGetParam(printB, 0);
+
+        //printf("%s\n, x ? "true" : "false");)
+
+        //TODO: I think the strings need to be char[]*
+        //LLVMValueRef cond = LLVMBuildSelect(builder, x, LLVMConstStringInContext(context, "true", 4, 0) , LLVMConstStringInContext(context, "false", 5, 0), "cond");
+        LLVMValueRef cond = LLVMBuildSelect(builder, x, LLVMConstInt(i32Type, 1, 0), LLVMConstInt(i32Type, 0, 0), "cond");
+
+        PointerPointer<Pointer> printArgs = new PointerPointer<>(2)
+                .put(0, LLVMBuildGlobalStringPtr(builder, "%d\n", "str"))
+                .put(1, cond);
+
+        LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+        LLVMBuildRetVoid(builder);
+
+        if (LLVMVerifyFunction(printB, LLVMPrintMessageAction) != 0) {
+            log.error("Error when validating printB function:");
+            LLVMDumpModule(module);
+            System.exit(1);
+        }
+    }
+
     private LLVMTypeRef buildFunctionType(List<BoundFunctionParameterExpression> arguments, TypeSymbol returnType, LLVMContextRef context) {
 
         List<TypeSymbol> argumentTypes = arguments.stream()
@@ -338,7 +370,7 @@ public class LLVMCompiler implements Compiler {
 
         BoundLiteralExpression index = tupleIndexExpression.getIndex();
 
-        return LLVMBuildStructGEP(builder, tuple, (int)index.getValue(), index.getValue().toString());
+        return LLVMBuildStructGEP(builder, tuple, (int) index.getValue(), index.getValue().toString());
     }
 
     private LLVMValueRef visit(BoundMemberAssignmentExpression memberAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -551,6 +583,7 @@ public class LLVMCompiler implements Compiler {
             LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
+            condition = dereference(builder, condition, "");
             LLVMBuildCondBr(builder, condition, thenBlock, endBlock);
 
             LLVMPositionBuilderAtEnd(builder, thenBlock);
@@ -571,6 +604,7 @@ public class LLVMCompiler implements Compiler {
         LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
         LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
+        condition = dereference(builder, condition, "");
         LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
 
         LLVMPositionBuilderAtEnd(builder, thenBlock);
@@ -613,6 +647,9 @@ public class LLVMCompiler implements Compiler {
     private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol, LLVMContextRef context) {
         if (typeSymbol == VOID) {
             return LLVMVoidTypeInContext(context);
+        }
+        if (typeSymbol == BOOL) {
+            return i1Type;
         }
         if (typeSymbol == INT) {
             return i32Type;
@@ -752,7 +789,7 @@ public class LLVMCompiler implements Compiler {
             return LLVMConstInt(i32Type, (int) literalExpression.getValue(), 0);
         }
         if (literalExpression.getType() == TypeSymbol.BOOL) {
-            return LLVMConstInt(i32Type, (boolean) literalExpression.getValue() ? 1 : 0, 0);
+            return LLVMConstInt(i1Type, (boolean) literalExpression.getValue() ? 1 : 0, 0);
         }
         if (literalExpression.getType() == TypeSymbol.REAL) {
             return LLVMConstReal(realType, (double) literalExpression.getValue());
@@ -784,6 +821,10 @@ public class LLVMCompiler implements Compiler {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%f\n", "real"))
                     .put(1, res);
+        } else if (printExpression.getExpression().getType() == BOOL) {
+            printArgs = new PointerPointer<>(1)
+                    .put(0, res);
+            return LLVMBuildCall(builder, printB, printArgs, 1, "");
         } else {
             printArgs = new PointerPointer<>(2)
                     .put(0, formatStr)
