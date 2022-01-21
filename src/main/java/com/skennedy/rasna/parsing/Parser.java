@@ -733,10 +733,11 @@ public class Parser {
 
         IdentifierExpression colon = matchToken(TokenType.COLON);
 
-
         Expression typeExpression;
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
             IdentifierExpression openParenthesis = matchToken(TokenType.OPEN_PARENTHESIS);
+
+            //TODO: This should parse typeexpressions to allow nested tuples of arrays and more tuples
             List<DelimitedExpression<IdentifierExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeKeyword, TokenType.CLOSE_PARENTHESIS);
             IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
 
