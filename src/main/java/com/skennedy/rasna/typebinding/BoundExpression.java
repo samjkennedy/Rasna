@@ -17,7 +17,6 @@ public interface BoundExpression {
                 children.add(child);
             }
         });
-        //Maybe not quite right
         return children.stream().allMatch(BoundExpression::isConstExpression);
     }
 

@@ -1,7 +1,7 @@
 import inline "libs/lib.rasna"
 
 fn main() {
-    a: A = A(5)
+    a: A = A{5}
     b: A = square(a)
     print(b.i)
 }
