@@ -1,5 +1,5 @@
 fn multiReturn(a: Int): (String, Bool) {
-    match a {
+    match (a) {
         1    -> return ("Hello", true),
         else -> return ("World", false)
     }

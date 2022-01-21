@@ -361,6 +361,8 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundPositionalAccessExpression) expression, builder, context, function);
             case ARRAY_LENGTH_EXPRESSION:
                 return visit((BoundArrayLengthExpression) expression, builder, context, function);
+            case ARRAY_ASSIGNMENT_EXPRESSION:
+                return visit((BoundArrayAssignmentExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
@@ -424,7 +426,7 @@ public class LLVMCompiler implements Compiler {
     }
 
     private LLVMValueRef visit(BoundArrayLengthExpression arrayLengthExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-        LLVMValueRef struct = visit(arrayLengthExpression.getIterable(), builder, context, function);
+        LLVMValueRef struct = ref(builder, visit(arrayLengthExpression.getIterable(), builder, context, function), arrayLengthExpression.getIterable().getType(), context);
 
         return LLVMBuildStructGEP(builder, struct, 0, "size");
     }
@@ -453,7 +455,7 @@ public class LLVMCompiler implements Compiler {
     }
 
     private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-        LLVMValueRef struct = visit(positionalAccessExpression.getArray(), builder, context, function);
+        LLVMValueRef struct = ref(builder, visit(positionalAccessExpression.getArray(), builder, context, function), positionalAccessExpression.getArray().getType(), context);
 
         LLVMValueRef index = dereference(builder, visit(positionalAccessExpression.getIndex(), builder, context, function), "idx");
 
@@ -464,6 +466,24 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef arrayidx = LLVMBuildInBoundsGEP(builder, array, indices, 1, "arrayidx");
 
         return LLVMBuildLoad(builder, arrayidx, "");
+    }
+
+    private LLVMValueRef visit(BoundArrayAssignmentExpression arrayAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        BoundPositionalAccessExpression arrayAccessExpression = arrayAssignmentExpression.getArrayAccessExpression();
+        LLVMValueRef struct = ref(builder, visit(arrayAccessExpression.getArray(), builder, context, function), arrayAccessExpression.getArray().getType(), context);
+
+        LLVMValueRef index = dereference(builder, visit(arrayAccessExpression.getIndex(), builder, context, function), "idx");
+
+        LLVMValueRef array = dereference(builder, LLVMBuildStructGEP(builder, struct, 1, "arr"), "arr");
+
+        PointerPointer<Pointer> indices = new PointerPointer<>(1)
+                .put(0, index);
+        LLVMValueRef arrayidx = LLVMBuildInBoundsGEP(builder, array, indices, 1, "arrayidx");
+
+        LLVMValueRef value = visit(arrayAssignmentExpression.getAssignment(), builder, context, function);
+        value = dereference(builder, value, "value");
+
+        return LLVMBuildStore(builder, value, arrayidx);
     }
 
     private LLVMValueRef visit(BoundMemberAssignmentExpression memberAssignmentExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {

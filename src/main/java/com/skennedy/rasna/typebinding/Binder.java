@@ -256,6 +256,8 @@ public class Binder {
         TypeSymbol type;
         if (TypeSymbol.getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
             type = boundOwner.getType();
+        } else if (boundOwner.getType() instanceof ArrayTypeSymbol) {
+            type = ((ArrayTypeSymbol) boundOwner.getType()).getType();
         } else if (boundOwner.getType() != null) {
             Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
             if (typeSymbol.isEmpty()) {
@@ -673,22 +675,23 @@ public class Binder {
         try {
             BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
 
-            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-
-                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
-
-                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-
-                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-
-                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-
-                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
-            }
+            //TODO: This is hella broken for const variables
+//            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+//
+//                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+//
+//                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+//
+//                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+//
+//                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+//
+//                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
+//            }
 
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {
