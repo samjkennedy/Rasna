@@ -172,7 +172,7 @@ public class Lexer {
                             next();
                             break;
                         case '"':
-                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor+1), parseString(line)));
+                            tokens.add(new Token(TokenType.STRING_LITERAL, new Location(filePath, lineNumber, cursor + 1), parseString(line)));
                             break;
                         case '\'':
                             tokens.add(new Token(TokenType.CHAR_LITERAL, new Location(filePath, lineNumber, cursor), parseChar(line)));
@@ -205,24 +205,34 @@ public class Lexer {
 
     private char parseChar(String line) {
         next(); //skip '
+        char c;
         if (charAt(line, cursor) == STRING_ESCAPE_CHAR) {
             next();
             switch (charAt(line, cursor)) {
                 case 'n':
-                    return '\n';
+                    c = '\n';
+                    break;
                 case 'r':
-                    return '\r';
+                    c = '\r';
+                    break;
                 case 't':
-                    return '\t';
+                    c = '\t';
+                    break;
                 case 'f':
-                    return '\f';
+                    c = '\f';
+                    break;
                 case '"':
-                    return '\"';
+                    c = '\"';
+                    break;
                 default:
-                    throw new IllegalStateException("Illegal escape character in string literal");
+                    throw new IllegalStateException("Illegal escape character in char literal");
             }
+        } else {
+            c = charAt(line, cursor);
         }
-        return charAt(line, cursor);
+        next();
+        next();
+        return c;
     }
 
     //TODO: Multi-line Strings

@@ -36,6 +36,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildAlloca;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAnd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildBr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildCall;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildCast;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildCondBr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildFAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildFCmp;
@@ -105,6 +106,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructCreateNamed;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructSetBody;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructTypeInContext;
+import static org.bytedeco.llvm.global.LLVM.LLVMTrunc;
 import static org.bytedeco.llvm.global.LLVM.LLVMTypeOf;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyModule;
@@ -144,7 +146,7 @@ public class LLVMCompiler implements Compiler {
         LLVMBuilderRef builder = LLVMCreateBuilderInContext(context);
 
         i1Type = LLVMInt1TypeInContext(context);
-        i8Type = LLVMInt128TypeInContext(context);
+        i8Type = LLVMInt8TypeInContext(context);
         i32Type = LLVMInt32TypeInContext(context);
         realType = LLVMDoubleTypeInContext(context);
 
@@ -219,7 +221,7 @@ public class LLVMCompiler implements Compiler {
             LLVMDisposeMessage(error);
             System.exit(1);
         }
-        log.info("Wrote IR to " + outputFileName + ".ll");
+        log.debug("Wrote IR to " + outputFileName + ".ll");
         Process process = Runtime.getRuntime().exec("C:\\Program Files\\LLVM\\bin\\clang " + outputFileName + ".ll -o " + outputFileName + ".exe");
         InputStream inputStream = process.getInputStream();
         StringBuilder stdout = new StringBuilder();
@@ -240,9 +242,9 @@ public class LLVMCompiler implements Compiler {
             c = (char) errorStream.read();
         }
         if (stderr.length() != 0) {
-            log.warn(stderr.toString()); //gcc likes to put warnings in stderr, if there was an error we probably wouldn't have gotten this far
+            log.debug(stderr.toString()); //gcc likes to put warnings in stderr, if there was an error we probably wouldn't have gotten this far
         }
-        log.info("Compiled IR to " + outputFileName + ".exe");
+        log.debug("Compiled IR to " + outputFileName + ".exe");
 
         // Stage 5: Dispose of allocated resources
         LLVMDisposeModule(module);
@@ -520,7 +522,13 @@ public class LLVMCompiler implements Compiler {
             throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
         }
 
-        return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, "load"), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
+        if (incrementExpression.getType() == INT) {
+            return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, "load"), LLVMConstInt(i32Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
+        } else if (incrementExpression.getType() == CHAR) {
+            return LLVMBuildStore(builder, LLVMBuildAdd(builder, LLVMBuildLoad(builder, ptr, "load"), LLVMConstInt(i8Type, (int) incrementExpression.getAmount().getValue(), 1), "incrtmp"), ptr);
+        } else {
+            throw new UnsupportedOperationException("Increment expressions for type `" + incrementExpression.getType() + "` are not yet supported in LLVM");
+        }
     }
 
     private LLVMValueRef visit(BoundBlockExpression blockExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -708,6 +716,13 @@ public class LLVMCompiler implements Compiler {
 
         if (binaryExpression.getLeft().getType() == INT && binaryExpression.getRight().getType() == INT) {
             return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
+        }
+        if (binaryExpression.getLeft().getType() == CHAR && binaryExpression.getRight().getType() == CHAR) {
+            return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
+        }
+        if (binaryExpression.getLeft().getType() == CHAR && binaryExpression.getRight().getType() == INT) {
+            LLVMValueRef i8rhs = LLVMBuildCast(builder, LLVMTrunc, rhs, i8Type, "");
+            return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), i8rhs);
         }
         if (binaryExpression.getLeft().getType() == REAL && binaryExpression.getRight().getType() == REAL) {
             return visitRealBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);

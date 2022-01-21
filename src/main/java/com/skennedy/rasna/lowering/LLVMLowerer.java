@@ -44,7 +44,15 @@ public class LLVMLowerer extends Lowerer {
         BoundVariableDeclarationExpression initialisation = new BoundVariableDeclarationExpression(iterator, null, rangeExpression.getLowerBound(), false);
 
         BoundVariableExpression iteratorExpression = new BoundVariableExpression(iterator);
-        BoundBinaryExpression condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
+
+        BoundBinaryExpression condition;
+        if (iteratorExpression.getType() == TypeSymbol.INT) {
+            condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LT, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
+        } else if (iteratorExpression.getType() == TypeSymbol.CHAR) {
+            condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LTEQ, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
+        } else {
+            throw new UnsupportedOperationException("No such operation for types `" + iteratorExpression.getType() + "` and `" + rangeExpression.getUpperBound().getType() + "`");
+        }
 
         BoundExpression postStep = new BoundAssignmentExpression(iterator, null,
                 new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getStep() == null ? new BoundLiteralExpression(1) : rangeExpression.getStep())
