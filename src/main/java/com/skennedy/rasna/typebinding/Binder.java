@@ -136,6 +136,7 @@ public class Binder {
         BoundExpression boundTuple = bind(tupleIndexExpression.getTuple());
         if (!(boundTuple.getType() instanceof TupleTypeSymbol)) {
             errors.add(BindingError.raise("Expected a tuple type but got `" + boundTuple.getType() + "` instead", tupleIndexExpression.getTuple().getSpan()));
+            return new BoundErrorExpression();
         }
         if (((TupleTypeSymbol) boundTuple.getType()).getTypes().size() <= (int) tupleIndexExpression.getIndex().getValue()) {
             errors.add(BindingError.raiseOutOfBounds((int) tupleIndexExpression.getIndex().getValue(), (TupleTypeSymbol) boundTuple.getType(), tupleIndexExpression.getSpan()));
@@ -506,7 +507,11 @@ public class Binder {
     private BoundExpression bindForExpression(ForExpression forExpression) {
 
         currentScope = new BoundScope(currentScope);
-        BoundRangeExpression range = bindRangeExpression(forExpression.getRangeExpression());
+        BoundExpression boundRangeExpression = bindRangeExpression(forExpression.getRangeExpression());
+        if (!(boundRangeExpression instanceof BoundRangeExpression)) {
+            return boundRangeExpression;
+        }
+        BoundRangeExpression range = (BoundRangeExpression) boundRangeExpression;
 
         TypeSymbol type = parseType(forExpression.getTypeExpression());
 
@@ -533,7 +538,7 @@ public class Binder {
         return new BoundForExpression(variable, range, guard, body);
     }
 
-    private BoundRangeExpression bindRangeExpression(RangeExpression rangeExpression) {
+    private BoundExpression bindRangeExpression(RangeExpression rangeExpression) {
 
         BoundExpression lowerBound = bind(rangeExpression.getLowerBound());
         BoundExpression upperBound = bind(rangeExpression.getUpperBound());
@@ -543,7 +548,12 @@ public class Binder {
             step = bind(rangeExpression.getStep());
         }
 
-        return new BoundRangeExpression(lowerBound, upperBound, step);
+        try {
+            return new BoundRangeExpression(lowerBound, upperBound, step);
+        } catch (TypeMismatchException tme) {
+            errors.add(BindingError.raiseTypeMismatch(lowerBound.getType(), upperBound.getType(), rangeExpression.getSpan()));
+            return new BoundErrorExpression();
+        }
     }
 
     private BoundExpression bindForInExpression(ForInExpression forInExpression) {

@@ -694,6 +694,8 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundCStyleForExpression cStyleForExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
+        scope = new Scope(scope);
+
         LLVMBasicBlockRef forCondBlock = LLVMAppendBasicBlockInContext(context, function, "for.cond");
         LLVMBasicBlockRef forBodyBlock = LLVMAppendBasicBlockInContext(context, function, "for.body");
         LLVMBasicBlockRef forIncrBlock = LLVMAppendBasicBlockInContext(context, function, "for.incr");
@@ -715,6 +717,9 @@ public class LLVMCompiler implements Compiler {
         LLVMBuildBr(builder, forCondBlock);
 
         LLVMPositionBuilderAtEnd(builder, forExitBlock);
+
+        scope = scope.getParentScope();
+
         return body;
     }
 

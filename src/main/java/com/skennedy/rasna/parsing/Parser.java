@@ -634,7 +634,7 @@ public class Parser {
         }
 
         if (constKeyword != null && current().getTokenType() == TokenType.REF_KEYWORD) {
-            errors.add(Error.raise("Expected ref before const", current()));
+            errors.add(Error.raise("`ref` must precede `const`. Did you mean `ref const " + nextToken().getValue() + "`?", current()));
             matchToken(TokenType.REF_KEYWORD);
         }
 

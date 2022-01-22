@@ -2,35 +2,46 @@ enum Color {
     Red
     Blue
     Green
-    Pink
-    Yellow
 }
 
-enum TrafficLight {
-    Red
-    Yellow
-    Green
-}
-
-fn favouriteColour(c: Color) {
+fn printColor(ref const c: Color) {
     if (c == Color.Red) {
-        print("Your favourite colour is red")
-    } else {
-        print("I don't know that colour")
+        print("Red")
+    }
+    if (c == Color.Blue) {
+        print("Blue")
+    }
+    if (c == Color.Green) {
+        print("Green")
     }
 }
 
-fn main() {
-    c: Color = Color.Green
+fn sort(ref array: Color[]) {
 
-    favouriteColour(c)
-
-//    for (c: Color = Color.Red to Color.Yellow) {
-//        favouriteColour(c)
-//    }
-
-//    i: Int = c as Int
-//    r: Color = 0 as Color
-
-//    s: String = c as String //Gets the name of the enum
+   n: Int = len(array)
+   for (i: Int = 1 to n) {
+       for (j: Int = 0 to n - i) {
+           if (array[j] > array[j + 1]) {
+               tmp: Color = array[j]
+               array[j] = array[j + 1]
+               array[j + 1] = tmp
+           }
+       }
+   }
 }
+
+fn flip(cols: (Color, Color)): (Color, Color) {
+    return (cols.1, cols.0)
+}
+
+fn main() {
+
+    t: (Color, Color) = (Color.Red, Color.Blue)
+    t.0->printColor()
+    t.1->printColor()
+
+    t2: (Color, Color) = t.flip()
+    t2.0->printColor()
+    t2.1->printColor()
+
+ }
