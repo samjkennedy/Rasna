@@ -20,10 +20,10 @@ Variables in Rasna are declared with the syntax:
 ```
 [identifier]: ([Type]) = [initialiser]
 ```
-The `[Type]` is optional if the compiler can determine the type from the initialiser, which is should always be able to.
+The `[Type]` is optional if the compiler can determine the type from the initialiser, which it should always be able to.
 This results in a go-style declaration syntax when omitting the type:
 
-```nim
+```rust
     //These two are equivalent
     i: Int = 0
     j := 0
@@ -31,7 +31,7 @@ This results in a go-style declaration syntax when omitting the type:
 
 If a variable is declared without an initialiser, a type must be provided:
 
-```nim
+```rust
     i      //Will not compile
     i: Int //Will compile
 ```
@@ -40,13 +40,13 @@ If a variable is declared without an initialiser, a type must be provided:
 
 Simple programs that print numbers from 0 to 99 in an ascending order:
 
-```nim
+```rust
 for (N: Int = 0 to 100) {
     print(N)
 }
 ```
 
-```nim
+```rust
 N: Int = 0
 while (N < 100) {
     print(N)
@@ -60,7 +60,7 @@ Rasna features **Guards** where an expression can be defined for a specific **Su
 
 For example with Variables:
 
-```nim
+```rust
 i: Int | (i mod 2 == 0) = 0 //Variable i can only contain the set of even integers
 ...
 i = 3 //runtime error
@@ -68,7 +68,7 @@ i = 3 //runtime error
 
 This can be combined with for expressions to loop over only a **specific subset** of the guard:
 
-```nim
+```rust
 for (N: Int = 0 to 10 | N % 2 == 0) {
     print(N) //prints 0, 2, 4, 6, 8
 }
@@ -78,12 +78,12 @@ for (N: Int = 0 to 10 | N % 2 == 0) {
 
 In Rasna, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
 
-```nim
+```rust
 i: Int = if (x > y) 1 else 2
 ```
 If x > y then i will be assigned the value 1, else 2. If the body of the if is multiline, only the last line will be returned:
 
-```nim
+```rust
 i: Int = if (x > y) {
     x = x + 1
     1
@@ -96,7 +96,7 @@ This will assign i to either 1 or 2 with the side effect of incrementing either 
    
 This extends to loops as well, whose return type is `T[]`:
 
-```nim
+```rust
 //Assigns x to an Array of Ints from 0 to 4
 ns: Int[] = for (N: Int= 0 to 5) {
     N
@@ -106,7 +106,7 @@ print(ns) //prints [0, 1, 2, 3, 4]
 
 These act as normal for loops and can contain multiple lines, as with if expressions the last line of the body is assigned:
 
-```nim
+```rust
 //Assigns x to an Array of the squares of all even numbers from 0 to 99
 xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
     N * N
@@ -117,7 +117,7 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  
  Functions so far are pretty much like rust or go:
  
- ```nim
+ ```rust
  fn sum(a: Int, b: Int): Int {
      return a + b
  }
@@ -127,7 +127,7 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  
  Functions can also take guards on their parameters:
  
- ```nim
+ ```rust
  fn isqrt(x: Int | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
 
      i: Int= 1
@@ -144,7 +144,7 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  
  Structs are no more than structured data:
  
- ```nim
+ ```rust
  struct V3R {
      x: Real
      y: Real
@@ -154,14 +154,14 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  
  They are initialised with a special constructor syntax taking arguments in the order they were defined:
  
- ```nim
+ ```rust
  v3: V3R = V3R{1.0, 2.0, 3.0}
  ```
  
  Unlike languages like c++ and Rust, structs cannot contain member functions. 
  Once defined, a struct can be used in the return types and arguments of functions just like any other type:
  
- ```nim
+ ```rust
  fn mag3(v: V3R): Real {
      return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
  }
@@ -169,11 +169,11 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  
  ### Uniform Function Call Syntax
  
- Like languages such as Nim and D, Rasna supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) instead of traditional OOP.
+ Like languages such as rust and D, Rasna supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) instead of traditional OOP.
  
  Any function defined with a type as the first argument can instead be called on that type, allowing chaining of methods:
  
- ```nim
+ ```rust
  struct Vector {
      x: Int
      y: Int
@@ -207,19 +207,19 @@ Tuples are immutable structures that contain a fixed number of values, each with
 
 They can be constructed literally like so:
 
-```nim
+```rust
     t: (String, Int, Bool) = ("Hello", 1, false)
 ```
 
 A tuple of one element should be constructed with a trailing comma, like so:
 
-```nim
+```rust
     singleton: (String) = ("Hello",)
 ```
 
 Values can be accessed by their position:
 
-```nim
+```rust
     print(t.0) //will print "Hello"
 ```
 
@@ -227,7 +227,7 @@ Values can be accessed by their position:
 
 A function can accept its arguments by reference with the `ref` keyword. Any callers will also have to provide the parameter with the `ref` keyword.
 
-```nim
+```rust
 fn inc(ref i: Int) {
     i++   
 }
@@ -241,7 +241,7 @@ fn main() {
 
 When calling with UFCS, the `->` operator should be used instead of `.` to indicate a pass by reference:
 
-```nim
+```rust
     i: Int = 0
     i->inc()
     print(i) //prints 1
@@ -251,7 +251,7 @@ When calling with UFCS, the `->` operator should be used instead of `.` to indic
 
 Enums are declared similarly to structs, but the members are simple identifiers:
 
-```nim
+```rust
 enum Color {
     Red
     Green
@@ -261,13 +261,13 @@ enum Color {
 
 Once declared, they can be used like any type. For now members must be qualified with their type:
 
-```nim
+```rust
     c := Color.Red
 ```
 
 The variable `c` will be of the type `Color`, which compiles down to a const i32. As a result enums can be treated like Ints:
 
-```nim
+```rust
     //Prints 0, 1, 2
     for (c: Color = Color.Red to Color.Blue) {
         print(c)
