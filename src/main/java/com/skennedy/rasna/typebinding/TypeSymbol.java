@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class TypeSymbol extends Symbol {
 
-    public static final TypeSymbol VOID = new TypeSymbol("Void", new LinkedHashMap<>());
+    public static final TypeSymbol UNIT = new TypeSymbol("Unit", new LinkedHashMap<>());
     public static final TypeSymbol BOOL = new TypeSymbol("Bool", new LinkedHashMap<>());
     public static final TypeSymbol CHAR = new TypeSymbol("Char", new LinkedHashMap<>());
     public static final TypeSymbol INT = new TypeSymbol("Int", new LinkedHashMap<>());

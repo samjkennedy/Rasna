@@ -16,7 +16,7 @@ public class BoundNoOpExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return TypeSymbol.VOID;
+        return TypeSymbol.UNIT;
     }
 
     @Override

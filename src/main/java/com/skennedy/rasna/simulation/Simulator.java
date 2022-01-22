@@ -89,11 +89,11 @@ public class Simulator {
                 scope.declareFunction(functionDeclarationExpression.getFunctionSymbol(), i);
 
                 program.getExpressions().remove(i);
-                if (functionDeclarationExpression.getFunctionSymbol().getType() == TypeSymbol.VOID) {
+                if (functionDeclarationExpression.getFunctionSymbol().getType() == TypeSymbol.UNIT) {
                     program.getExpressions().add(i, new BoundReturnExpression(new BoundNoOpExpression()));
                 }
                 program.getExpressions().addAll(i, functionDeclarationExpression.getBody().getExpressions());
-                if (functionDeclarationExpression.getFunctionSymbol().getType() == TypeSymbol.VOID) {
+                if (functionDeclarationExpression.getFunctionSymbol().getType() == TypeSymbol.UNIT) {
                     i += 1;
                 }
 
