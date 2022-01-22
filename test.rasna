@@ -4,7 +4,16 @@ enum Color {
     Green
 }
 
-fn printColor(ref const c: Color) {
+struct Item {
+    i: Int
+    color: Color
+}
+
+fn getComplexTuple(): (Int, (Bool, Color), Item) {
+    return (1, (true, Color.Red), Item{3, Color.Blue})
+}
+
+fn printName(ref const c: Color) {
     if (c == Color.Red) {
         print("Red")
     }
@@ -16,32 +25,17 @@ fn printColor(ref const c: Color) {
     }
 }
 
-fn sort(ref array: Color[]) {
-
-   n: Int = len(array)
-   for (i: Int = 1 to n) {
-       for (j: Int = 0 to n - i) {
-           if (array[j] > array[j + 1]) {
-               tmp: Color = array[j]
-               array[j] = array[j + 1]
-               array[j + 1] = tmp
-           }
-       }
-   }
-}
-
-fn flip(cols: (Color, Color)): (Color, Color) {
-    return (cols.1, cols.0)
-}
-
 fn main() {
 
-    t: (Color, Color) = (Color.Red, Color.Blue)
-    t.0->printColor()
-    t.1->printColor()
+    i: Int = 2
+    j := getComplexTuple()
+    c := Color.Red
 
-    t2: (Color, Color) = t.flip()
-    t2.0->printColor()
-    t2.1->printColor()
-
+    c->printName()
+    print(i)
+    print(j.0)
+    print((j.1).0)
+    print((j.1).1)
+    print(j.2.i)
+    printName(ref j.2.color)
  }

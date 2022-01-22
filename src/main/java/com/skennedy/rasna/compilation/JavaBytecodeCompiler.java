@@ -1571,7 +1571,7 @@ public class JavaBytecodeCompiler implements Compiler {
     }
 
     private String getTypeFromName(String name) {
-        if (name.equals(TypeSymbol.VOID.getName())) {
+        if (name.equals(TypeSymbol.UNIT.getName())) {
             return Type.VOID_TYPE.getDescriptor();
         }
         if (name.equals(TypeSymbol.INT.getName())) {
@@ -1613,7 +1613,7 @@ public class JavaBytecodeCompiler implements Compiler {
             scope = scope.parent;
         }
         //Push return type onto stack
-        if (functionCallExpression.getType() != TypeSymbol.VOID) {
+        if (functionCallExpression.getType() != TypeSymbol.UNIT) {
             scope.pushStack(functionCallExpression.getType());
         }
     }
@@ -1644,7 +1644,7 @@ public class JavaBytecodeCompiler implements Compiler {
 
         visit(printExpression.getExpression(), methodVisitor);
 
-        String descriptor = getMethodDescriptor(Collections.singletonList(printExpression.getExpression().getType()), TypeSymbol.VOID);
+        String descriptor = getMethodDescriptor(Collections.singletonList(printExpression.getExpression().getType()), TypeSymbol.UNIT);
 
         methodVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", descriptor, false);
         textifierVisitor.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", descriptor, false);

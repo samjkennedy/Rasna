@@ -13,17 +13,40 @@ Rasna is planned to be:
 
 ## Features
 
+### Variables
+
+Variables in Rasna are declared with the syntax:
+
+```
+[identifier]: ([Type]) = [initialiser]
+```
+The `[Type]` is optional if the compiler can determine the type from the initialiser, which is should always be able to.
+This results in a go-style declaration syntax when omitting the type:
+
+```nim
+    //These two are equivalent
+    i: Int = 0
+    j := 0
+```
+
+If a variable is declared without an initialiser, a type must be provided:
+
+```nim
+    i      //Will not compile
+    i: Int //Will compile
+```
+
 ### Loops
 
 Simple programs that print numbers from 0 to 99 in an ascending order:
 
-```julia
+```nim
 for (N: Int = 0 to 100) {
     print(N)
 }
 ```
 
-```julia
+```nim
 N: Int = 0
 while (N < 100) {
     print(N)
@@ -31,17 +54,13 @@ while (N < 100) {
 }
 ```
 
-Implemented:
-   - [x] simulation
-   - [x] compilation
-
 ### Guards
 
 Rasna features **Guards** where an expression can be defined for a specific **Subset** of its full domain. 
 
 For example with Variables:
 
-```julia
+```nim
 i: Int | (i mod 2 == 0) = 0 //Variable i can only contain the set of even integers
 ...
 i = 3 //runtime error
@@ -49,26 +68,22 @@ i = 3 //runtime error
 
 This can be combined with for expressions to loop over only a **specific subset** of the guard:
 
-```julia
+```nim
 for (N: Int = 0 to 10 | N % 2 == 0) {
     print(N) //prints 0, 2, 4, 6, 8
 }
 ```
 
-Implemented:
-   - [x] simulation
-   - [x] compilation
-
 ### Everything is an expression
 
 In Rasna, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
 
-```julia
+```nim
 i: Int = if (x > y) 1 else 2
 ```
 If x > y then i will be assigned the value 1, else 2. If the body of the if is multiline, only the last line will be returned:
 
-```julia
+```nim
 i: Int = if (x > y) {
     x = x + 1
     1
@@ -78,14 +93,10 @@ i: Int = if (x > y) {
 }
 ```
 This will assign i to either 1 or 2 with the side effect of incrementing either x or y
-
-Implemented:
-   - [ ] simulation
-   - [x] compilation
    
-This extends to loops as well, whose return type is an `Array`:
+This extends to loops as well, whose return type is `T[]`:
 
-```julia
+```nim
 //Assigns x to an Array of Ints from 0 to 4
 ns: Int[] = for (N: Int= 0 to 5) {
     N
@@ -95,22 +106,18 @@ print(ns) //prints [0, 1, 2, 3, 4]
 
 These act as normal for loops and can contain multiple lines, as with if expressions the last line of the body is assigned:
 
-```julia
+```nim
 //Assigns x to an Array of the squares of all even numbers from 0 to 99
 xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
     N * N
 }
 ```
-
-Implemented:
-   - [ ] simulation
-   - [x] compilation
    
- ## Functions
+ ### Functions
  
  Functions so far are pretty much like rust or go:
  
- ```julia
+ ```nim
  fn sum(a: Int, b: Int): Int {
      return a + b
  }
@@ -120,7 +127,7 @@ Implemented:
  
  Functions can also take guards on their parameters:
  
- ```julia
+ ```nim
  fn isqrt(x: Int | x >= 0): Int { //Attempting to call isqrt with a negative number will throw an error
 
      i: Int= 1
@@ -132,16 +139,12 @@ Implemented:
      return i - 1
  }
  ```
- 
-Implemented:
-   - [x] simulation
-   - [x] compilation
    
- ## Structs
+ ### Structs
  
  Structs are no more than structured data:
  
- ```julia
+ ```nim
  struct V3R {
      x: Real
      y: Real
@@ -149,37 +152,28 @@ Implemented:
  }
  ```
  
- They are initialised with a constructor syntax taking arguments in the order they were defined:
+ They are initialised with a special constructor syntax taking arguments in the order they were defined:
  
- ```julia
- v3: V3R = V3R(1.0, 2.0, 3.0)
+ ```nim
+ v3: V3R = V3R{1.0, 2.0, 3.0}
  ```
- 
- Alternatively for assignments only, a literal syntax can be used:
- 
- ```julia
-  v3: V3R = {1.0, 2.0, 3.0}
-  ```
-  
- This is not yet supported elsewhere due to there being no type information, 
- hopefully this can be improved in future to allow literals to be passed as function arguments.
  
  Unlike languages like c++ and Rust, structs cannot contain member functions. 
  Once defined, a struct can be used in the return types and arguments of functions just like any other type:
  
- ```julia
+ ```nim
  fn mag3(v: V3R): Real {
      return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
  }
  ```
  
- ## Uniform Function Call Syntax
+ ### Uniform Function Call Syntax
  
  Like languages such as Nim and D, Rasna supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) instead of traditional OOP.
  
  Any function defined with a type as the first argument can instead be called on that type, allowing chaining of methods:
  
- ```julia
+ ```nim
  struct Vector {
      x: Int
      y: Int
@@ -207,48 +201,81 @@ Implemented:
  }
  ```
  
- ## Tuples
+ ### Tuples
 
 Tuples are immutable structures that contain a fixed number of values, each with their own type.
 
-They can be useful when a method may need to return multiple values, although the types returned are not known at runtime (Yet).
-
 They can be constructed literally like so:
 
-```julia
-t: Tuple = ("Hello", 1, false)
+```nim
+    t: (String, Int, Bool) = ("Hello", 1, false)
 ```
 
 A tuple of one element should be constructed with a trailing comma, like so:
 
-```julia
-singleton: Tuple = ("Hello",)
+```nim
+    singleton: (String) = ("Hello",)
 ```
 
 Values can be accessed by their position:
 
-```julia
-print(t[0]) //will print "Hello"
+```nim
+    print(t.0) //will print "Hello"
 ```
 
-or iterated through:
+### Pass by reference 
 
-```julia
-for (v: Any in t) {
-    print(v)
+A function can accept its arguments by reference with the `ref` keyword. Any callers will also have to provide the parameter with the `ref` keyword.
+
+```nim
+fn inc(ref i: Int) {
+    i++   
+}
+
+fn main() {
+    i: Int = 0
+    inc(ref i)
+    print(i) //prints 1
 }
 ```
 
-As shown here, the return type for accessing a tuple is `Any` as the exact type is unknown at runtime, hopefully in future this will be fixed
+When calling with UFCS, the `->` operator should be used instead of `.` to indicate a pass by reference:
 
-For more see the examples and tests directory.
-   
-## Planned Features
+```nim
+    i: Int = 0
+    i->inc()
+    print(i) //prints 1
+```
 
-- Pattern matching and type decomposition
-- Custom type system
-- Type subset system
-- REPL
+### Enums
+
+Enums are declared similarly to structs, but the members are simple identifiers:
+
+```nim
+enum Color {
+    Red
+    Green
+    Blue
+}
+```
+
+Once declared, they can be used like any type. For now members must be qualified with their type:
+
+```nim
+    c := Color.Red
+```
+
+The variable `c` will be of the type `Color`, which compiles down to a const i32. As a result enums can be treated like Ints:
+
+```nim
+    //Prints 0, 1, 2
+    for (c: Color = Color.Red to Color.Blue) {
+        print(c)
+    }
+    
+    if (Color.Red < Color.Green) { //Evaluates to true
+        ...
+```
 
 ## Acknowledgements
 

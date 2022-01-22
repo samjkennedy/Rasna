@@ -14,7 +14,7 @@ public class FunctionAnalyser {
 
         List<BindingError> errors = new ArrayList<>(typeCheckBody(function, boundExpressions, expressions));
 
-        if (function.getType() != TypeSymbol.VOID) {
+        if (function.getType() != TypeSymbol.UNIT) {
             boolean allPathsReturnValue = checkReturnPaths(boundExpressions);
             if (!allPathsReturnValue) {
                 errors.add(BindingError.raiseMissingReturnExpression(functionDeclarationExpression.getBody().getCloseCurly().getSpan()));

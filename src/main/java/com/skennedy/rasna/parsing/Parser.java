@@ -642,7 +642,10 @@ public class Parser {
 
         IdentifierExpression colon = matchToken(TokenType.COLON);
 
-        TypeExpression typeExpression = parseTypeExpression();
+        TypeExpression typeExpression = null;
+        if (current().getTokenType() != TokenType.EQUALS) {
+            typeExpression = parseTypeExpression();
+        }
 
         IdentifierExpression equals = null;
         Expression initialiser = null;

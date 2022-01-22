@@ -29,7 +29,7 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
-import static com.skennedy.rasna.typebinding.TypeSymbol.VOID;
+import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
@@ -596,7 +596,7 @@ public class LLVMCompiler implements Compiler {
             args.put(i, arg);
         }
 
-        if (functionSymbol.getType() == VOID) {
+        if (functionSymbol.getType() == UNIT) {
             return scope.tryLookupFunction(functionSymbol).map(func -> LLVMBuildCall(builder, func, args, functionCallExpression.getBoundArguments().size(), ""))
                     .orElseThrow(() -> new IllegalStateException("No such function defined in scope: `" + functionSymbol.getSignature() + "`"));
         }
@@ -793,7 +793,7 @@ public class LLVMCompiler implements Compiler {
     }
 
     private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol, LLVMContextRef context) {
-        if (typeSymbol == VOID) {
+        if (typeSymbol == UNIT) {
             return LLVMVoidTypeInContext(context);
         }
         if (typeSymbol == BOOL) {
@@ -1049,7 +1049,7 @@ public class LLVMCompiler implements Compiler {
             scope.declareVariable(argument.getArgument(), val);
         }
 
-        if (functionSymbol.getType() != VOID) {
+        if (functionSymbol.getType() != UNIT) {
             //Assign return value
             LLVMTypeRef retValType = getLlvmTypeRef(functionSymbol.getType(), context);
             LLVMValueRef retval = LLVMBuildAlloca(builder, retValType, functionSymbol.getName() + "-retval");
@@ -1067,7 +1067,7 @@ public class LLVMCompiler implements Compiler {
 
         //Build return value
         TypeSymbol returnType = functionSymbol.getType();
-        if (returnType == VOID) {
+        if (returnType == UNIT) {
             return LLVMBuildRetVoid(builder);
         }
 

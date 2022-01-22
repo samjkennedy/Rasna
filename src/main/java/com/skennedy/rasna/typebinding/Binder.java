@@ -16,6 +16,7 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
+import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
 
 public class Binder {
 
@@ -319,7 +321,7 @@ public class Binder {
             IdentifierExpression identifier = (IdentifierExpression) member;
             VariableSymbol variable = type.getFields().get(identifier.getValue());
             if (!type.getFields().containsKey(identifier.getValue())) {
-                errors.add(BindingError.raiseUnknownMember((String)identifier.getValue(), type, member.getSpan()));
+                errors.add(BindingError.raiseUnknownMember((String) identifier.getValue(), type, member.getSpan()));
                 return new BoundErrorExpression();
             }
             BoundVariableExpression variableExpression = new BoundVariableExpression(variable);
@@ -595,7 +597,7 @@ public class Binder {
 
         TypeSymbol typeSymbol;
         if (typeExpression == null) {
-            return TypeSymbol.VOID;
+            return TypeSymbol.UNIT;
         }
         if (typeExpression.getIdentifier() instanceof TupleTypeExpression) {
             List<TypeSymbol> boundTypes = ((TupleTypeExpression) typeExpression.getIdentifier()).getTypeExpressions()
@@ -850,6 +852,10 @@ public class Binder {
     private BoundExpression bindPrintIntrinsic(PrintExpression printExpression) {
         BoundExpression boundExpression = bind(printExpression.getExpression());
 
+        if (boundExpression.getType() == UNIT) {
+            errors.add(BindingError.raiseUnknownFunction("print", Collections.singletonList(boundExpression), printExpression.getExpression().getSpan()));
+        }
+
         return new BoundPrintExpression(boundExpression);
     }
 
@@ -978,8 +984,8 @@ public class Binder {
 
     private void typeCheckMainFunction(BoundFunctionDeclarationExpression boundMainFunction, FunctionDeclarationExpression mainFunction) {
 
-        if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.VOID) {
-            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.VOID, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
+        if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.UNIT) {
+            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
         }
         List<BoundFunctionParameterExpression> arguments = boundMainFunction.getArguments();
         if (!arguments.isEmpty()) {
@@ -994,7 +1000,7 @@ public class Binder {
                     errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
                 }
                 for (int i = 1; i < arguments.size(); i++) {
-                    errors.add(BindingError.raiseTypeMismatch(TypeSymbol.VOID, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getSpan()));
+                    errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getSpan()));
                 }
             }
         }
@@ -1172,6 +1178,10 @@ public class Binder {
             IdentifierExpression typeExpression = (IdentifierExpression) variableDeclarationExpression.getTypeExpression().getIdentifier();
             errors.add(BindingError.raiseUnknownType((String) typeExpression.getValue(), variableDeclarationExpression.getTypeExpression().getSpan()));
             return new BoundErrorExpression();
+        }
+
+        if (variableDeclarationExpression.getTypeExpression() == null && initialiser != null) {
+            type = initialiser.getType();
         }
 
         if (initialiser != null && !type.isAssignableFrom(initialiser.getType())) {
