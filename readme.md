@@ -169,7 +169,7 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  
  ### Uniform Function Call Syntax
  
- Like languages such as rust and D, Rasna supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) instead of traditional OOP.
+ Like languages such as Nim and D, Rasna supports [UFCS](https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax) instead of traditional OOP.
  
  Any function defined with a type as the first argument can instead be called on that type, allowing chaining of methods:
  
