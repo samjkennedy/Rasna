@@ -52,6 +52,11 @@ public class LLVMLowerer extends Lowerer {
             postStep = new BoundAssignmentExpression(iterator, null,
                     new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getStep() == null ? new BoundLiteralExpression(1) : rangeExpression.getStep())
             );
+        } else if (iteratorExpression.getType() instanceof EnumTypeSymbol) {
+            condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LTEQ, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
+            postStep = new BoundAssignmentExpression(iterator, null,
+                    new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.ADD, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getStep() == null ? new BoundLiteralExpression(1) : rangeExpression.getStep())
+            );
         } else if (iteratorExpression.getType() == TypeSymbol.CHAR) {
             condition = new BoundBinaryExpression(iteratorExpression, BoundBinaryOperator.bind(OpType.LTEQ, TypeSymbol.INT, TypeSymbol.INT), rangeExpression.getUpperBound());
             postStep = new BoundAssignmentExpression(iterator, null,

@@ -363,9 +363,17 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundArrayLengthExpression) expression, builder, context, function);
             case ARRAY_ASSIGNMENT_EXPRESSION:
                 return visit((BoundArrayAssignmentExpression) expression, builder, context, function);
+            case ENUM_DECLARATION_EXPRESSION:
+                return visit((BoundEnumDeclarationExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
+    }
+
+    //Doesn't emit any LLVM
+    private LLVMValueRef visit(BoundEnumDeclarationExpression enumDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        return null;
     }
 
     /*
@@ -432,6 +440,21 @@ public class LLVMCompiler implements Compiler {
     }
 
     private LLVMValueRef visit(BoundMemberAccessorExpression memberAccessorExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        if (memberAccessorExpression.getOwner() instanceof BoundTypeExpression) {
+
+            BoundTypeExpression typeExpression = (BoundTypeExpression) memberAccessorExpression.getOwner();
+            BoundExpression member = memberAccessorExpression.getMember();
+
+            if (!(member instanceof BoundVariableExpression)) {
+                throw new IllegalStateException("Cannot access anything other than variables in enums");
+            }
+            BoundVariableExpression memberVariable = (BoundVariableExpression) member;
+
+            int ordinal = ((EnumTypeSymbol) typeExpression.getTypeSymbol()).ordinalOf(memberVariable.getVariable().getName());
+
+            return LLVMConstInt(i32Type, ordinal, 0);
+        }
 
         LLVMValueRef owner = visit(memberAccessorExpression.getOwner(), builder, context, function);
         owner = ref(builder, owner, memberAccessorExpression.getOwner().getType(), context);
@@ -803,6 +826,9 @@ public class LLVMCompiler implements Compiler {
 
             return LLVMStructTypeInContext(context, llvmTypes, 2, 0);
         }
+        if (typeSymbol instanceof EnumTypeSymbol) {
+            return i32Type;
+        }
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {
             return type.get();
@@ -835,6 +861,12 @@ public class LLVMCompiler implements Compiler {
         rhs = dereference(builder, rhs, "rhs");
 
         if (binaryExpression.getLeft().getType() == INT && binaryExpression.getRight().getType() == INT) {
+            return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
+        }
+        if (binaryExpression.getLeft().getType() instanceof EnumTypeSymbol && binaryExpression.getRight().getType() instanceof EnumTypeSymbol) {
+            return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
+        }
+        if (binaryExpression.getLeft().getType() instanceof EnumTypeSymbol && binaryExpression.getRight().getType() == INT) {
             return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
         }
         if (binaryExpression.getLeft().getType() == CHAR && binaryExpression.getRight().getType() == CHAR) {
@@ -973,6 +1005,10 @@ public class LLVMCompiler implements Compiler {
             printArgs = new PointerPointer<>(1)
                     .put(0, res);
             return LLVMBuildCall(builder, printB, printArgs, 1, "");
+        } else if (printExpression.getExpression().getType() instanceof EnumTypeSymbol) {
+            printArgs = new PointerPointer<>(1)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%d\n", "str")) //TODO: Need to associate the name with the ordinal. A struct? struct Color { int ord; char* name; }?
+                    .put(1, res);
         } else {
             printArgs = new PointerPointer<>(2)
                     .put(0, formatStr)

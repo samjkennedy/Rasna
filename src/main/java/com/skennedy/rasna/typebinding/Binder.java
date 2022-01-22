@@ -15,13 +15,14 @@ import com.skennedy.rasna.parsing.*;
 import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 
 public class Binder {
 
@@ -124,6 +125,8 @@ public class Binder {
                 return bindTypeTestExpression((TypeTestExpression) expression);
             case TUPLE_INDEX_EXPR:
                 return bindTupleIndexExpression((TupleIndexExpression) expression);
+            case ENUM_DECLARATION_EXPR:
+                return bindEnumDeclarationExpression((EnumDeclarationExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
@@ -254,7 +257,9 @@ public class Binder {
         }
 
         TypeSymbol type;
-        if (TypeSymbol.getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
+        if (boundOwner instanceof BoundTypeExpression) {
+            type = ((BoundTypeExpression) boundOwner).getTypeSymbol();
+        } else if (TypeSymbol.getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
             type = boundOwner.getType();
         } else if (boundOwner.getType() instanceof ArrayTypeSymbol) {
             type = ((ArrayTypeSymbol) boundOwner.getType()).getType();
@@ -312,12 +317,14 @@ public class Binder {
 
             IdentifierExpression identifier = (IdentifierExpression) member;
             VariableSymbol variable = type.getFields().get(identifier.getValue());
-            BoundVariableExpression variableExpression = new BoundVariableExpression(variable);
-            if (!type.getFields().containsKey(variableExpression.getVariable().getName())) {
-                errors.add(BindingError.raiseUnknownMember(variableExpression.getVariable().getName(), type, member.getSpan()));
+            if (!type.getFields().containsKey(identifier.getValue())) {
+                errors.add(BindingError.raiseUnknownMember((String)identifier.getValue(), type, member.getSpan()));
+                return new BoundErrorExpression();
             }
+            BoundVariableExpression variableExpression = new BoundVariableExpression(variable);
             return new BoundMemberAccessorExpression(boundOwner, variableExpression);
         }
+        errors.add(BindingError.raise("Unknown member for type `" + type + "`", member.getSpan()));
         return new BoundErrorExpression();
     }
 
@@ -329,7 +336,7 @@ public class Binder {
 
     private BoundExpression bindArrayDeclarationExpression(ArrayDeclarationExpression arrayDeclarationExpression) {
         BoundExpression elementCount = bind(arrayDeclarationExpression.getElementCount());
-        if (!elementCount.getType().isAssignableFrom(TypeSymbol.INT)) {
+        if (!elementCount.getType().isAssignableFrom(INT)) {
             throw new IllegalStateException("Element count must be of type int");
         }
         ArrayTypeSymbol typeSymbol = new ArrayTypeSymbol(parseType(arrayDeclarationExpression.getTypeExpression()));
@@ -438,8 +445,8 @@ public class Binder {
 
         BoundExpression index = bind(arrayAccessExpression.getIndex());
 
-        if (!index.getType().isAssignableFrom(TypeSymbol.INT)) {
-            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.INT, index.getType(), arrayAccessExpression.getIndex().getSpan()));
+        if (!index.getType().isAssignableFrom(INT)) {
+            errors.add(BindingError.raiseTypeMismatch(INT, index.getType(), arrayAccessExpression.getIndex().getSpan()));
         }
         return new BoundPositionalAccessExpression(new BoundVariableExpression(variable.get()), index);
     }
@@ -550,7 +557,7 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
             return new BoundErrorExpression();
         }
-        if (!type.isAssignableFrom(((ArrayTypeSymbol)iterable.getType()).getType())) {
+        if (!type.isAssignableFrom(((ArrayTypeSymbol) iterable.getType()).getType())) {
             errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
         }
         VariableSymbol variable = buildVariableSymbol(type, forInExpression.getIdentifier(), null, false, forInExpression);
@@ -607,7 +614,7 @@ public class Binder {
                 typeSymbol = TypeSymbol.CHAR;
                 break;
             case INT_KEYWORD:
-                typeSymbol = TypeSymbol.INT;
+                typeSymbol = INT;
                 break;
             case BOOL_KEYWORD:
                 typeSymbol = TypeSymbol.BOOL;
@@ -673,7 +680,12 @@ public class Binder {
         BoundExpression right = bind(binaryExpression.getRight());
 
         try {
-            BoundBinaryOperator operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
+            BoundBinaryOperator operator;
+            if (left.getType() instanceof EnumTypeSymbol && right.getType() instanceof EnumTypeSymbol && left.getType().getName().equals(right.getType().getName())) {
+                operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), INT, INT);
+            } else {
+                operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
+            }
 
             //TODO: This is hella broken for const variables
 //            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
@@ -795,7 +807,7 @@ public class Binder {
 
         Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifierExpression.getValue());
         if (type.isPresent()) {
-            throw new UnsupportedOperationException("Custom types are not yet supported");
+            return new BoundTypeExpression(type.get());
         }
 
         Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifierExpression.getValue());
@@ -871,10 +883,8 @@ public class Binder {
             members.add(bind(member));
         }
 
-        LinkedHashMap<String, FunctionSymbol> definedFunctions = currentScope.getDefinedFunctions();
         LinkedHashMap<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
 
-        //TODO: The defined functions and variables have no knowledge of their owner, two types with the same method may cause issues
         TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedVariables);
 
         currentScope = currentScope.getParentScope();
@@ -886,6 +896,37 @@ public class Binder {
         }
 
         return new BoundStructDeclarationExpression(type, members);
+    }
+
+    private BoundExpression bindEnumDeclarationExpression(EnumDeclarationExpression enumDeclarationExpression) {
+
+        String name = (String) enumDeclarationExpression.getIdendifier().getValue();
+        currentScope = new BoundScope(currentScope);
+
+        EnumTypeSymbol type = new EnumTypeSymbol(name, new LinkedHashMap<>());
+        List<VariableSymbol> members = new ArrayList<>();
+        for (int i = 0; i < enumDeclarationExpression.getMembers().size(); i++) {
+
+            //TODO: Using variables might not be the best way to handle them, they're not integers they're colours
+            IdentifierExpression identifier = enumDeclarationExpression.getMembers().get(i);
+            VariableSymbol member = new VariableSymbol((String) identifier.getValue(), type, null, true, identifier);
+            try {
+                currentScope.declareVariable(member.getName(), member);
+            } catch (VariableAlreadyDeclaredException vade) {
+                errors.add(BindingError.raiseVariableAlreadyDeclared(member, identifier.getSpan(), currentScope.tryLookupVariable(member.getName()).get().getDeclaration().getSpan()));
+            }
+            members.add(member);
+        }
+        LinkedHashMap<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
+        type = new EnumTypeSymbol(name, definedVariables);
+
+        currentScope = currentScope.getParentScope();
+        try {
+            currentScope.declareType(name, type);
+        } catch (TypeAlreadyDeclaredException tade) {
+            errors.add(BindingError.raiseTypeAlreadyDeclared(name, enumDeclarationExpression.getIdendifier().getSpan()));
+        }
+        return new BoundEnumDeclarationExpression(type, members);
     }
 
     private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {

@@ -131,6 +131,9 @@ public class Lexer {
                             if (lookAhead(line) == '=') {
                                 tokens.add(new Token(TokenType.EQUALS_EQUALS, new Location(filePath, lineNumber, cursor)));
                                 next();
+                            } else if (lookAhead(line) == '>') {
+                                tokens.add(new Token(TokenType.THICC_ARROW, new Location(filePath, lineNumber, cursor)));
+                                next();
                             } else {
                                 tokens.add(new Token(TokenType.EQUALS, new Location(filePath, lineNumber, cursor)));
                             }

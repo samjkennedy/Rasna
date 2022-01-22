@@ -36,7 +36,8 @@ public class Parser {
             TokenType.FN_KEYWORD,
             TokenType.STRUCT_KEYWORD,
             TokenType.IMPORT_KEYWORD,
-            TokenType.NAMESPACE_KEYWORD
+            TokenType.NAMESPACE_KEYWORD,
+            TokenType.ENUM_KEYWORD
     );
     private boolean inTopLevel = true;
 
@@ -164,6 +165,8 @@ public class Parser {
                 return parseImportStatement();
             case NAMESPACE_KEYWORD:
                 return parseNamespaceExpression();
+            case ENUM_KEYWORD:
+                return parseEnumDeclaration();
             case EOF_TOKEN:
 
             default:
@@ -171,6 +174,24 @@ public class Parser {
                 matchToken(current().getTokenType());
                 return new NoOpExpression();
         }
+    }
+
+    private Expression parseEnumDeclaration() {
+        IdentifierExpression enumKeyword = matchToken(TokenType.ENUM_KEYWORD);
+
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
+
+        List<IdentifierExpression> members = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+            && current().getTokenType() != TokenType.EOF_TOKEN
+            && current().getTokenType() != TokenType.BAD_TOKEN) {
+            members.add(matchToken(TokenType.IDENTIFIER));
+        }
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
+
+        return new EnumDeclarationExpression(enumKeyword, identifier, openCurly, members, closeCurly);
     }
 
     private Expression parseUnaryExpression() {
@@ -356,7 +377,7 @@ public class Parser {
                 caseExpression = new RangeExpression(caseExpression, toKeyword, terminator, byKeyword, step);
             }
 
-            IdentifierExpression arrow = matchToken(TokenType.ARROW);
+            IdentifierExpression arrow = matchToken(TokenType.THICC_ARROW);
             Expression thenExpression = parseExpression();
 
             //TODO: This is a concern of the rewriter, not the parser. A case could be infinitely nested ors
@@ -373,7 +394,7 @@ public class Parser {
             }
         }
         IdentifierExpression elseKeyword = matchToken(TokenType.ELSE_KEYWORD);
-        IdentifierExpression arrow = matchToken(TokenType.ARROW);
+        IdentifierExpression arrow = matchToken(TokenType.THICC_ARROW);
         Expression thenExpression = parseExpression();
 
         caseExpressions.add(new MatchCaseExpression(elseKeyword, arrow, thenExpression));

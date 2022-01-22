@@ -3,6 +3,7 @@ package com.skennedy.rasna.compilation.llvm;
 import com.skennedy.rasna.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.rasna.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.rasna.exceptions.VariableAlreadyDeclaredException;
+import com.skennedy.rasna.typebinding.EnumTypeSymbol;
 import com.skennedy.rasna.typebinding.FunctionSymbol;
 import com.skennedy.rasna.typebinding.TypeSymbol;
 import com.skennedy.rasna.typebinding.VariableSymbol;
@@ -10,6 +11,7 @@ import org.bytedeco.llvm.LLVM.LLVMTypeRef;
 import org.bytedeco.llvm.LLVM.LLVMValueRef;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 

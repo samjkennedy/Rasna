@@ -43,6 +43,7 @@ public enum TokenType {
     //Syntax
     COMMA(","),
     ARROW("->"),
+    THICC_ARROW("=>"),
     DOT("."),
     COLON(":"),
     COLON_COLON("::"),
@@ -74,6 +75,7 @@ public enum TokenType {
     AS_KEYWORD("as"),
     IS_KEYWORD("is"),
     REF_KEYWORD("ref"),
+    ENUM_KEYWORD("enum"),
 
     //Types
     ANY_KEYWORD("Any"),
