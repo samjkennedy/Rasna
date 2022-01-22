@@ -20,7 +20,7 @@ Variables in Rasna are declared with the syntax:
 ```
 [identifier]: ([Type]) = [initialiser]
 ```
-The `[Type]` is optional if the compiler can determine the type from the initialiser, which is should always be able to.
+The `[Type]` is optional if the compiler can determine the type from the initialiser, which it should always be able to.
 This results in a go-style declaration syntax when omitting the type:
 
 ```nim
