@@ -1,10 +1,4 @@
-enum Color {
-    Red
-    Blue
-    Green
-}
-
 fn main() {
-    r := Color.Red
-    print(r)
-}
+     s := "Hello, World!"
+     print(s)
+ }

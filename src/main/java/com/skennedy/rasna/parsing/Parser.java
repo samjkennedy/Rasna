@@ -477,7 +477,7 @@ public class Parser {
 
         matchToken(TokenType.COLON);
 
-        TypeExpression declarationKeyword = parseTypeExpression();
+        TypeExpression typeExpression = parseTypeExpression();
 
         if (current().getTokenType() == TokenType.EQUALS) {
             IdentifierExpression equals = matchToken(TokenType.EQUALS);
@@ -502,7 +502,7 @@ public class Parser {
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             Expression body = parseExpression();
 
-            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, guard, closeParen, body);
+            return new ForExpression(forKeyword, openParen, typeExpression, identifier, equals, rangeExpression, guard, closeParen, body);
 
         } else if (current().getTokenType() == TokenType.IN_KEYWORD) {
 
@@ -521,7 +521,7 @@ public class Parser {
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             Expression body = parseExpression();
 
-            return new ForInExpression(forKeyword, openParen, declarationKeyword, identifier, inKeyword, iterable, guard, closeParen, body);
+            return new ForInExpression(forKeyword, openParen, typeExpression, identifier, inKeyword, iterable, guard, closeParen, body);
         } else {
             throw new IllegalStateException("Unexpected token in iterator expression: " + current().getTokenType());
         }
