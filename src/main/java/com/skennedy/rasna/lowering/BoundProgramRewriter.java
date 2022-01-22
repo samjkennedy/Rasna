@@ -76,7 +76,12 @@ public abstract class BoundProgramRewriter {
             case NOOP:
             case INCREMENT:
             case TYPE_TEST_EXPRESSION:
+            case C_STYLE_FOR_EXPRESSION:
+            case ENUM_DECLARATION_EXPRESSION:
+            case TYPE_EXPRESSION:
                 return expression;
+            case TUPLE_INDEX_EXPRESSION:
+                return rewriteTupleIndexExpression((BoundTupleIndexExpression) expression);
             case ASSIGNMENT_EXPRESSION:
                 return rewriteAssignmentExpression((BoundAssignmentExpression) expression);
             case BINARY_EXPRESSION:
@@ -127,10 +132,6 @@ public abstract class BoundProgramRewriter {
                 return rewriteCastExpression((BoundCastExpression) expression);
             case DO_WHILE:
                 return rewriteDoWhileExpression((BoundDoWhileExpression) expression);
-            case C_STYLE_FOR_EXPRESSION:
-                return expression;
-            case TUPLE_INDEX_EXPRESSION:
-                return rewriteTupleIndexExpression((BoundTupleIndexExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
