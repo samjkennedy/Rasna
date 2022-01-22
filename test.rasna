@@ -4,38 +4,7 @@ enum Color {
     Green
 }
 
-struct Item {
-    i: Int
-    color: Color
-}
-
-fn getComplexTuple(): (Int, (Bool, Color), Item) {
-    return (1, (true, Color.Red), Item{3, Color.Blue})
-}
-
-fn printName(ref const c: Color) {
-    if (c == Color.Red) {
-        print("Red")
-    }
-    if (c == Color.Blue) {
-        print("Blue")
-    }
-    if (c == Color.Green) {
-        print("Green")
-    }
-}
-
 fn main() {
-
-    i: Int = 2
-    j := getComplexTuple()
-    c := Color.Red
-
-    c->printName()
-    print(i)
-    print(j.0)
-    print((j.1).0)
-    print((j.1).1)
-    print(j.2.i)
-    printName(ref j.2.color)
- }
+    r := Color.Red
+    print(r)
+}
