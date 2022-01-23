@@ -1,6 +1,6 @@
 fn sort(array: Int[] ): Int[] {
 
-   n: Int = len(array)
+   n: Int = array.len
    for (i: Int = 1 to n) {
        for (j: Int = 0 to n - i) {
            if (array[j] > array[j + 1]) {
@@ -14,18 +14,21 @@ fn sort(array: Int[] ): Int[] {
 }
 
 fn main() {
-    arr: Int[] = [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
-    for (a: Int in sort(arr)) print(a)
+    arr := [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
+    for (a in sort(arr)) print(a)
 
-    ints: Int[] = [1, 2, 3]
-    for (i: Int in ints) print(i)
+    ints := [1, 2, 3]
+    for (i in ints) print(i)
 
-    bools: Bool[] = [true, false, true, true, false]
-    for (b: Bool in bools) print(b)
+    bools := [true, false, true, true, false]
+    for (b in bools) print(b)
 
-    strings: String[] = ["Hello", "World"]
-    for (s: String in strings) print(s)
+    strings := ["Hello", "World"]
+    for (s in strings) print(s)
 
-    reals: Real[] = [1.414, 2.718, 3.141]
-    for (r: Real in reals) print(r)
+    reals := [1.414, 2.718, 3.141]
+    for (r in reals) print(r)
+
+    chars := "Hello"
+    for (c in chars) print(c)
 }

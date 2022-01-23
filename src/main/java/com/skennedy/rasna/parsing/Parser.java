@@ -471,9 +471,16 @@ public class Parser {
 
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
 
-        matchToken(TokenType.COLON);
+        TypeExpression typeExpression = null;
+        if (current().getTokenType() == TokenType.COLON) {
+            matchToken(TokenType.COLON);
 
-        TypeExpression typeExpression = parseTypeExpression();
+            if (current().getTokenType() != TokenType.EQUALS) {
+                typeExpression = parseTypeExpression();
+            }
+        } else if (current().getTokenType() != TokenType.EQUALS && current().getTokenType() != TokenType.IN_KEYWORD) {
+            typeExpression = parseTypeExpression();
+        }
 
         if (current().getTokenType() == TokenType.EQUALS) {
             IdentifierExpression equals = matchToken(TokenType.EQUALS);

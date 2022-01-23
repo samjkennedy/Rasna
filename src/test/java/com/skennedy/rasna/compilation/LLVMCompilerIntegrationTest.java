@@ -50,14 +50,14 @@ public class LLVMCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         Binder binder = new Binder();
         BoundProgram boundProgram = binder.bind(program);
 
-        LLVMLowerer lowerer = new LLVMLowerer();
-        boundProgram = lowerer.rewrite(boundProgram);
-
         if (boundProgram.hasErrors()) {
             for (BindingError error : boundProgram.getErrors()) {
                 highlightBindingError(error, code.lines().collect(Collectors.toList()));
             }
         } else {
+
+            LLVMLowerer lowerer = new LLVMLowerer();
+            boundProgram = lowerer.rewrite(boundProgram);
 
             LLVMCompiler compiler = new LLVMCompiler();
             compiler.compile(boundProgram, filename.split("\\.")[0]);

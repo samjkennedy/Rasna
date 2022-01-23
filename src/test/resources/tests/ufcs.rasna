@@ -28,12 +28,13 @@ fn mag(v: Vector): Int {
 }
 
 fn reverse(n: Int): Int {
+    nTmp := n //There is currently a bug with assigning to parameters, so have to save to a new var
     r: Int = 0
     sum: Int = 0
-    while (n > 0) {
-        r = n mod 10
+    while (nTmp > 0) {
+        r = nTmp mod 10
         sum = (sum * 10) + r
-        n = n / 10
+        nTmp = nTmp / 10
     }
     return sum
 }

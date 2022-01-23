@@ -18,6 +18,11 @@ Missing return statement:
 22: }
 23:
 
+Expected type `(String, Int)` but got `(Int)`:
+30:         }
+31:         3 => (1,)
+32:         else => return ("World", 65)
+
 Missing return statement:
 33:     }
 34: }
@@ -27,3 +32,4 @@ Unreachable expression:
 38:     return 1
 39:     print("Unreachable!")
 40: }
+

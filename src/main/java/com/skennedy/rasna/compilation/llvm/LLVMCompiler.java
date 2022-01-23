@@ -51,6 +51,8 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildInBoundsGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildNeg;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildNot;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRet;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRetVoid;
@@ -62,14 +64,10 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildStructGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstArray;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstString;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
-import static org.bytedeco.llvm.global.LLVM.LLVMCreateBinary;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMDeleteBasicBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeBuilder;
@@ -369,6 +367,8 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundArrayAssignmentExpression) expression, builder, context, function);
             case ENUM_DECLARATION_EXPRESSION:
                 return visit((BoundEnumDeclarationExpression) expression, builder, context, function);
+            case UNARY_EXPRESSION:
+                return visit((BoundUnaryExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
@@ -474,9 +474,11 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef tuple = visit(tupleIndexExpression.getTuple(), builder, context, function);
         tuple = ref(builder, tuple, tupleIndexExpression.getTuple().getType(), context);
 
-        BoundLiteralExpression index = tupleIndexExpression.getIndex();
+        int index = (int)tupleIndexExpression.getIndex().getValue();
 
-        return LLVMBuildStructGEP(builder, tuple, (int) index.getValue(), index.getValue().toString());
+        TypeSymbol memberType = ((TupleTypeSymbol) tupleIndexExpression.getTuple().getType()).getTypes().get(index);
+
+        return ref(builder, LLVMBuildStructGEP(builder, tuple, index, String.valueOf(index)), memberType, context);
     }
 
     private LLVMValueRef visit(BoundPositionalAccessExpression positionalAccessExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -869,6 +871,22 @@ public class LLVMCompiler implements Compiler {
             return pointerRef.get();
         }
         throw new IllegalStateException("Variable `" + variable.getName() + "` has not been declared");
+    }
+
+
+    private LLVMValueRef visit(BoundUnaryExpression unaryExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        LLVMValueRef operand = visit(unaryExpression.getOperand(), builder, context, function);
+
+        switch (unaryExpression.getOperator().getBoundOpType()) {
+
+            case NOT:
+                return LLVMBuildNot(builder, operand, "");
+            case NEGATION:
+                return LLVMBuildNeg(builder, operand, "");
+            case ERROR:
+            default:
+                throw new UnsupportedOperationException("Compilation for unary operation `" + unaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for type `" + unaryExpression.getOperand().getType() + "`");
+        }
     }
 
     private LLVMValueRef visit(BoundBinaryExpression binaryExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
