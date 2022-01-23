@@ -409,14 +409,14 @@ public class LLVMCompiler implements Compiler {
                 .put(0, LLVMConstInt(i64Type, 0, 0))
                 .put(1, LLVMConstInt(i64Type, 0, 0));
         LLVMValueRef prev = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arrayinit.begin");
-        LLVMBuildStore(builder, visit(init, builder, context, function), prev);
+        LLVMBuildStore(builder, dereference(builder, visit(init, builder, context, function), ""), prev);
 
         for (int i = 1; i < elements.size(); i++) {
             BoundExpression element = elements.get(i);
             indices = new PointerPointer<>(1)
                     .put(0, LLVMConstInt(i64Type, 1, 0));
             prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
-            LLVMBuildStore(builder, visit(element, builder, context, function), prev);
+            LLVMBuildStore(builder, dereference(builder, visit(element, builder, context, function), ""), prev);
         }
 
         indices = new PointerPointer<>(2)
@@ -999,7 +999,7 @@ public class LLVMCompiler implements Compiler {
         String value = (String) literalExpression.getValue();
         int length = value.length();
 
-        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length);
+        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length + 1); //+1 for the null terminator
         LLVMValueRef compoundliteral = LLVMBuildAlloca(builder, sizeInBytes, ".compoundliteral");
 
         LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
@@ -1014,10 +1014,10 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef prev = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arrayinit.begin");
         LLVMBuildStore(builder, LLVMConstInt(i8Type, init, 0), prev);
 
+        indices = new PointerPointer<>(1)
+                .put(0, LLVMConstInt(i64Type, 1, 0));
         for (int i = 1; i < value.length(); i++) {
             char c = value.charAt(i);
-            indices = new PointerPointer<>(1)
-                    .put(0, LLVMConstInt(i64Type, 1, 0));
             prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
             LLVMBuildStore(builder, LLVMConstInt(i8Type, c, 0), prev);
         }
@@ -1049,11 +1049,15 @@ public class LLVMCompiler implements Compiler {
 
         PointerPointer<Pointer> printArgs;
         if (printExpression.getExpression().getType() == STRING) {
+            res = ref(builder, res, STRING, context);
             //TODO: The actual length of the string is stored in there somewhere, use it
+            LLVMValueRef size = dereference(builder, LLVMBuildStructGEP(builder, res, 0, "size"), "");
             LLVMValueRef string = dereference(builder, LLVMBuildStructGEP(builder, res, 1, "string"), "");
-            printArgs = new PointerPointer<>(2)
-                    .put(0, LLVMBuildGlobalStringPtr(builder, "%s\n", "str"))
-                    .put(1, string);
+            printArgs = new PointerPointer<>(3)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%.*s\n", "str"))
+                    .put(1, size)
+                    .put(2, string);
+            return LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
         } else if (printExpression.getExpression().getType() == CHAR) {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%c\n", "real"))

@@ -1,4 +1,10 @@
+fn putsa(strArr: String[]) {
+    for (s in strArr) {
+        print(s)
+    }
+}
+
 fn main() {
-     s := "Hello, World!"
-     print(s)
- }
+    s := ["Hello", "World!"]
+    putsa(s)
+}
