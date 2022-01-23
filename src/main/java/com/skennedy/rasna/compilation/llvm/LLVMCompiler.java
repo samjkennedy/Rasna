@@ -75,6 +75,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMDoubleTypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMDumpModule;
+import static org.bytedeco.llvm.global.LLVM.LLVMFPToSI;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetBasicBlockTerminator;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
@@ -107,6 +108,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMRealOGT;
 import static org.bytedeco.llvm.global.LLVM.LLVMRealOLE;
 import static org.bytedeco.llvm.global.LLVM.LLVMRealOLT;
 import static org.bytedeco.llvm.global.LLVM.LLVMRealONE;
+import static org.bytedeco.llvm.global.LLVM.LLVMSIToFP;
 import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructCreateNamed;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructSetBody;
@@ -376,9 +378,27 @@ public class LLVMCompiler implements Compiler {
                 return visit((BoundEnumDeclarationExpression) expression, builder, context, function);
             case UNARY_EXPRESSION:
                 return visit((BoundUnaryExpression) expression, builder, context, function);
+            case CAST_EXPRESSION:
+                return visit((BoundCastExpression) expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }
+    }
+
+    private LLVMValueRef visit(BoundCastExpression castExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        LLVMValueRef expression = visit(castExpression.getExpression(), builder, context, function);
+
+        if (castExpression.getExpression().getType() == INT) {
+            if (castExpression.getType() == REAL) {
+                return LLVMBuildCast(builder, LLVMSIToFP, expression, getLlvmTypeRef(REAL, context), "");
+            }
+        }
+        if (castExpression.getExpression().getType() == REAL) {
+            if (castExpression.getType() == INT) {
+                return LLVMBuildCast(builder, LLVMFPToSI, expression, getLlvmTypeRef(INT, context), "");
+            }
+        }
+        throw new UnsupportedOperationException("Casts from `" + castExpression.getExpression().getType() + "` to `" + castExpression.getType() + "` are not supported");
     }
 
     //Doesn't emit any LLVM

@@ -1,5 +1,0 @@
-i := 0
-
-fn main() {
-    print(i)
-}
