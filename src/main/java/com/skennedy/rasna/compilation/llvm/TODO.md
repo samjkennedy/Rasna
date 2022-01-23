@@ -2,8 +2,7 @@
 
 - Global variables
 - Casting
-- Strings (char arrays)
-    - cmdline args
+- cmdline args
 - Write to file
 - Generics
 

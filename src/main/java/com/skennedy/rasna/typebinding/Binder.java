@@ -277,11 +277,11 @@ public class Binder {
         } else if (TypeSymbol.getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
             type = boundOwner.getType();
         } else if (boundOwner.getType() instanceof ArrayTypeSymbol) {
-            type = ((ArrayTypeSymbol) boundOwner.getType()).getType();
+            type = boundOwner.getType();
         } else if (boundOwner.getType() != null) {
             Optional<TypeSymbol> typeSymbol = currentScope.tryLookupType(boundOwner.getType().getName());
             if (typeSymbol.isEmpty()) {
-                throw new IllegalStateException("No such type " + boundOwner.getType().getName() + " in scope, possibly a parser bug");
+                throw new IllegalStateException("No such type " + boundOwner.getType() + " in scope, possibly a parser bug");
             }
             type = typeSymbol.get();
         } else {
@@ -529,8 +529,15 @@ public class Binder {
 
         TypeSymbol type = parseType(forExpression.getTypeExpression());
 
-        if (!type.isAssignableFrom(range.getType())) {
-            errors.add(BindingError.raiseTypeMismatch(type, range.getType(), forExpression.getRangeExpression().getSpan()));
+        TypeSymbol rangeType = range.getType();
+
+        //Type inference
+        if (type == UNIT) {
+            type = rangeType;
+        }
+
+        if (!type.isAssignableFrom(rangeType)) {
+            errors.add(BindingError.raiseTypeMismatch(type, rangeType, forExpression.getRangeExpression().getSpan()));
         }
 
         VariableSymbol variable = buildVariableSymbol(type, forExpression.getIdentifier(), null, true, forExpression);
@@ -575,18 +582,28 @@ public class Binder {
 
         BoundExpression iterable = bind(forInExpression.getIterable());
 
-        TypeSymbol type = parseType(forInExpression.getTypeExpression());
+        TypeSymbol iteratorType = parseType(forInExpression.getTypeExpression());
 
-        if (!(iterable.getType() == STRING && type == CHAR)) {
-            if (!(iterable.getType() instanceof ArrayTypeSymbol)) {
-                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
-                return new BoundErrorExpression();
-            }
-            if (!type.isAssignableFrom(((ArrayTypeSymbol) iterable.getType()).getType())) {
-                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+        //Type inference
+        TypeSymbol iterableType = iterable.getType();
+        if (iteratorType == UNIT) {
+            if (iterableType == STRING) {
+                iteratorType = CHAR;
+            } else {
+                iteratorType = ((ArrayTypeSymbol) iterableType).getType();
             }
         }
-        VariableSymbol variable = buildVariableSymbol(type, forInExpression.getIdentifier(), null, false, forInExpression);
+
+        if (!(iterableType == STRING && iteratorType == CHAR)) {
+            if (!(iterableType instanceof ArrayTypeSymbol)) {
+                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(iteratorType), iterableType, forInExpression.getIterable().getSpan()));
+                return new BoundErrorExpression();
+            }
+            if (!iteratorType.isAssignableFrom(((ArrayTypeSymbol) iterableType).getType())) {
+                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(iteratorType), iterableType, forInExpression.getIterable().getSpan()));
+            }
+        }
+        VariableSymbol variable = buildVariableSymbol(iteratorType, forInExpression.getIdentifier(), null, false, forInExpression);
 
         try {
             currentScope.declareVariable((String) forInExpression.getIdentifier().getValue(), variable);

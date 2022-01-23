@@ -179,7 +179,7 @@ public class Rasna {
                             break;
                         case LLVM:
                             //TODO: This is windows specific
-                            process = Runtime.getRuntime().exec(fileName + ".exe");
+                            process = Runtime.getRuntime().exec(fileName + ".exe foo bar baz");
                             break;
                         default:
                             throw new IllegalStateException("Unexpected compile target: " + compileTarget);

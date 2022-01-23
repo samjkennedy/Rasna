@@ -2,6 +2,7 @@ package com.skennedy.rasna.typebinding;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TupleTypeSymbol extends TypeSymbol {
@@ -9,7 +10,9 @@ public class TupleTypeSymbol extends TypeSymbol {
     private final List<TypeSymbol> types;
 
     public TupleTypeSymbol(List<TypeSymbol> types) {
-        super(buildName(types), new LinkedHashMap<>());
+        super(buildName(types), new LinkedHashMap<>(new LinkedHashMap<>(Map.of(
+                "len", new VariableSymbol("len", INT, null, true, null)
+        ))));
         this.types = types;
     }
 
