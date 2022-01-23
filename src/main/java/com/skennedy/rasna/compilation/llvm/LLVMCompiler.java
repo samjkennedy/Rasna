@@ -168,8 +168,15 @@ public class LLVMCompiler implements Compiler {
                 BoundFunctionDeclarationExpression functionDeclarationExpression = (BoundFunctionDeclarationExpression) expression;
 
                 if (functionDeclarationExpression.getFunctionSymbol().getName().equals("main")) {
-                    //TODO: main args
-                    LLVMTypeRef mainType = LLVMFunctionType(i32Type, LLVMVoidType(), /* argumentCount */ 0, /* isVariadic */ 0);
+
+                    //TODO: need an entry method that takes in argc argv and transforms it to a Rasna String[] and calls main with it
+
+                    LLVMTypeRef mainType;
+                    if (functionDeclarationExpression.getFunctionSymbol().getArguments().size() == 1) {
+                        mainType = LLVMFunctionType(i32Type, getLlvmTypeRef(new ArrayTypeSymbol(STRING), context), /* argumentCount */ 1, /* isVariadic */ 0);
+                    } else {
+                        mainType = LLVMFunctionType(i32Type, LLVMVoidType(), /* argumentCount */ 0, /* isVariadic */ 0);
+                    }
 
                     LLVMValueRef main = LLVMAddFunction(module, "main", mainType);
                     LLVMSetFunctionCallConv(main, LLVMCCallConv);
@@ -474,7 +481,7 @@ public class LLVMCompiler implements Compiler {
         LLVMValueRef tuple = visit(tupleIndexExpression.getTuple(), builder, context, function);
         tuple = ref(builder, tuple, tupleIndexExpression.getTuple().getType(), context);
 
-        int index = (int)tupleIndexExpression.getIndex().getValue();
+        int index = (int) tupleIndexExpression.getIndex().getValue();
 
         TypeSymbol memberType = ((TupleTypeSymbol) tupleIndexExpression.getTuple().getType()).getTypes().get(index);
 
@@ -1107,7 +1114,13 @@ public class LLVMCompiler implements Compiler {
                 .collect(Collectors.toList());
 
         if (argumentTypes.size() == 1) {
-            throw new UnsupportedOperationException("Main method args are not yet implemented in LLVM");
+            List<BoundFunctionParameterExpression> arguments = mainMethodDeclaration.getArguments();
+            BoundFunctionParameterExpression argument = arguments.get(0);
+            LLVMValueRef val = LLVMGetParam(function, 0);
+
+            scope.declareVariable(argument.getArgument(), val);
+        } else if (!argumentTypes.isEmpty()) {
+            throw new IllegalStateException("Main should only take one arg `String[]`");
         }
 
         for (BoundExpression expression : mainMethodDeclaration.getBody().getExpressions()) {
