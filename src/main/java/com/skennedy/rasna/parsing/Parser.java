@@ -112,10 +112,6 @@ public class Parser {
                 return parseTypeofIntrinsic();
             case PRINT_INTR:
                 return parsePrintIntrinsic();
-            case LEN_INTR:
-                return parseLenIntrinsic();
-            case MAP_INTR:
-                return parseMapIntrinsic();
             case IF_KEYWORD:
                 return parseIfExpression();
             case WHILE_KEYWORD:
@@ -477,7 +473,7 @@ public class Parser {
 
         matchToken(TokenType.COLON);
 
-        TypeExpression declarationKeyword = parseTypeExpression();
+        TypeExpression typeExpression = parseTypeExpression();
 
         if (current().getTokenType() == TokenType.EQUALS) {
             IdentifierExpression equals = matchToken(TokenType.EQUALS);
@@ -502,7 +498,7 @@ public class Parser {
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             Expression body = parseExpression();
 
-            return new ForExpression(forKeyword, openParen, declarationKeyword, identifier, equals, rangeExpression, guard, closeParen, body);
+            return new ForExpression(forKeyword, openParen, typeExpression, identifier, equals, rangeExpression, guard, closeParen, body);
 
         } else if (current().getTokenType() == TokenType.IN_KEYWORD) {
 
@@ -521,7 +517,7 @@ public class Parser {
             IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
             Expression body = parseExpression();
 
-            return new ForInExpression(forKeyword, openParen, declarationKeyword, identifier, inKeyword, iterable, guard, closeParen, body);
+            return new ForInExpression(forKeyword, openParen, typeExpression, identifier, inKeyword, iterable, guard, closeParen, body);
         } else {
             throw new IllegalStateException("Unexpected token in iterator expression: " + current().getTokenType());
         }
@@ -978,7 +974,6 @@ public class Parser {
         return left;
     }
 
-    // print(<EXPRESSION>)
     private Expression parsePrintIntrinsic() {
 
         IdentifierExpression printInstr = matchToken(TokenType.PRINT_INTR);
@@ -987,36 +982,6 @@ public class Parser {
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
         return new PrintExpression(printInstr, openParen, expression, closeParen);
-    }
-
-
-    private Expression parseLenIntrinsic() {
-        IdentifierExpression len = matchToken(TokenType.LEN_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        Expression expression = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new ArrayLengthExpression(len, openParen, expression, closeParen);
-    }
-
-//    private Expression parseReduceIntrinsic() {
-//        IdentifierExpression reduce = matchToken(TokenType.REDUCE_INTR);
-//        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-//        Expression expression = parseExpression();
-//        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-//
-//        return new ReduceExpression(reduce, openParen, expression, closeParen);
-//    }
-
-    private Expression parseMapIntrinsic() {
-        IdentifierExpression map = matchToken(TokenType.MAP_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        Expression lambda = parseLambdaExpression();
-        IdentifierExpression comma = matchToken(TokenType.COMMA);
-        Expression mapFunction = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new MapExpression(map, openParen, lambda, comma, mapFunction, closeParen);
     }
 
     private Expression parseTypeofIntrinsic() {

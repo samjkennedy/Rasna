@@ -1,17 +1,10 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-%Item = type { i32, i32 }
-
 @str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 @formatStr = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
-@Red = private unnamed_addr constant [4 x i8] c"Red\00", align 1
-@str.1 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
-@Blue = private unnamed_addr constant [5 x i8] c"Blue\00", align 1
-@str.2 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
-@Green = private unnamed_addr constant [6 x i8] c"Green\00", align 1
-@str.3 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
-@str.4 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+@real = private unnamed_addr constant [4 x i8] c"%c\0A\00", align 1
+@real.1 = private unnamed_addr constant [4 x i8] c"%c\0A\00", align 1
 
 declare i32 @printf(i8*, ...)
 
@@ -22,98 +15,100 @@ entry:
   ret void
 }
 
-define { i32, { i1, i32 }, %Item } @getComplexTuple() {
-entry:
-  %getComplexTuple-retval = alloca { i32, { i1, i32 }, %Item }, align 8
-  %"tmp.(Int, (Bool, Color), Item)" = alloca { i32, { i1, i32 }, %Item }, align 8
-  %0 = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %"tmp.(Int, (Bool, Color), Item)", i32 0, i32 0
-  store i32 1, i32* %0, align 4
-  %1 = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %"tmp.(Int, (Bool, Color), Item)", i32 0, i32 1
-  %"tmp.(Bool, Color)" = alloca { i1, i32 }, align 8
-  %2 = getelementptr inbounds { i1, i32 }, { i1, i32 }* %"tmp.(Bool, Color)", i32 0, i32 0
-  store i1 true, i1* %2, align 1
-  %3 = getelementptr inbounds { i1, i32 }, { i1, i32 }* %"tmp.(Bool, Color)", i32 0, i32 1
-  store i32 0, i32* %3, align 4
-  %"tmp.(Bool, Color)1" = load { i1, i32 }, { i1, i32 }* %"tmp.(Bool, Color)", align 4
-  store { i1, i32 } %"tmp.(Bool, Color)1", { i1, i32 }* %1, align 4
-  %4 = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %"tmp.(Int, (Bool, Color), Item)", i32 0, i32 2
-  %tmp.Item = alloca %Item, align 8
-  %i = getelementptr inbounds %Item, %Item* %tmp.Item, i32 0, i32 0
-  store i32 3, i32* %i, align 4
-  %color = getelementptr inbounds %Item, %Item* %tmp.Item, i32 0, i32 1
-  store i32 1, i32* %color, align 4
-  %tmp.Item2 = load %Item, %Item* %tmp.Item, align 4
-  store %Item %tmp.Item2, %Item* %4, align 4
-  %"tmp.(Int, (Bool, Color), Item)3" = load { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %"tmp.(Int, (Bool, Color), Item)", align 4
-  store { i32, { i1, i32 }, %Item } %"tmp.(Int, (Bool, Color), Item)3", { i32, { i1, i32 }, %Item }* %getComplexTuple-retval, align 4
-  br label %return
-
-return:                                           ; preds = %entry
-  %getComplexTuple-retval4 = load { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %getComplexTuple-retval, align 4
-  ret { i32, { i1, i32 }, %Item } %getComplexTuple-retval4
-}
-
-define void @printName(i32* %0) {
-entry:
-  %lhs = load i32, i32* %0, align 4
-  %1 = icmp eq i32 %lhs, 0
-  br i1 %1, label %if.then, label %if.end
-
-if.then:                                          ; preds = %entry
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str.1, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @Red, i32 0, i32 0))
-  br label %if.end
-
-if.end:                                           ; preds = %if.then, %entry
-  %lhs3 = load i32, i32* %0, align 4
-  %2 = icmp eq i32 %lhs3, 1
-  br i1 %2, label %if.then1, label %if.end2
-
-if.then1:                                         ; preds = %if.end
-  %printcall4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str.2, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @Blue, i32 0, i32 0))
-  br label %if.end2
-
-if.end2:                                          ; preds = %if.then1, %if.end
-  %lhs7 = load i32, i32* %0, align 4
-  %3 = icmp eq i32 %lhs7, 2
-  br i1 %3, label %if.then5, label %if.end6
-
-if.then5:                                         ; preds = %if.end2
-  %printcall8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str.3, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @Green, i32 0, i32 0))
-  br label %if.end6
-
-if.end6:                                          ; preds = %if.then5, %if.end2
-  ret void
-}
-
 define i32 @main() {
 entry:
-  %i = alloca i32, align 4
-  store i32 2, i32* %i, align 4
-  %j = alloca { i32, { i1, i32 }, %Item }, align 8
-  %getComplexTuple = call { i32, { i1, i32 }, %Item } @getComplexTuple()
-  store { i32, { i1, i32 }, %Item } %getComplexTuple, { i32, { i1, i32 }, %Item }* %j, align 4
-  %c = alloca i32, align 4
-  store i32 0, i32* %c, align 4
-  call void @printName(i32* %c)
-  %print = load i32, i32* %i, align 4
-  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %print)
-  %"0" = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %j, i32 0, i32 0
-  %print1 = load i32, i32* %"0", align 4
-  %printcall2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %print1)
-  %"1" = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %j, i32 0, i32 1
-  %"03" = getelementptr inbounds { i1, i32 }, { i1, i32 }* %"1", i32 0, i32 0
-  %print4 = load i1, i1* %"03", align 1
-  call void @printb(i1 %print4)
-  %"15" = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %j, i32 0, i32 1
-  %"16" = getelementptr inbounds { i1, i32 }, { i1, i32 }* %"15", i32 0, i32 1
-  %print7 = load i32, i32* %"16", align 4
-  %printcall8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str.4, i32 0, i32 0), i32 %print7)
-  %"2" = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %j, i32 0, i32 2
-  %i9 = getelementptr inbounds %Item, %Item* %"2", i32 0, i32 0
-  %print10 = load i32, i32* %i9, align 4
-  %printcall11 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @formatStr, i32 0, i32 0), i32 %print10)
-  %"212" = getelementptr inbounds { i32, { i1, i32 }, %Item }, { i32, { i1, i32 }, %Item }* %j, i32 0, i32 2
-  %color = getelementptr inbounds %Item, %Item* %"212", i32 0, i32 1
-  call void @printName(i32* %color)
+  %s = alloca { i32, i8* }, align 8
+  %.compoundliteral = alloca [6 x i8], align 1
+  %tmp.array.struct = alloca { i32, i8* }, align 8
+  %arrayinit.begin = getelementptr inbounds [6 x i8], [6 x i8]* %.compoundliteral, i64 0, i64 0
+  store i8 72, i8* %arrayinit.begin, align 1
+  %arrayinit.element = getelementptr inbounds i8, i8* %arrayinit.begin, i64 1
+  store i8 101, i8* %arrayinit.element, align 1
+  %arrayinit.element1 = getelementptr inbounds i8, i8* %arrayinit.element, i64 1
+  store i8 108, i8* %arrayinit.element1, align 1
+  %arrayinit.element2 = getelementptr inbounds i8, i8* %arrayinit.element1, i64 1
+  store i8 108, i8* %arrayinit.element2, align 1
+  %arrayinit.element3 = getelementptr inbounds i8, i8* %arrayinit.element2, i64 1
+  store i8 111, i8* %arrayinit.element3, align 1
+  %arraydecay = getelementptr inbounds [6 x i8], [6 x i8]* %.compoundliteral, i64 0, i64 0
+  %size = getelementptr inbounds { i32, i8* }, { i32, i8* }* %tmp.array.struct, i32 0, i32 0
+  store i32 5, i32* %size, align 4
+  %data = getelementptr inbounds { i32, i8* }, { i32, i8* }* %tmp.array.struct, i32 0, i32 1
+  store i8* %arraydecay, i8** %data, align 8
+  %val = load { i32, i8* }, { i32, i8* }* %tmp.array.struct, align 8
+  store { i32, i8* } %val, { i32, i8* }* %s, align 8
+  %chars = alloca { i32, i8* }, align 8
+  %val4 = load { i32, i8* }, { i32, i8* }* %s, align 8
+  store { i32, i8* } %val4, { i32, i8* }* %chars, align 8
+  %array-length-972c9f9a-6470-4612-8555-c3a4dbc7da4b = alloca i32, align 4
+  %size5 = getelementptr inbounds { i32, i8* }, { i32, i8* }* %s, i32 0, i32 0
+  %val6 = load i32, i32* %size5, align 4
+  store i32 %val6, i32* %array-length-972c9f9a-6470-4612-8555-c3a4dbc7da4b, align 4
+  %iteration-counter-f86bf3aa-af22-4bac-a2b9-bee6b701c006 = alloca i32, align 4
+  store i32 0, i32* %iteration-counter-f86bf3aa-af22-4bac-a2b9-bee6b701c006, align 4
+  %c = alloca i8, align 1
+  %arr = getelementptr inbounds { i32, i8* }, { i32, i8* }* %s, i32 0, i32 1
+  %arr7 = load i8*, i8** %arr, align 8
+  %arrayidx = getelementptr inbounds i8, i8* %arr7, i32 0
+  %0 = load i8, i8* %arrayidx, align 1
+  store i8 %0, i8* %c, align 1
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.body, %entry
+  %lhs = load i32, i32* %iteration-counter-f86bf3aa-af22-4bac-a2b9-bee6b701c006, align 4
+  %rhs = load i32, i32* %array-length-972c9f9a-6470-4612-8555-c3a4dbc7da4b, align 4
+  %1 = icmp slt i32 %lhs, %rhs
+  br i1 %1, label %while.body, label %while.exit
+
+while.body:                                       ; preds = %while.cond
+  %idx = load i32, i32* %iteration-counter-f86bf3aa-af22-4bac-a2b9-bee6b701c006, align 4
+  %arr8 = getelementptr inbounds { i32, i8* }, { i32, i8* }* %s, i32 0, i32 1
+  %arr9 = load i8*, i8** %arr8, align 8
+  %arrayidx10 = getelementptr inbounds i8, i8* %arr9, i32 %idx
+  %2 = load i8, i8* %arrayidx10, align 1
+  store i8 %2, i8* %c, align 1
+  %print = load i8, i8* %c, align 1
+  %printcall = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real, i32 0, i32 0), i8 %print)
+  %load = load i32, i32* %iteration-counter-f86bf3aa-af22-4bac-a2b9-bee6b701c006, align 4
+  %incrtmp = add i32 %load, 1
+  store i32 %incrtmp, i32* %iteration-counter-f86bf3aa-af22-4bac-a2b9-bee6b701c006, align 4
+  br label %while.cond
+
+while.exit:                                       ; preds = %while.cond
+  %array-length-9dae7c61-d040-4d6f-9127-533962e5a6fd = alloca i32, align 4
+  %size11 = getelementptr inbounds { i32, i8* }, { i32, i8* }* %chars, i32 0, i32 0
+  %val12 = load i32, i32* %size11, align 4
+  store i32 %val12, i32* %array-length-9dae7c61-d040-4d6f-9127-533962e5a6fd, align 4
+  %iteration-counter-a9c145f7-28ec-4f6d-8f24-dcfa95a620c8 = alloca i32, align 4
+  store i32 0, i32* %iteration-counter-a9c145f7-28ec-4f6d-8f24-dcfa95a620c8, align 4
+  %char = alloca i8, align 1
+  %arr13 = getelementptr inbounds { i32, i8* }, { i32, i8* }* %chars, i32 0, i32 1
+  %arr14 = load i8*, i8** %arr13, align 8
+  %arrayidx15 = getelementptr inbounds i8, i8* %arr14, i32 0
+  %3 = load i8, i8* %arrayidx15, align 1
+  store i8 %3, i8* %char, align 1
+  br label %while.cond16
+
+while.cond16:                                     ; preds = %while.body17, %while.exit
+  %lhs19 = load i32, i32* %iteration-counter-a9c145f7-28ec-4f6d-8f24-dcfa95a620c8, align 4
+  %rhs20 = load i32, i32* %array-length-9dae7c61-d040-4d6f-9127-533962e5a6fd, align 4
+  %4 = icmp slt i32 %lhs19, %rhs20
+  br i1 %4, label %while.body17, label %while.exit18
+
+while.body17:                                     ; preds = %while.cond16
+  %idx21 = load i32, i32* %iteration-counter-a9c145f7-28ec-4f6d-8f24-dcfa95a620c8, align 4
+  %arr22 = getelementptr inbounds { i32, i8* }, { i32, i8* }* %chars, i32 0, i32 1
+  %arr23 = load i8*, i8** %arr22, align 8
+  %arrayidx24 = getelementptr inbounds i8, i8* %arr23, i32 %idx21
+  %5 = load i8, i8* %arrayidx24, align 1
+  store i8 %5, i8* %char, align 1
+  %print25 = load i8, i8* %char, align 1
+  %printcall26 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @real.1, i32 0, i32 0), i8 %print25)
+  %load27 = load i32, i32* %iteration-counter-a9c145f7-28ec-4f6d-8f24-dcfa95a620c8, align 4
+  %incrtmp28 = add i32 %load27, 1
+  store i32 %incrtmp28, i32* %iteration-counter-a9c145f7-28ec-4f6d-8f24-dcfa95a620c8, align 4
+  br label %while.cond16
+
+while.exit18:                                     ; preds = %while.cond16
   ret i32 0
 }

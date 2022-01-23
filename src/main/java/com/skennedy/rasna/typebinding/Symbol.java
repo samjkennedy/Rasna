@@ -21,7 +21,7 @@ public abstract class Symbol {
         if (this == o) return true;
         if (!(o instanceof Symbol)) return false;
         Symbol symbol = (Symbol) o;
-        return Objects.equals(getName(), symbol.getName());
+        return Objects.equals(toString(), symbol.toString());
     }
 
     @Override

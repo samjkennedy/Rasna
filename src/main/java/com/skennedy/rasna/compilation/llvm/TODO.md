@@ -1,11 +1,10 @@
 ## LLVM TODO
 
 - Global variables
-- Const variables
 - Casting
-- Arrays
-- Strings
+- Strings (char arrays)
     - cmdline args
+- Write to file
 - Generics
 
 - Currying?

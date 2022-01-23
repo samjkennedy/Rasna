@@ -62,10 +62,14 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildStructGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSub;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstArray;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstString;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
+import static org.bytedeco.llvm.global.LLVM.LLVMCreateBinary;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMDeleteBasicBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeBuilder;
@@ -372,7 +376,6 @@ public class LLVMCompiler implements Compiler {
 
     //Doesn't emit any LLVM
     private LLVMValueRef visit(BoundEnumDeclarationExpression enumDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-
         return null;
     }
 
@@ -388,8 +391,6 @@ public class LLVMCompiler implements Compiler {
         LLVMTypeRef arrayStructType = getLlvmTypeRef(arrayLiteralExpression.getType(), context);
         LLVMTypeRef dataType = LLVMPointerType(getLlvmTypeRef(arrayLiteralExpression.getType(), context), 0);
 
-        LLVMValueRef arr = LLVMBuildAlloca(builder, dataType, "arr");
-
         int elementCount = arrayLiteralExpression.getElements().size();
 
         LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(((ArrayTypeSymbol) arrayLiteralExpression.getType()).getType(), context), elementCount);
@@ -397,8 +398,9 @@ public class LLVMCompiler implements Compiler {
 
         List<BoundExpression> elements = arrayLiteralExpression.getElements();
 
+        LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
         if (elements.isEmpty()) {
-            return arr;
+            return structPtr;
         }
 
         //Populate the array
@@ -407,22 +409,22 @@ public class LLVMCompiler implements Compiler {
                 .put(0, LLVMConstInt(i64Type, 0, 0))
                 .put(1, LLVMConstInt(i64Type, 0, 0));
         LLVMValueRef prev = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arrayinit.begin");
-        LLVMBuildStore(builder, visit(init, builder, context, function), prev);
+        LLVMBuildStore(builder, dereference(builder, visit(init, builder, context, function), ""), prev);
 
         for (int i = 1; i < elements.size(); i++) {
             BoundExpression element = elements.get(i);
             indices = new PointerPointer<>(1)
                     .put(0, LLVMConstInt(i64Type, 1, 0));
             prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
-            LLVMBuildStore(builder, visit(element, builder, context, function), prev);
+            LLVMBuildStore(builder, dereference(builder, visit(element, builder, context, function), ""), prev);
         }
+
         indices = new PointerPointer<>(2)
                 .put(0, LLVMConstInt(i64Type, 0, 0))
                 .put(1, LLVMConstInt(i64Type, 0, 0));
         LLVMValueRef arraydecay = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arraydecay");
 
         //Build the struct that houses the array
-        LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
 
         LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
         LLVMValueRef sizeVal = LLVMConstInt(i32Type, arrayLiteralExpression.getElements().size(), 0);
@@ -783,11 +785,14 @@ public class LLVMCompiler implements Compiler {
         LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
 
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
+        scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
+        if (variableDeclarationExpression.getInitialiser() == null) {
+            return ptr;
+        }
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
 
         val = dereference(builder, val, "val");
-        scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
         return LLVMBuildStore(builder, val, ptr);
     }
@@ -807,6 +812,14 @@ public class LLVMCompiler implements Compiler {
         }
         if (typeSymbol == REAL) {
             return realType;
+        }
+        if (typeSymbol == STRING) {
+
+            PointerPointer<Pointer> structTypes = new PointerPointer<>(2)
+                    .put(0, i32Type)
+                    .put(1, LLVMPointerType(i8Type, 0)); //TODO: Doesn't support beyond ascii);
+
+            return LLVMStructTypeInContext(context, structTypes, 2, 0);
         }
         if (typeSymbol instanceof TupleTypeSymbol) {
             TupleTypeSymbol tupleTypeSymbol = (TupleTypeSymbol) typeSymbol;
@@ -963,7 +976,7 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundLiteralExpression literalExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        if (literalExpression.getType() == TypeSymbol.BOOL) {
+        if (literalExpression.getType() == BOOL) {
             return LLVMConstInt(i1Type, (boolean) literalExpression.getValue() ? 1 : 0, 0);
         }
         if (literalExpression.getType() == CHAR) {
@@ -972,14 +985,55 @@ public class LLVMCompiler implements Compiler {
         if (literalExpression.getType() == INT) {
             return LLVMConstInt(i32Type, (int) literalExpression.getValue(), 0);
         }
-        if (literalExpression.getType() == TypeSymbol.REAL) {
+        if (literalExpression.getType() == REAL) {
             return LLVMConstReal(realType, (double) literalExpression.getValue());
         }
-        if (literalExpression.getType() == TypeSymbol.STRING) {
-            String value = (String) literalExpression.getValue();
-            return LLVMBuildGlobalStringPtr(builder, value, value); //TODO: This needs to be a pointer but not global
+        if (literalExpression.getType() == STRING) {
+            return buildString(literalExpression, builder, context);
         }
         throw new UnsupportedOperationException("Literals of type `" + literalExpression.getType() + "` are not yet supported in LLVM");
+    }
+
+    private LLVMValueRef buildString(BoundLiteralExpression literalExpression, LLVMBuilderRef builder, LLVMContextRef context) {
+        LLVMTypeRef arrayStructType = getLlvmTypeRef(new ArrayTypeSymbol(CHAR), context);
+        String value = (String) literalExpression.getValue();
+        int length = value.length();
+
+        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length + 1); //+1 for the null terminator
+        LLVMValueRef compoundliteral = LLVMBuildAlloca(builder, sizeInBytes, ".compoundliteral");
+
+        LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
+        if (value.isEmpty()) {
+            return structPtr;
+        }
+
+        char init = value.charAt(0);
+        PointerPointer<Pointer> indices = new PointerPointer<>(2)
+                .put(0, LLVMConstInt(i64Type, 0, 0))
+                .put(1, LLVMConstInt(i64Type, 0, 0));
+        LLVMValueRef prev = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arrayinit.begin");
+        LLVMBuildStore(builder, LLVMConstInt(i8Type, init, 0), prev);
+
+        indices = new PointerPointer<>(1)
+                .put(0, LLVMConstInt(i64Type, 1, 0));
+        for (int i = 1; i < value.length(); i++) {
+            char c = value.charAt(i);
+            prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
+            LLVMBuildStore(builder, LLVMConstInt(i8Type, c, 0), prev);
+        }
+
+        indices = new PointerPointer<>(2)
+                .put(0, LLVMConstInt(i64Type, 0, 0))
+                .put(1, LLVMConstInt(i64Type, 0, 0));
+        LLVMValueRef arraydecay = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arraydecay");
+
+        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
+        LLVMValueRef sizeVal = LLVMConstInt(i32Type, length, 0);
+        LLVMBuildStore(builder, sizeVal, sizePtr);
+        LLVMValueRef dataPtrPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
+        LLVMBuildStore(builder, arraydecay, dataPtrPtr);
+
+        return structPtr;
     }
 
     private LLVMValueRef visit(BoundPrintExpression printExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -995,9 +1049,15 @@ public class LLVMCompiler implements Compiler {
 
         PointerPointer<Pointer> printArgs;
         if (printExpression.getExpression().getType() == STRING) {
-            printArgs = new PointerPointer<>(2)
-                    .put(0, LLVMBuildGlobalStringPtr(builder, "%s\n", "str"))
-                    .put(1, res);
+            res = ref(builder, res, STRING, context);
+            //TODO: The actual length of the string is stored in there somewhere, use it
+            LLVMValueRef size = dereference(builder, LLVMBuildStructGEP(builder, res, 0, "size"), "");
+            LLVMValueRef string = dereference(builder, LLVMBuildStructGEP(builder, res, 1, "string"), "");
+            printArgs = new PointerPointer<>(3)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%.*s\n", "str"))
+                    .put(1, size)
+                    .put(2, string);
+            return LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
         } else if (printExpression.getExpression().getType() == CHAR) {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%c\n", "real"))

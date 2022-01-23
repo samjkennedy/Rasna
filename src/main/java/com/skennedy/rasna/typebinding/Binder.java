@@ -23,7 +23,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
+import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
+import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
 
 public class Binder {
@@ -140,10 +143,19 @@ public class Binder {
             errors.add(BindingError.raise("Expected a tuple type but got `" + boundTuple.getType() + "` instead", tupleIndexExpression.getTuple().getSpan()));
             return new BoundErrorExpression();
         }
+        BoundLiteralExpression boundIndex = new BoundLiteralExpression(tupleIndexExpression.getIndex().getValue());
+        if (boundIndex.getType() == REAL) {
+            errors.add(BindingError.raise("Expected type `Int` but got `Real`. Did you mean to access a nested tuple? If so wrap the index in parentheses, i.e. `(t.0).0)`" ,tupleIndexExpression.getIndex().getSpan()));
+            return new BoundErrorExpression();
+        }
+        if (!(tupleIndexExpression.getIndex().getValue() instanceof Integer)) {
+            errors.add(BindingError.raiseTypeMismatch(INT, boundIndex.getType(), tupleIndexExpression.getIndex().getSpan()));
+            return new BoundErrorExpression();
+        }
         if (((TupleTypeSymbol) boundTuple.getType()).getTypes().size() <= (int) tupleIndexExpression.getIndex().getValue()) {
             errors.add(BindingError.raiseOutOfBounds((int) tupleIndexExpression.getIndex().getValue(), (TupleTypeSymbol) boundTuple.getType(), tupleIndexExpression.getSpan()));
         }
-        return new BoundTupleIndexExpression(boundTuple, new BoundLiteralExpression(tupleIndexExpression.getIndex().getValue()));
+        return new BoundTupleIndexExpression(boundTuple, boundIndex);
     }
 
     private BoundExpression bindTypeTestExpression(TypeTestExpression typeTestExpression) {
@@ -565,12 +577,14 @@ public class Binder {
 
         TypeSymbol type = parseType(forInExpression.getTypeExpression());
 
-        if (!(iterable.getType() instanceof ArrayTypeSymbol)) {
-            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
-            return new BoundErrorExpression();
-        }
-        if (!type.isAssignableFrom(((ArrayTypeSymbol) iterable.getType()).getType())) {
-            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+        if (!(iterable.getType() == STRING && type == CHAR)) {
+            if (!(iterable.getType() instanceof ArrayTypeSymbol)) {
+                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+                return new BoundErrorExpression();
+            }
+            if (!type.isAssignableFrom(((ArrayTypeSymbol) iterable.getType()).getType())) {
+                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+            }
         }
         VariableSymbol variable = buildVariableSymbol(type, forInExpression.getIdentifier(), null, false, forInExpression);
 
@@ -997,10 +1011,10 @@ public class Binder {
             } else {
                 BoundFunctionParameterExpression argumentExpression = arguments.get(0);
                 if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
-                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
+                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getTypeExpression().getSpan()));
                 }
                 for (int i = 1; i < arguments.size(); i++) {
-                    errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getSpan()));
+                    errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getTypeExpression().getSpan()));
                 }
             }
         }
