@@ -1,6 +1,7 @@
 package com.skennedy.rasna.typebinding;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import static com.skennedy.rasna.typebinding.SymbolType.VARIABLE;
@@ -10,19 +11,9 @@ public class ArrayTypeSymbol extends TypeSymbol {
     private final TypeSymbol type;
 
     public ArrayTypeSymbol(TypeSymbol type) {
-        super(type.getName(),
-                //TODO: split, reduce, etc etc
-                new LinkedHashMap<>()
-        );
+        super(type.getName(), new LinkedHashMap<>(Map.of("len", new VariableSymbol("len", INT, null, true, null))));
         this.type = type;
     }
-
-    //private static final VariableSymbol arrayLen = new VariableSymbol("size", TypeSymbol.INT, null, false, declaration);
-
-//    private static final TreeMap<String, VariableSymbol> intrinsicMemberVariables = TreeMap.of(
-//            "size", arrayLen
-//    );
-
 
     @Override
     public boolean equals(Object o) {
@@ -34,6 +25,17 @@ public class ArrayTypeSymbol extends TypeSymbol {
         }
         ArrayTypeSymbol that = (ArrayTypeSymbol) o;
         return getType() == that.getType();
+    }
+
+    @Override
+    public boolean isAssignableFrom(TypeSymbol other) {
+        boolean isAssignable = super.isAssignableFrom(other);
+
+        if (isAssignable) {
+            return true;
+        }
+
+        return other == STRING && type == CHAR;
     }
 
     @Override

@@ -23,8 +23,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
+import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
 
 public class Binder {
@@ -575,12 +577,14 @@ public class Binder {
 
         TypeSymbol type = parseType(forInExpression.getTypeExpression());
 
-        if (!(iterable.getType() instanceof ArrayTypeSymbol)) {
-            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
-            return new BoundErrorExpression();
-        }
-        if (!type.isAssignableFrom(((ArrayTypeSymbol) iterable.getType()).getType())) {
-            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+        if (!(iterable.getType() == STRING && type == CHAR)) {
+            if (!(iterable.getType() instanceof ArrayTypeSymbol)) {
+                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+                return new BoundErrorExpression();
+            }
+            if (!type.isAssignableFrom(((ArrayTypeSymbol) iterable.getType()).getType())) {
+                errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(type), iterable.getType(), forInExpression.getIterable().getSpan()));
+            }
         }
         VariableSymbol variable = buildVariableSymbol(type, forInExpression.getIdentifier(), null, false, forInExpression);
 

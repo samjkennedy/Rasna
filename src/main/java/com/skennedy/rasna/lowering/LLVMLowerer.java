@@ -25,8 +25,8 @@ public class LLVMLowerer extends Lowerer {
             BoundArrayLiteralExpression arrayLiteralExpression = (BoundArrayLiteralExpression) initialiser;
             return new BoundArrayVariableDeclarationExpression(rewrittenExpression.getVariable(), rewrittenExpression.getGuard(), arrayLiteralExpression, arrayLiteralExpression.getElements().size(), rewrittenExpression.isReadOnly());
         }
-
-        throw new UnsupportedOperationException("Array declarations must have size available at compile time");
+        return rewrittenExpression;
+        //throw new UnsupportedOperationException("Array declarations must have size available at compile time");
     }
 
     @Override

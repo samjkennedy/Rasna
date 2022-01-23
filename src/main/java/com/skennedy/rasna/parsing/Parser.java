@@ -112,10 +112,6 @@ public class Parser {
                 return parseTypeofIntrinsic();
             case PRINT_INTR:
                 return parsePrintIntrinsic();
-            case LEN_INTR:
-                return parseLenIntrinsic();
-            case MAP_INTR:
-                return parseMapIntrinsic();
             case IF_KEYWORD:
                 return parseIfExpression();
             case WHILE_KEYWORD:
@@ -978,7 +974,6 @@ public class Parser {
         return left;
     }
 
-    // print(<EXPRESSION>)
     private Expression parsePrintIntrinsic() {
 
         IdentifierExpression printInstr = matchToken(TokenType.PRINT_INTR);
@@ -987,36 +982,6 @@ public class Parser {
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
         return new PrintExpression(printInstr, openParen, expression, closeParen);
-    }
-
-
-    private Expression parseLenIntrinsic() {
-        IdentifierExpression len = matchToken(TokenType.LEN_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        Expression expression = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new ArrayLengthExpression(len, openParen, expression, closeParen);
-    }
-
-//    private Expression parseReduceIntrinsic() {
-//        IdentifierExpression reduce = matchToken(TokenType.REDUCE_INTR);
-//        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-//        Expression expression = parseExpression();
-//        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-//
-//        return new ReduceExpression(reduce, openParen, expression, closeParen);
-//    }
-
-    private Expression parseMapIntrinsic() {
-        IdentifierExpression map = matchToken(TokenType.MAP_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        Expression lambda = parseLambdaExpression();
-        IdentifierExpression comma = matchToken(TokenType.COMMA);
-        Expression mapFunction = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new MapExpression(map, openParen, lambda, comma, mapFunction, closeParen);
     }
 
     private Expression parseTypeofIntrinsic() {

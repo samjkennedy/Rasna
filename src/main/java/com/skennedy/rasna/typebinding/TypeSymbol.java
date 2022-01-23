@@ -12,7 +12,9 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol CHAR = new TypeSymbol("Char", new LinkedHashMap<>());
     public static final TypeSymbol INT = new TypeSymbol("Int", new LinkedHashMap<>());
     public static final TypeSymbol REAL = new TypeSymbol("Real", new LinkedHashMap<>());
-    public static final TypeSymbol STRING = new TypeSymbol("String", new LinkedHashMap<>());
+    public static final TypeSymbol STRING = new TypeSymbol("String", new LinkedHashMap<>(Map.of(
+            "len", new VariableSymbol("len", INT, null, true, null)
+    )));
     public static final TypeSymbol TYPE = new TypeSymbol("Type", new LinkedHashMap<>());
     public static final TypeSymbol ANY = new TypeSymbol("Any", new LinkedHashMap<>());
     public static final TypeSymbol ERROR = new TypeSymbol("Error", new LinkedHashMap<>());

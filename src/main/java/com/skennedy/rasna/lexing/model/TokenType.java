@@ -88,9 +88,7 @@ public enum TokenType {
 
     //Intrinsics
     PRINT_INTR("print"),
-    LEN_INTR("len"),
     TYPEOF_INTR("typeof"),
-    MAP_INTR("map"),
 
     //Other
     BAD_TOKEN(null),

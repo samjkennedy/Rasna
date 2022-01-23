@@ -1,10 +1,16 @@
-fn putsa(strArr: String[]) {
-    for (s in strArr) {
-        print(s)
-    }
-}
+//fn putsa(strArr: String[]) {
+//    for (s: String in strArr) {
+//        print(s)
+//    }
+//}
 
 fn main() {
-    s := ["Hello", "World!"]
-    putsa(s)
-}
+    s := "Hello"
+    chars := s
+    for (c: Char in s) {
+        print(c)
+    }
+    for (char: Char in chars) {
+        print(char)
+    }
+ }
