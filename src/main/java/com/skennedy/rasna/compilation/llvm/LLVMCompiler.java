@@ -914,7 +914,7 @@ public class LLVMCompiler implements Compiler {
             case NOT:
                 return LLVMBuildNot(builder, operand, "");
             case NEGATION:
-                return LLVMBuildNeg(builder, operand, "");
+                return LLVMBuildSub(builder, LLVMConstInt(i32Type, 0, 1), dereference(builder, operand, ""), ""); //lol, lmao
             case ERROR:
             default:
                 throw new UnsupportedOperationException("Compilation for unary operation `" + unaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for type `" + unaryExpression.getOperand().getType() + "`");

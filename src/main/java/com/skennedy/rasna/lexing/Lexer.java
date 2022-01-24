@@ -77,13 +77,8 @@ public class Lexer {
                             } else if (lookAhead(line) == '>') {
                                 tokens.add(new Token(TokenType.ARROW, new Location(filePath, lineNumber, cursor)));
                                 next();
-                                //TODO: No, - is a unary operator
-                            } else if (Character.isDigit(lookAhead(line))) {
-                                tokens.add(new Token(TokenType.NUM_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
-                                break;
                             } else {
                                 tokens.add(new Token(TokenType.MINUS, new Location(filePath, lineNumber, cursor)));
-                                next();
                             }
                             next();
                             break;

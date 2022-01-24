@@ -1,3 +1,11 @@
-fn main() {
+fn sum(a: Int, b: Int): Int {
+    return a + b
+}
 
+fn main() {
+    i := 5
+
+    s := (-2).sum(i)
+
+    print(-s)
 }
