@@ -50,6 +50,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalStringPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildInBoundsGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildMemCpy;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildNeg;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildNot;
@@ -388,14 +389,18 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundCastExpression castExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
         LLVMValueRef expression = visit(castExpression.getExpression(), builder, context, function);
 
+        if (castExpression.getType() == castExpression.getExpression().getType()) {
+            return expression;
+        }
+
         if (castExpression.getExpression().getType() == INT) {
             if (castExpression.getType() == REAL) {
-                return LLVMBuildCast(builder, LLVMSIToFP, expression, getLlvmTypeRef(REAL, context), "");
+                return LLVMBuildCast(builder, LLVMSIToFP, dereference(builder, expression, ""), getLlvmTypeRef(REAL, context), "");
             }
         }
         if (castExpression.getExpression().getType() == REAL) {
             if (castExpression.getType() == INT) {
-                return LLVMBuildCast(builder, LLVMFPToSI, expression, getLlvmTypeRef(INT, context), "");
+                return LLVMBuildCast(builder, LLVMFPToSI, dereference(builder, expression, ""), getLlvmTypeRef(INT, context), "");
             }
         }
         throw new UnsupportedOperationException("Casts from `" + castExpression.getExpression().getType() + "` to `" + castExpression.getType() + "` are not supported");
@@ -588,7 +593,7 @@ public class LLVMCompiler implements Compiler {
         int idx = 0;
         for (VariableSymbol member : members) {
             LLVMValueRef elementRef = LLVMBuildStructGEP(builder, ptr, idx, member.getName());
-            LLVMValueRef valueRef = visit(structLiteralExpression.getElements().get(idx), builder, context, function);
+            LLVMValueRef valueRef = dereference(builder, visit(structLiteralExpression.getElements().get(idx), builder, context, function), "");
             LLVMBuildStore(builder, valueRef, elementRef);
             idx++;
         }
@@ -919,9 +924,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef visit(BoundBinaryExpression binaryExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef lhs = visit(binaryExpression.getLeft(), builder, context, function);
-        lhs = dereference(builder, lhs, "lhs");
         LLVMValueRef rhs = visit(binaryExpression.getRight(), builder, context, function);
-        rhs = dereference(builder, rhs, "rhs");
 
         if (binaryExpression.getLeft().getType() == INT && binaryExpression.getRight().getType() == INT) {
             return visitIntBinop(builder, lhs, binaryExpression.getOperator().getBoundOpType(), rhs);
@@ -958,10 +961,49 @@ public class LLVMCompiler implements Compiler {
                     throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM");
             }
         }
+        if (binaryExpression.getLeft().getType() == STRING && binaryExpression.getRight().getType() == STRING) {
+            switch (binaryExpression.getOperator().getBoundOpType()) {
+                case CONCATENATION:
+                    return concatenate(lhs, rhs, builder, context, function);
+                case EQUALS:
+                default:
+                    throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM");
+
+            }
+        }
         throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for types `" + binaryExpression.getLeft().getType() + "` and `" + binaryExpression.getRight().getType() + "`");
     }
 
+    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMValueRef leftSize = LLVMBuildStructGEP(builder, left, 0, "");
+        LLVMValueRef rightSize = LLVMBuildStructGEP(builder, right, 0, "");
+
+        leftSize = dereference(builder, leftSize, "lhs");
+        rightSize = dereference(builder, rightSize, "rhs");
+
+        LLVMValueRef sizeVal = LLVMBuildAdd(builder, leftSize, rightSize, "");
+
+        LLVMValueRef structPtr = LLVMBuildAlloca(builder, getLlvmTypeRef(new ArrayTypeSymbol(CHAR), context), "tmp.array.struct");
+
+        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
+        LLVMBuildStore(builder, sizeVal, sizePtr);
+
+        LLVMValueRef dataPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
+        LLVMBuildMemCpy(builder, dataPtr, 0, LLVMBuildStructGEP(builder, left, 1, ""), 0, leftSize);
+
+        PointerPointer<Pointer> indices = new PointerPointer<>(1)
+                .put(0, leftSize);
+        LLVMValueRef endOfLeft = LLVMBuildInBoundsGEP(builder, dataPtr, indices, 1, "endOfLeft");
+
+        LLVMBuildMemCpy(builder, endOfLeft, 0, LLVMBuildStructGEP(builder, right, 1, ""), 0, rightSize);
+
+        return structPtr;
+    }
+
     private LLVMValueRef visitRealBinop(LLVMBuilderRef builder, LLVMValueRef lhs, BoundBinaryOperator.BoundBinaryOperation op, LLVMValueRef rhs) {
+        lhs = dereference(builder, lhs, "lhs");
+        rhs = dereference(builder, rhs, "rhs");
         switch (op) {
             case ADDITION:
                 return LLVMBuildFAdd(builder, lhs, rhs, "saddtmp");
@@ -991,6 +1033,8 @@ public class LLVMCompiler implements Compiler {
     }
 
     private LLVMValueRef visitIntBinop(LLVMBuilderRef builder, LLVMValueRef lhs, BoundBinaryOperator.BoundBinaryOperation op, LLVMValueRef rhs) {
+        lhs = dereference(builder, lhs, "lhs");
+        rhs = dereference(builder, rhs, "rhs");
         switch (op) {
             case ADDITION:
                 return LLVMBuildAdd(builder, lhs, rhs, "saddtmp");

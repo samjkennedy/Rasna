@@ -77,6 +77,7 @@ public class Lexer {
                             } else if (lookAhead(line) == '>') {
                                 tokens.add(new Token(TokenType.ARROW, new Location(filePath, lineNumber, cursor)));
                                 next();
+                                //TODO: No, - is a unary operator
                             } else if (Character.isDigit(lookAhead(line))) {
                                 tokens.add(new Token(TokenType.NUM_LITERAL, new Location(filePath, lineNumber, cursor), parseNum(line)));
                                 break;
@@ -181,8 +182,13 @@ public class Lexer {
                             tokens.add(new Token(TokenType.CHAR_LITERAL, new Location(filePath, lineNumber, cursor), parseChar(line)));
                             break;
                         case '.':
-                            tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));
-                            next();
+                            if (lookAhead(line) == '.' && peek(line, 2) == '.') {
+                                tokens.add(new Token(TokenType.ELIPSIS, new Location(filePath, lineNumber, cursor)));
+                                cursor += 3;
+                            } else {
+                                tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));
+                                next();
+                            }
                             break;
                         case ':':
                             if (lookAhead(line) == ':') {

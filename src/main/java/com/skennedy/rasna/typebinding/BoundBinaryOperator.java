@@ -5,6 +5,7 @@ import com.skennedy.rasna.parsing.model.OpType;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.function.Function;
 
 public class BoundBinaryOperator implements BoundExpression {
 
@@ -60,6 +61,7 @@ public class BoundBinaryOperator implements BoundExpression {
             new BoundBinaryOperator(OpType.ADD, BoundBinaryOperation.ADDITION, TypeSymbol.REAL, TypeSymbol.INT, TypeSymbol.REAL),
             new BoundBinaryOperator(OpType.ADD, BoundBinaryOperation.ADDITION, TypeSymbol.INT, TypeSymbol.REAL, TypeSymbol.REAL),
             new BoundBinaryOperator(OpType.ADD, BoundBinaryOperation.ADDITION, TypeSymbol.CHAR, TypeSymbol.INT, TypeSymbol.CHAR),
+            new BoundBinaryOperator(OpType.ADD, BoundBinaryOperation.CONCATENATION, TypeSymbol.STRING, TypeSymbol.STRING, TypeSymbol.STRING),
             new BoundBinaryOperator(OpType.SUB, BoundBinaryOperation.SUBTRACTION, TypeSymbol.INT, TypeSymbol.INT, TypeSymbol.INT),
             new BoundBinaryOperator(OpType.SUB, BoundBinaryOperation.SUBTRACTION, TypeSymbol.REAL, TypeSymbol.INT, TypeSymbol.REAL),
             new BoundBinaryOperator(OpType.SUB, BoundBinaryOperation.SUBTRACTION, TypeSymbol.INT, TypeSymbol.REAL, TypeSymbol.REAL),
@@ -125,6 +127,7 @@ public class BoundBinaryOperator implements BoundExpression {
     public enum BoundBinaryOperation {
         ADDITION,
         SUBTRACTION,
+        CONCATENATION,
         MULTIPLICATION,
         DIVISION,
         REMAINDER,

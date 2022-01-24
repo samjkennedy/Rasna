@@ -45,6 +45,7 @@ public enum TokenType {
     ARROW("->"),
     THICC_ARROW("=>"),
     DOT("."),
+    ELIPSIS("..."),
     COLON(":"),
     COLON_COLON("::"),
 
