@@ -484,6 +484,9 @@ public class Binder {
         if (array.getType() instanceof TupleTypeSymbol) {
             errors.add(BindingError.raise("Type `TupleTypeSymbol` is immutable and does not support member reassignment", arrayAssignmentExpression.getSpan()));
         }
+        if (array instanceof BoundVariableExpression && ((BoundVariableExpression) array).getVariable().isReadOnly()) {
+            errors.add(BindingError.raiseConstReassignmentError(((BoundVariableExpression) array).getVariable(), arrayAssignmentExpression.getArrayAccessExpression().getSpan()));
+        }
 
         BoundExpression assignment = bind(arrayAssignmentExpression.getAssignment());
 
@@ -1227,7 +1230,7 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(type, initialiser.getType(), variableDeclarationExpression.getInitialiser().getSpan()));
         }
 
-        boolean readOnly = variableDeclarationExpression.getConstKeyword() != null;
+        boolean readOnly = type == STRING || variableDeclarationExpression.getConstKeyword() != null;
         if (readOnly && (initialiser == null || !initialiser.isConstExpression())) {
             errors.add(BindingError.raiseNonConstAssignmentError(variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getSpan()));
         }

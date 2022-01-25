@@ -50,9 +50,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalStringPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildInBoundsGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
-import static org.bytedeco.llvm.global.LLVM.LLVMBuildMemCpy;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
-import static org.bytedeco.llvm.global.LLVM.LLVMBuildNeg;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildNot;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRet;
@@ -86,6 +84,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeTarget;
+import static org.bytedeco.llvm.global.LLVM.LLVMInt16TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt1TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt32TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt64TypeInContext;
@@ -135,6 +134,7 @@ public class LLVMCompiler implements Compiler {
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
+    private LLVMValueRef snprintf; //TODO: https://en.cppreference.com/w/cpp/io/c/fprintf
 
     private Scope scope;
 
@@ -163,6 +163,11 @@ public class LLVMCompiler implements Compiler {
         //Declare printf function and string formatter once
         printf = LLVMAddFunction(module, "printf", LLVMFunctionType(i32Type, LLVMPointerType(LLVMInt8TypeInContext(context), 0), 1, 1));//No idea what AddressSpace is for yet
 
+        PointerPointer<Pointer> snprintfTypes = new PointerPointer<>(3)
+                .put(0, LLVMPointerType(LLVMInt8TypeInContext(context), 0))
+                .put(1, LLVMInt32TypeInContext(context))
+                .put(2, LLVMPointerType(LLVMInt8TypeInContext(context), 0));
+        snprintf = LLVMAddFunction(module, "snprintf", LLVMFunctionType(LLVMInt16TypeInContext(context), snprintfTypes, 3, 1));
         buildPrintbMethod(context, module, builder);
 
         for (BoundExpression expression : program.getExpressions()) {
@@ -456,13 +461,24 @@ public class LLVMCompiler implements Compiler {
                 .put(1, LLVMConstInt(i64Type, 0, 0));
         LLVMValueRef arraydecay = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arraydecay");
 
-        //Build the struct that houses the array
-
         LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
         LLVMValueRef sizeVal = LLVMConstInt(i32Type, arrayLiteralExpression.getElements().size(), 0);
         LLVMBuildStore(builder, sizeVal, sizePtr);
         LLVMValueRef dataPtrPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
         LLVMBuildStore(builder, arraydecay, dataPtrPtr);
+
+        return structPtr;
+    }
+
+    private LLVMValueRef visit(BoundArrayDeclarationExpression arrayDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+        LLVMTypeRef arrayStructType = getLlvmTypeRef(arrayDeclarationExpression.getType(), context);
+
+        LLVMValueRef elementCount = dereference(builder, visit(arrayDeclarationExpression.getElementCount(), builder, context, function), "elCount");
+
+        LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
+
+        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
+        LLVMBuildStore(builder, elementCount, sizePtr);
 
         return structPtr;
     }
@@ -662,7 +678,7 @@ public class LLVMCompiler implements Compiler {
         return LLVMBuildStore(builder, val, ptr);
     }
 
-    //TODO: You cannot mutate a function argument
+    //TODO: You cannot mutate a function argument - callers should clone and pass a reference
     /*
     define void @foo(i32 %0) {
     entry:
@@ -964,7 +980,7 @@ public class LLVMCompiler implements Compiler {
         if (binaryExpression.getLeft().getType() == STRING && binaryExpression.getRight().getType() == STRING) {
             switch (binaryExpression.getOperator().getBoundOpType()) {
                 case CONCATENATION:
-                    return concatenate(lhs, rhs, builder, context, function);
+                    //return concatenate(lhs, rhs, builder, context, function);
                 case EQUALS:
                 default:
                     throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM");
@@ -972,33 +988,6 @@ public class LLVMCompiler implements Compiler {
             }
         }
         throw new UnsupportedOperationException("Compilation for binary operation `" + binaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for types `" + binaryExpression.getLeft().getType() + "` and `" + binaryExpression.getRight().getType() + "`");
-    }
-
-    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-
-        LLVMValueRef leftSize = LLVMBuildStructGEP(builder, left, 0, "");
-        LLVMValueRef rightSize = LLVMBuildStructGEP(builder, right, 0, "");
-
-        leftSize = dereference(builder, leftSize, "lhs");
-        rightSize = dereference(builder, rightSize, "rhs");
-
-        LLVMValueRef sizeVal = LLVMBuildAdd(builder, leftSize, rightSize, "");
-
-        LLVMValueRef structPtr = LLVMBuildAlloca(builder, getLlvmTypeRef(new ArrayTypeSymbol(CHAR), context), "tmp.array.struct");
-
-        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
-        LLVMBuildStore(builder, sizeVal, sizePtr);
-
-        LLVMValueRef dataPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
-        LLVMBuildMemCpy(builder, dataPtr, 0, LLVMBuildStructGEP(builder, left, 1, ""), 0, leftSize);
-
-        PointerPointer<Pointer> indices = new PointerPointer<>(1)
-                .put(0, leftSize);
-        LLVMValueRef endOfLeft = LLVMBuildInBoundsGEP(builder, dataPtr, indices, 1, "endOfLeft");
-
-        LLVMBuildMemCpy(builder, endOfLeft, 0, LLVMBuildStructGEP(builder, right, 1, ""), 0, rightSize);
-
-        return structPtr;
     }
 
     private LLVMValueRef visitRealBinop(LLVMBuilderRef builder, LLVMValueRef lhs, BoundBinaryOperator.BoundBinaryOperation op, LLVMValueRef rhs) {
@@ -1088,7 +1077,7 @@ public class LLVMCompiler implements Compiler {
         String value = (String) literalExpression.getValue();
         int length = value.length();
 
-        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length + 1); //+1 for the null terminator
+        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length);
         LLVMValueRef compoundliteral = LLVMBuildAlloca(builder, sizeInBytes, ".compoundliteral");
 
         LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
@@ -1110,6 +1099,8 @@ public class LLVMCompiler implements Compiler {
             prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
             LLVMBuildStore(builder, LLVMConstInt(i8Type, c, 0), prev);
         }
+        prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
+        LLVMBuildStore(builder, LLVMConstInt(i8Type, '\0', 0), prev);
 
         indices = new PointerPointer<>(2)
                 .put(0, LLVMConstInt(i64Type, 0, 0))
@@ -1121,6 +1112,41 @@ public class LLVMCompiler implements Compiler {
         LLVMBuildStore(builder, sizeVal, sizePtr);
         LLVMValueRef dataPtrPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
         LLVMBuildStore(builder, arraydecay, dataPtrPtr);
+
+        return structPtr;
+    }
+
+    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMValueRef snprintfFormatPtr = LLVMBuildGlobalStringPtr(builder, "%s%s", "snprintfFormat");
+        LLVMValueRef bufferSize = dereference(builder, LLVMConstInt(i32Type, 100, 0), "");
+
+        LLVMValueRef leftSize = LLVMBuildStructGEP(builder, left, 0, "");
+        LLVMValueRef rightSize = LLVMBuildStructGEP(builder, right, 0, "");
+        LLVMValueRef leftData = LLVMBuildStructGEP(builder, left, 1, "");
+        LLVMValueRef rightData = LLVMBuildStructGEP(builder, right, 1, "");
+
+        leftSize = dereference(builder, leftSize, "l.size");
+        rightSize = dereference(builder, rightSize, "r.size");
+        leftData = dereference(builder, leftData, "l.data");
+        rightData = dereference(builder, rightData, "r.data");
+
+        LLVMValueRef sizeVal = LLVMBuildAdd(builder, leftSize, rightSize, "");
+
+        LLVMValueRef structPtr = LLVMBuildAlloca(builder, getLlvmTypeRef(STRING, context), "");
+
+        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
+        LLVMValueRef dataPtr = dereference(builder, LLVMBuildStructGEP(builder, structPtr, 1, "data"), "");
+
+        PointerPointer<Pointer> args = new PointerPointer<>(5)
+                .put(0, dataPtr)
+                .put(1, bufferSize)
+                .put(2, snprintfFormatPtr)
+                .put(3, leftData)
+                .put(4, rightData);
+        LLVMValueRef remainder = LLVMBuildCall(builder, snprintf, args, 5, "snprintf");
+
+        LLVMBuildStore(builder, sizeVal, sizePtr);
 
         return structPtr;
     }
