@@ -31,6 +31,9 @@ public class BoundPositionalAccessExpression implements BoundExpression {
         if (array.getType() instanceof TupleTypeSymbol) {
             return TypeSymbol.ANY;
         }
+        if (array.getType() == TypeSymbol.STRING) {
+            return TypeSymbol.CHAR;
+        }
         return ((ArrayTypeSymbol)array.getType()).getType();
     }
 

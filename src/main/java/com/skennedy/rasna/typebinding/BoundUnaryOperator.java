@@ -35,8 +35,8 @@ public class BoundUnaryOperator implements BoundExpression {
 
     private static BoundUnaryOperator[] operators = {
             new BoundUnaryOperator(OpType.NOT, BoundUnaryOperation.NOT, TypeSymbol.BOOL, TypeSymbol.BOOL),
-            new BoundUnaryOperator(OpType.NEG, BoundUnaryOperation.NEGATION, TypeSymbol.INT, TypeSymbol.INT),
-            new BoundUnaryOperator(OpType.NEG, BoundUnaryOperation.NEGATION, TypeSymbol.REAL, TypeSymbol.REAL),
+            new BoundUnaryOperator(OpType.SUB, BoundUnaryOperation.NEGATION, TypeSymbol.INT, TypeSymbol.INT),
+            new BoundUnaryOperator(OpType.SUB, BoundUnaryOperation.NEGATION, TypeSymbol.REAL, TypeSymbol.REAL),
     };
 
     public OpType getOpType() {

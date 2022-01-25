@@ -1,0 +1,162 @@
+fn sin(x: Real): Real {
+
+    const _PI: Real = 3.14159265359
+    const precision: Int = 60
+
+    sign: Int = -1
+    x1 := x mod (2. * _PI)
+
+    term: Real = 1.0
+    sum: Real = 0.0
+
+    for (iter: Int = 1 to precision) {
+        term = term * (x1 / (iter as Real))
+        if (iter mod 4 == 1) {
+            sum = sum + term
+        }
+        if (iter mod 4 == 3) {
+            sum = sum - term
+        }
+    }
+    return sum
+}
+
+fn cos(x: Real): Real {
+    const _PI: Real = 3.14159265359
+    return sin(x + _PI)
+}
+
+fn fract(r: Real): Real {
+    return r - (r as Int as Real)
+}
+
+struct Col {
+    r: Real
+    g: Real
+    b: Real
+}
+
+struct Vec2 {
+    x: Real
+    y: Real
+}
+
+fn Vec2(xy: Real): Vec2 {
+    return Vec2{xy, xy}
+}
+
+struct Mat2 {
+    a: Real
+    b: Real
+    c: Real
+    d: Real
+}
+
+fn v2Add(a: Vec2, b: Vec2): Vec2 {
+    return Vec2{a.x + b.x, a.y + b.y}
+}
+
+fn v2Mul(v: Vec2, s: Real): Vec2 {
+    return Vec2{v.x * s, v.y * s}
+}
+
+fn mulVec2(v1: Vec2, v2: Vec2): Real {
+    return v1.x * v2.x + v1.y * v2.y
+}
+
+fn mulMatVec2(m: Mat2, v: Vec2): Vec2 {
+    x := m.a * v.x + m.b * v.y
+    y := m.c * v.x + m.d * v.y
+
+    return Vec2{x, y}
+}
+
+fn rotate2D(uv: Vec2, angle: Real): Vec2 {
+    st := v2Add(uv, Vec2(1 - 0.5))
+    st =  mulMatVec2(Mat2{cos(angle), -1.0 * sin(angle), sin(angle), cos(angle)}, st)
+    st = Vec2{st.x + 0.5, st.y + 0.5}
+    return st
+}
+
+//float box(vec2 _st, vec2 _size, float _smoothEdges){
+//    _size = vec2(0.5) - _size*0.5;
+//    vec2 aa = vec2(_smoothEdges*0.5);
+//    vec2 uv = smoothstep(_size,_size+aa,_st);
+//    uv *= smoothstep(_size,_size+aa,vec2(1.0)-_st);
+//    return uv.x*uv.y;
+//}
+
+fn clamp(x: Real, lowerBound: Real, upperBound: Real): Real {
+    if (x < lowerBound) {
+        return lowerBound
+    }
+    if (x > upperBound) {
+        return upperBound
+    }
+    return x
+}
+
+fn smoothstep(edge0: Real, edge1: Real, x: Real): Real {
+    n := clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0)
+    return x * x * (3. - 2. * x)
+}
+
+fn box(st: Vec2, size: Vec2, smoothEdges: Real): Real {
+    _size := Vec2{0.5 - size.x * 0.5, 0.5 - size.y * 0.5}
+    aa := Vec2(smoothEdges * 0.5)
+
+    x := smoothstep(_size.x, v2Add(_size, aa).x, st.x)
+    y := smoothstep(_size.y, v2Add(_size, aa).y, st.y)
+
+    x = x * smoothstep(_size.x, v2Add(_size, aa).x, 1.0 - st.x)
+    y = y * smoothstep(_size.y, v2Add(_size, aa).y, 1.0 - st.y)
+
+    return x * y
+}
+
+fn frag(u: Real, v: Real): Col {
+    const PI: Real = 3.14159265359
+
+    st := Vec2{fract(u * 4.), fract(v * 4.)} //Tile
+    st = st.rotate2D(0.25 * PI) //Rotate 45 degrees
+
+    //mono := box(st, Vec2(0.7), 0.01)
+    //color := Col{mono, mono, mono}
+
+    return Col{st.x, st.y, 0.}
+}
+
+fn printCol(col: Col, maxVal: Real) {
+    print((col.r * maxVal) as Int)
+    print((col.g * maxVal) as Int)
+    print((col.b * maxVal) as Int)
+}
+
+fn normalise(ref col: Col) {
+    col.r = clamp(col.r, 0.0, 255.0)
+    col.g = clamp(col.g, 0.0, 255.0)
+    col.b = clamp(col.b, 0.0, 255.0)
+}
+
+fn main() {
+
+    const FORMAT := "P3"
+    const WIDTH := 64.
+    const HEIGHT := 64.
+    const MAX_VAL := 255.
+
+    print(FORMAT)
+    print(WIDTH as Int)
+    print(HEIGHT as Int)
+    print(MAX_VAL as Int)
+
+    for (y := 0. to HEIGHT) {
+        for (x := 0. to WIDTH) {
+            u := (x / WIDTH)
+            v := (y / HEIGHT)
+            col: Col = frag(u, v)
+            col->normalise()
+            col.printCol(MAX_VAL)
+        }
+    }
+}

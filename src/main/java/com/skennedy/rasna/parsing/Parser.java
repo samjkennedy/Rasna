@@ -164,7 +164,6 @@ public class Parser {
             case ENUM_KEYWORD:
                 return parseEnumDeclaration();
             case EOF_TOKEN:
-
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
@@ -656,9 +655,7 @@ public class Parser {
             //Variable declared but not assigned yet
             equals = matchToken(TokenType.EQUALS);
 
-            if (TokenType.typeTokens.contains(current().getTokenType())) {
-                initialiser = parseArrayDeclarationExpression();
-            } else if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
+            if (current().getTokenType() == TokenType.OPEN_CURLY_BRACE) {
                 initialiser = parseStructLiteralExpression(typeExpression);
             } else {
                 initialiser = parseExpression();
@@ -675,29 +672,7 @@ public class Parser {
     }
 
     private Expression parseArrayDeclarationExpression() {
-        IdentifierExpression typeKeyword;
-        switch (current().getTokenType()) {
-            case INT_KEYWORD:
-                typeKeyword = matchToken(TokenType.INT_KEYWORD);
-                break;
-            case BOOL_KEYWORD:
-                typeKeyword = matchToken(TokenType.BOOL_KEYWORD);
-                break;
-            case REAL_KEYWORD:
-                typeKeyword = matchToken(TokenType.REAL_KEYWORD);
-                break;
-            case STRING_KEYWORD:
-                typeKeyword = matchToken(TokenType.STRING_KEYWORD);
-                break;
-            case FUNCTION_KEYWORD:
-                typeKeyword = matchToken(TokenType.FUNCTION_KEYWORD);
-                break;
-            case ANY_KEYWORD:
-                typeKeyword = matchToken(TokenType.ANY_KEYWORD);
-                break;
-            default:
-                throw new IllegalStateException("Unexpected variable declaration keyword: " + current().getTokenType());
-        }
+        IdentifierExpression typeKeyword = parseTypeKeyword();
         IdentifierExpression openSquareBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
         Expression elementCount = parseExpression();
         IdentifierExpression closeSquareBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);

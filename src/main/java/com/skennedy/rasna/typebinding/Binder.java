@@ -145,7 +145,7 @@ public class Binder {
         }
         BoundLiteralExpression boundIndex = new BoundLiteralExpression(tupleIndexExpression.getIndex().getValue());
         if (boundIndex.getType() == REAL) {
-            errors.add(BindingError.raise("Expected type `Int` but got `Real`. Did you mean to access a nested tuple? If so wrap the index in parentheses, i.e. `(t.0).0)`" ,tupleIndexExpression.getIndex().getSpan()));
+            errors.add(BindingError.raise("Expected type `Int` but got `Real`. Did you mean to access a nested tuple? If so wrap the index in parentheses, i.e. `(t.0).0)`", tupleIndexExpression.getIndex().getSpan()));
             return new BoundErrorExpression();
         }
         if (!(tupleIndexExpression.getIndex().getValue() instanceof Integer)) {
@@ -484,6 +484,9 @@ public class Binder {
         if (array.getType() instanceof TupleTypeSymbol) {
             errors.add(BindingError.raise("Type `TupleTypeSymbol` is immutable and does not support member reassignment", arrayAssignmentExpression.getSpan()));
         }
+        if (array instanceof BoundVariableExpression && ((BoundVariableExpression) array).getVariable().isReadOnly()) {
+            errors.add(BindingError.raiseConstReassignmentError(((BoundVariableExpression) array).getVariable(), arrayAssignmentExpression.getArrayAccessExpression().getSpan()));
+        }
 
         BoundExpression assignment = bind(arrayAssignmentExpression.getAssignment());
 
@@ -731,22 +734,30 @@ public class Binder {
             }
 
             //TODO: This is hella broken for const variables
-//            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-//
-//                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
-//
-//                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-//
-//                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-//
-//                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
-//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-//
-//                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
-//            }
+            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+
+                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+
+                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+
+                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+
+                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+
+                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
+            } else if (left.isConstExpression() && left.getType() == STRING && right.isConstExpression() && right.getType() == STRING) {
+
+                if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.CONCATENATION) {
+                    return new BoundLiteralExpression(left.getConstValue() + (String)right.getConstValue());
+                }
+                if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
+                    return new BoundLiteralExpression(left.getConstValue().equals(right.getConstValue()));
+                }
+            }
 
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {
@@ -1219,7 +1230,7 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(type, initialiser.getType(), variableDeclarationExpression.getInitialiser().getSpan()));
         }
 
-        boolean readOnly = variableDeclarationExpression.getConstKeyword() != null;
+        boolean readOnly = type == STRING || variableDeclarationExpression.getConstKeyword() != null;
         if (readOnly && (initialiser == null || !initialiser.isConstExpression())) {
             errors.add(BindingError.raiseNonConstAssignmentError(variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getSpan()));
         }

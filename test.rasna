@@ -1,0 +1,7 @@
+fn main() {
+    h := "Hello"
+    w := "World"
+
+    print(h)
+    print(w)
+}
