@@ -46,6 +46,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildFDiv;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildFMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildFRem;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildFSub;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalString;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalStringPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildInBoundsGEP;
@@ -582,6 +583,13 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundStructDeclarationExpression structDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
+        LLVMTypeRef structTypeRef = LLVMStructCreateNamed(context, structDeclarationExpression.getType().getName());
+        scope.declareType(structDeclarationExpression.getType(), structTypeRef);
+
+        if (structDeclarationExpression.getType() instanceof ParameterisedTypeSymbol) {
+            return null;
+        }
+
         PointerPointer<Pointer> elementTypes = new PointerPointer<>(structDeclarationExpression.getMembers().size());
 
         List<LLVMTypeRef> memberTypes = structDeclarationExpression.getMembers().stream()
@@ -592,15 +600,37 @@ public class LLVMCompiler implements Compiler {
             elementTypes.put(i, memberTypes.get(i));
         }
 
-        LLVMTypeRef structTypeRef = LLVMStructCreateNamed(context, structDeclarationExpression.getType().getName());
         LLVMStructSetBody(structTypeRef, elementTypes, memberTypes.size(), 0);
-
-        scope.declareType(structDeclarationExpression.getType(), structTypeRef);
 
         return null;
     }
 
     private LLVMValueRef visit(BoundStructLiteralExpression structLiteralExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        if (structLiteralExpression.getType() instanceof ParameterisedTypeSymbol) {
+            LLVMTypeRef structTypeRef = LLVMStructCreateNamed(context, structLiteralExpression.getType().getName());
+
+            PointerPointer<Pointer> llvmTypes = new PointerPointer<>(structLiteralExpression.getElements().size());
+            List<BoundExpression> arguments = structLiteralExpression.getElements();
+            for (int i = 0; i < arguments.size(); i++) {
+                TypeSymbol type = arguments.get(i).getType();
+                LLVMTypeRef llvmTypeRef = getLlvmTypeRef(type, context);
+                llvmTypes.put(i, llvmTypeRef);
+            }
+            LLVMValueRef ptr = LLVMBuildAlloca(builder, structTypeRef, "tmp." + structLiteralExpression.getType().getName());
+            LLVMStructSetBody(structTypeRef, llvmTypes, arguments.size(), 0);
+
+            Collection<BoundExpression> elements = structLiteralExpression.getElements();
+            int idx = 0;
+            for (BoundExpression element : elements) {
+                LLVMValueRef elementRef = LLVMBuildStructGEP(builder, ptr, idx, "");
+                LLVMValueRef valueRef = visit(element, builder, context, function);
+                LLVMBuildStore(builder, dereference(builder, valueRef, ""), elementRef);
+                idx++;
+            }
+            return LLVMBuildLoad(builder, ptr, "tmp." + structLiteralExpression.getType().getName());
+        }
+
         //Allocate a tmp variable for this... not the best but what we have to do
         LLVMTypeRef type = getLlvmTypeRef(structLiteralExpression.getType(), context);
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, "tmp." + structLiteralExpression.getType().getName());
@@ -832,15 +862,15 @@ public class LLVMCompiler implements Compiler {
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
+        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
 
+        LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
         scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
         if (variableDeclarationExpression.getInitialiser() == null) {
             return ptr;
         }
-        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
 
         val = dereference(builder, val, "val");
 
@@ -930,7 +960,13 @@ public class LLVMCompiler implements Compiler {
             case NOT:
                 return LLVMBuildNot(builder, operand, "");
             case NEGATION:
-                return LLVMBuildSub(builder, LLVMConstInt(i32Type, 0, 1), dereference(builder, operand, ""), ""); //lol, lmao
+                if (unaryExpression.getOperand().getType() == INT) {
+                    return LLVMBuildSub(builder, LLVMConstInt(i32Type, 0, 1), dereference(builder, operand, ""), ""); //lol, lmao
+                }
+                if (unaryExpression.getOperand().getType() == REAL) {
+                    return LLVMBuildFSub(builder, LLVMConstReal(LLVMDoubleTypeInContext(context), 0.0), dereference(builder, operand, ""), ""); //lol, lmao
+                }
+                throw new UnsupportedOperationException("Compilation for unary operation `" + unaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for type `" + unaryExpression.getOperand().getType() + "`");
             case ERROR:
             default:
                 throw new UnsupportedOperationException("Compilation for unary operation `" + unaryExpression.getOperator().getBoundOpType() + "` is not yet supported for LLVM for type `" + unaryExpression.getOperand().getType() + "`");
@@ -1077,7 +1113,7 @@ public class LLVMCompiler implements Compiler {
         String value = (String) literalExpression.getValue();
         int length = value.length();
 
-        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length);
+        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length + 1);
         LLVMValueRef compoundliteral = LLVMBuildAlloca(builder, sizeInBytes, ".compoundliteral");
 
         LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
@@ -1157,6 +1193,16 @@ public class LLVMCompiler implements Compiler {
             formatStr = LLVMBuildGlobalStringPtr(builder, "%d\n", "formatStr");
         }
 
+        if (printExpression.getExpression() instanceof BoundLiteralExpression && printExpression.getExpression().getType() == STRING) {
+            String literal = (String) ((BoundLiteralExpression) printExpression.getExpression()).getValue();
+            LLVMValueRef val = LLVMBuildGlobalString(builder, literal, "");
+            //LLVMValueRef string = dereference(builder, LLVMBuildStructGEP(builder, val, 1, "string"), "");
+            PointerPointer<Pointer> printArgs = new PointerPointer<>(2)
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%s", "str"))
+                    .put(1, val);
+            return LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+        }
+
         LLVMValueRef res = visit(printExpression.getExpression(), builder, context, function);
         if (printExpression.getExpression().getType() != STRING && LLVMGetTypeKind(LLVMTypeOf(res)) == LLVMPointerTypeKind) {
             res = LLVMBuildLoad(builder, res, "print");
@@ -1169,13 +1215,13 @@ public class LLVMCompiler implements Compiler {
             LLVMValueRef size = dereference(builder, LLVMBuildStructGEP(builder, res, 0, "size"), "");
             LLVMValueRef string = dereference(builder, LLVMBuildStructGEP(builder, res, 1, "string"), "");
             printArgs = new PointerPointer<>(3)
-                    .put(0, LLVMBuildGlobalStringPtr(builder, "%.*s\n", "str"))
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%.*s", "str"))
                     .put(1, size)
                     .put(2, string);
             return LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
         } else if (printExpression.getExpression().getType() == CHAR) {
             printArgs = new PointerPointer<>(2)
-                    .put(0, LLVMBuildGlobalStringPtr(builder, "%c\n", "real"))
+                    .put(0, LLVMBuildGlobalStringPtr(builder, "%c", "real"))
                     .put(1, res);
         } else if (printExpression.getExpression().getType() == REAL) {
             printArgs = new PointerPointer<>(2)

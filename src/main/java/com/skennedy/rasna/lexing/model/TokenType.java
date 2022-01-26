@@ -97,14 +97,6 @@ public enum TokenType {
 
     private final String text;
 
-    public static List<TokenType> typeTokens = Arrays.asList(
-            BOOL_KEYWORD,
-            INT_KEYWORD,
-            REAL_KEYWORD,
-            STRING_KEYWORD,
-            FUNCTION_KEYWORD
-    );
-
     TokenType(String text) {
         this.text = text;
     }
