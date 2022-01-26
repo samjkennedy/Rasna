@@ -1,0 +1,15 @@
+Function len is not defined in the scope for arguments (String[]):
+0: fn main(args: String[]) {
+1:     if (len(args) == 0) {
+2:         print("No args provided")
+
+Operation `equals` is not defined for types `Error` and `Int`:
+0: fn main(args: String[]) {
+1:     if (len(args) == 0) {
+2:         print("No args provided")
+
+Expected type `Bool` but got `Error`:
+0: fn main(args: String[]) {
+1:     if (len(args) == 0) {
+2:         print("No args provided")
+

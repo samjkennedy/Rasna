@@ -1,0 +1,47 @@
+Expected IDENTIFIER but got RETURN_KEYWORD 
+25:     match (a) {
+26:         1    -> return ("Hello", true)
+27:         2    -> {
+
+Expected ARROW but got NUM_LITERAL 
+26:         1    -> return ("Hello", true)
+27:         2    -> {
+28:             print("2")
+
+Unexpected token: ARROW 
+26:         1    -> return ("Hello", true)
+27:         2    -> {
+28:             print("2")
+
+Expected ARROW but got NUM_LITERAL 
+30:         }
+31:         3 -> (1,)
+32:         else -> return ("World", false, 1)
+
+Unexpected token: ARROW 
+30:         }
+31:         3 -> (1,)
+32:         else -> return ("World", false, 1)
+
+Expected ARROW but got ELSE_KEYWORD 
+31:         3 -> (1,)
+32:         else -> return ("World", false, 1)
+33:     }
+
+Unexpected token: ARROW 
+31:         3 -> (1,)
+32:         else -> return ("World", false, 1)
+33:     }
+
+Expected ARROW but got CLOSE_CURLY_BRACE 
+32:         else -> return ("World", false, 1)
+33:     }
+34: }
+
+Unexpected token: CLOSE_CURLY_BRACE 
+33:     }
+34: }
+35: 
+
+Expected ARROW but got EOF_TOKEN 
+Unexpected token `EOF_TOKEN` at top level: 

@@ -1,0 +1,10 @@
+Type V2RR is not defined in the scope:
+55: fn main() {
+56:     v2: V2R = V2RR{1.0}
+57:     print(v2.x)
+
+Expected type `V2R` but got `Error`:
+55: fn main() {
+56:     v2: V2R = V2RR{1.0}
+57:     print(v2.x)
+
