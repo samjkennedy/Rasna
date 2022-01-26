@@ -231,6 +231,7 @@ public class Lexer {
                 default:
                     throw new IllegalStateException("Illegal escape character in char literal");
             }
+            next();
         } else {
             c = charAt(line, cursor);
             next();
@@ -271,6 +272,7 @@ public class Lexer {
                     default:
                         throw new IllegalStateException("Illegal escape character in string literal");
                 }
+                next();
             } else {
                 sb.append(charAt(line, cursor));
                 next();

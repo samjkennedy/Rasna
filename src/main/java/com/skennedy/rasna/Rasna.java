@@ -171,35 +171,39 @@ public class Rasna {
                     log.debug("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 
                     //TODO: only do this with a -r flag
-                    Process process;
-                    start = Instant.now();
-                    switch (compileTarget) {
-                        case JVM:
-                            process = Runtime.getRuntime().exec("java " + fileName);
-                            break;
-                        case LLVM:
-                            //TODO: This is windows specific
-                            process = Runtime.getRuntime().exec(fileName + ".exe foo bar baz");
-                            break;
-                        default:
-                            throw new IllegalStateException("Unexpected compile target: " + compileTarget);
-                    }
-                    end = Instant.now();
-                    InputStream inputStream = process.getInputStream();
-                    char c = (char) inputStream.read();
-                    System.out.print(ConsoleColors.CYAN_BOLD);
-                    while (c != '\uFFFF') {
-                        System.out.print(c);
-                        c = (char) inputStream.read();
-                    }
-                    System.out.print(ConsoleColors.RED_BOLD);
-                    InputStream errorStream = process.getErrorStream();
-                    c = (char) errorStream.read();
-                    while (c != '\uFFFF') {
-                        System.out.print(c);
+
+                    boolean run = false;
+                    if (run) {
+                        Process process;
+                        start = Instant.now();
+                        switch (compileTarget) {
+                            case JVM:
+                                process = Runtime.getRuntime().exec("java " + fileName);
+                                break;
+                            case LLVM:
+                                //TODO: This is windows specific
+                                process = Runtime.getRuntime().exec(fileName + ".exe");
+                                break;
+                            default:
+                                throw new IllegalStateException("Unexpected compile target: " + compileTarget);
+                        }
+                        end = Instant.now();
+                        InputStream inputStream = process.getInputStream();
+                        char c = (char) inputStream.read();
+                        System.out.print(ConsoleColors.CYAN_BOLD);
+                        while (c != '\uFFFF') {
+                            System.out.print(c);
+                            c = (char) inputStream.read();
+                        }
+                        System.out.print(ConsoleColors.RED_BOLD);
+                        InputStream errorStream = process.getErrorStream();
                         c = (char) errorStream.read();
+                        while (c != '\uFFFF') {
+                            System.out.print(c);
+                            c = (char) errorStream.read();
+                        }
+                        System.out.print(ConsoleColors.RESET);
                     }
-                    System.out.print(ConsoleColors.RESET);
             }
 
         } catch (IOException ioe) {

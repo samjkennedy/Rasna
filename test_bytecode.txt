@@ -1,0 +1,32 @@
+  // main class test
+
+  // access flags 0x9
+  public static main([Ljava/lang/String;)V
+    ICONST_0
+    ISTORE 1
+    ICONST_0
+    ISTORE 2
+    ILOAD 1
+    ICONST_0
+    IF_ICMPNE L0
+    ICONST_1
+    ISTORE 2
+    GOTO L1
+   L0
+    ILOAD 1
+    ICONST_1
+    IF_ICMPNE L2
+    ICONST_0
+    ISTORE 2
+    GOTO L1
+   L2
+    ICONST_2
+    ISTORE 2
+   L1
+    GETSTATIC java/lang/System.out : Ljava/io/PrintStream;
+    ILOAD 2
+    INVOKEVIRTUAL java/io/PrintStream.println (I)V
+    RETURN
+    MAXSTACK = 1000
+    MAXLOCALS = 1000
+}

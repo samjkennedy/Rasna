@@ -17,8 +17,10 @@ import com.skennedy.rasna.parsing.model.IdentifierExpression;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -167,17 +169,21 @@ public class Binder {
 
     private BoundExpression bindStructLiteralExpression(StructLiteralExpression structLiteralExpression) {
 
-        if (structLiteralExpression.getTypeExpression().getIdentifier() instanceof TupleTypeExpression) {
+        if (structLiteralExpression.getTypeExpression().getTypeExpression() instanceof TupleTypeExpression) {
             throw new UnsupportedOperationException("TupleTypeSymbol types are not yet supported in struct literals");
         }
-        IdentifierExpression typeExpression = (IdentifierExpression) structLiteralExpression.getTypeExpression().getIdentifier();
+        if (structLiteralExpression.getTypeExpression().getTypeExpression() instanceof ErasedParameterisedTypeExpression) {
+            throw new UnsupportedOperationException("Erased parameterised structs are not yet implemented");
+        }
+        IdentifierExpression typeExpression = (IdentifierExpression) structLiteralExpression.getTypeExpression().getTypeExpression();
 
-        Optional<TypeSymbol> type = currentScope.tryLookupType((String) typeExpression.getValue());
-        if (type.isEmpty()) {
+        Optional<TypeSymbol> optionalTypeSymbol = currentScope.tryLookupType((String) typeExpression.getValue());
+        if (optionalTypeSymbol.isEmpty()) {
             //This should never happen
             errors.add(BindingError.raiseUnknownType((String) typeExpression.getValue(), structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
+        TypeSymbol type = optionalTypeSymbol.get();
 
         List<BoundExpression> members = new ArrayList<>();
         List<Expression> structLiteralExpressionMembers = structLiteralExpression.getMembers();
@@ -185,7 +191,7 @@ public class Binder {
             members.add(bind(member));
         }
 
-        List<VariableSymbol> values = new ArrayList<>(type.get().getFields().values());
+        List<VariableSymbol> values = new ArrayList<>(type.getFields().values());
         if (values.size() != structLiteralExpression.getMembers().size()) {
             errors.add(BindingError.raiseUnknownStruct((String) typeExpression.getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
@@ -196,8 +202,27 @@ public class Binder {
             TypeSymbol expectedType = values.get(i).getType();
             if (!expectedType.isAssignableFrom(boundMember.getType())) {
 
-                //TODO: Can be argType mismatch, e.g. expected type X in position Y of function Z
-                errors.add(BindingError.raiseTypeMismatch(expectedType, boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
+                if (structLiteralExpression.getTypeExpression() instanceof GenericTypeExpression) {
+
+                    Map<String, TypeSymbol> erasures = new HashMap<>();
+                    //Check for generic binding
+                    if (currentScope.tryLookupGenericType(expectedType.getName()).isPresent()) {
+                        Optional<TypeSymbol> boundGenericType = currentScope.tryLookupBinding(expectedType);
+                        if (boundGenericType.isPresent()) {
+                            if (!boundGenericType.get().isAssignableFrom(boundMember.getType())) {
+                                errors.add(BindingError.raiseTypeMismatch(boundGenericType.get(), boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
+                            }
+                        } else {
+                            currentScope.bindGenericType(expectedType, boundMember.getType());
+                            erasures.put(expectedType.getName(), boundMember.getType());
+                        }
+                    }
+                    type = new ErasedParameterisedTypeSymbol(type.getName(), (LinkedHashMap)type.getFields(), erasures);
+                } else {
+
+                    //TODO: Can be argType mismatch, e.g. expected type X in position Y of function Z
+                    errors.add(BindingError.raiseTypeMismatch(expectedType, boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
+                }
             }
         }
 
@@ -207,7 +232,7 @@ public class Binder {
             return new BoundErrorExpression();
         }
 
-        return new BoundStructLiteralExpression(type.get(), members);
+        return new BoundStructLiteralExpression(type, members);
     }
 
     private BoundExpression bindCastExpression(CastExpression castExpression) {
@@ -633,21 +658,21 @@ public class Binder {
         if (typeExpression == null) {
             return TypeSymbol.UNIT;
         }
-        if (typeExpression.getIdentifier() instanceof TupleTypeExpression) {
-            List<TypeSymbol> boundTypes = ((TupleTypeExpression) typeExpression.getIdentifier()).getTypeExpressions()
+        if (typeExpression.getTypeExpression() instanceof TupleTypeExpression) {
+            List<TypeSymbol> boundTypes = ((TupleTypeExpression) typeExpression.getTypeExpression()).getTypeExpressions()
                     .stream()
                     .map(DelimitedExpression::getExpression)
                     .map(this::parseType)
                     .collect(Collectors.toList());
             typeSymbol = new TupleTypeSymbol(boundTypes);
         } else {
-            IdentifierExpression identifier = (IdentifierExpression) typeExpression.getIdentifier();
+            IdentifierExpression identifier = getTypeIdentifier(typeExpression);
 
             typeSymbol = getTypeSymbol(identifier);
         }
 
         //TODO: This doesn't do N-Dimensional arrays yet
-        if (typeExpression.getOpenSquareBracket() != null && typeExpression.getCloseSquareBracket() != null) {
+        if (typeExpression instanceof ArrayTypeExpression) {
             return new ArrayTypeSymbol(typeSymbol);
         }
         return typeSymbol;
@@ -678,7 +703,7 @@ public class Binder {
                 typeSymbol = TypeSymbol.ANY;
                 break;
             default:
-                Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifier.getValue());
+                Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifier.getValue()).or(() -> currentScope.tryLookupGenericType((String) identifier.getValue()));
                 if (type.isEmpty()) {
                     errors.add(BindingError.raiseUnknownType((String) identifier.getValue(), identifier.getSpan()));
                     typeSymbol = null;
@@ -752,7 +777,7 @@ public class Binder {
             } else if (left.isConstExpression() && left.getType() == STRING && right.isConstExpression() && right.getType() == STRING) {
 
                 if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.CONCATENATION) {
-                    return new BoundLiteralExpression(left.getConstValue() + (String)right.getConstValue());
+                    return new BoundLiteralExpression(left.getConstValue() + (String) right.getConstValue());
                 }
                 if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
                     return new BoundLiteralExpression(left.getConstValue().equals(right.getConstValue()));
@@ -932,7 +957,16 @@ public class Binder {
 
     private BoundExpression bindStructDeclarationExpression(StructDeclarationExpression structDeclarationExpression) {
 
-        IdentifierExpression identifier = structDeclarationExpression.getIdentifier();
+        TypeExpression typeExpressiion = structDeclarationExpression.getTypeDefinition();
+
+        IdentifierExpression typeIdentifier = getTypeIdentifier(typeExpressiion);
+
+        if (typeExpressiion instanceof GenericTypeExpression) {
+            for (IdentifierExpression genericParameter : ((GenericTypeExpression) typeExpressiion).getGenericParameters()) {
+                TypeSymbol genericType = new TypeSymbol((String) genericParameter.getValue(), new LinkedHashMap<>());
+                currentScope.declareGenericType(genericType.getName(), genericType);
+            }
+        }
 
         currentScope = new BoundScope(currentScope);
 
@@ -943,17 +977,26 @@ public class Binder {
 
         LinkedHashMap<String, VariableSymbol> definedVariables = currentScope.getDefinedVariables();
 
-        TypeSymbol type = new TypeSymbol((String) identifier.getValue(), definedVariables);
-
         currentScope = currentScope.getParentScope();
 
-        try {
-            currentScope.declareType((String) identifier.getValue(), type);
-        } catch (TypeAlreadyDeclaredException tade) {
-            errors.add(BindingError.raiseTypeAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
+        TypeSymbol typeSymbol;
+        if (typeExpressiion instanceof GenericTypeExpression) {
+            List<String> genericParameters = new ArrayList<>();
+            for (IdentifierExpression genericParameter : ((GenericTypeExpression) typeExpressiion).getGenericParameters()) {
+                genericParameters.add((String) genericParameter.getValue());
+            }
+            typeSymbol = new ParameterisedTypeSymbol((String) typeIdentifier.getValue(), definedVariables, genericParameters);
+        } else {
+            typeSymbol = new TypeSymbol((String) typeIdentifier.getValue(), definedVariables);
         }
 
-        return new BoundStructDeclarationExpression(type, members);
+        try {
+            currentScope.declareType(typeSymbol.getName(), typeSymbol);
+        } catch (TypeAlreadyDeclaredException tade) {
+            errors.add(BindingError.raiseTypeAlreadyDeclared(typeSymbol.getName(), structDeclarationExpression.getTypeDefinition().getSpan()));
+        }
+
+        return new BoundStructDeclarationExpression(typeSymbol, members);
     }
 
     private BoundExpression bindEnumDeclarationExpression(EnumDeclarationExpression enumDeclarationExpression) {
@@ -1214,10 +1257,10 @@ public class Binder {
 
         TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
         if (type == null) {
-            if (variableDeclarationExpression.getTypeExpression().getIdentifier() instanceof TupleTypeExpression) {
+            if (variableDeclarationExpression.getTypeExpression().getTypeExpression() instanceof TupleTypeExpression) {
                 throw new UnsupportedOperationException("TupleTypeSymbol types are not yet supported in variable declarations");
             }
-            IdentifierExpression typeExpression = (IdentifierExpression) variableDeclarationExpression.getTypeExpression().getIdentifier();
+            IdentifierExpression typeExpression = (IdentifierExpression) variableDeclarationExpression.getTypeExpression().getTypeExpression();
             errors.add(BindingError.raiseUnknownType((String) typeExpression.getValue(), variableDeclarationExpression.getTypeExpression().getSpan()));
             return new BoundErrorExpression();
         }
@@ -1287,5 +1330,19 @@ public class Binder {
         currentScope = currentScope.getParentScope();
 
         return new BoundBlockExpression(boundExpressions);
+    }
+
+    private IdentifierExpression getTypeIdentifier(TypeExpression typeExpression) {
+
+        if (typeExpression.getTypeExpression() instanceof IdentifierExpression) {
+            return (IdentifierExpression) typeExpression.getTypeExpression();
+        }
+        if (typeExpression.getTypeExpression() instanceof ArrayTypeExpression) {
+            return getTypeIdentifier((ArrayTypeExpression) typeExpression.getTypeExpression());
+        }
+        if (typeExpression.getTypeExpression() instanceof GenericTypeExpression) {
+            return getTypeIdentifier((GenericTypeExpression) typeExpression.getTypeExpression());
+        }
+        throw new UnsupportedOperationException("Unhandled type expression type `" + typeExpression.getTypeExpression().getClass().getSimpleName() + "`");
     }
 }

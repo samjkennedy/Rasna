@@ -1,35 +1,21 @@
 package com.skennedy.rasna.parsing;
 
 import com.skennedy.rasna.parsing.model.ExpressionType;
-import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.SyntaxNode;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.Objects;
 
 public class TypeExpression extends Expression {
 
-    private final Expression identifier;
-    private final IdentifierExpression openSquareBracket;
-    private final IdentifierExpression closeSquareBracket;
+    final Expression type;
 
-    public TypeExpression(Expression typeExpression, IdentifierExpression openSquareBracket, IdentifierExpression closeSquareBracket) {
-        this.identifier = typeExpression;
-        this.openSquareBracket = openSquareBracket;
-        this.closeSquareBracket = closeSquareBracket;
+    public TypeExpression(Expression type) {
+        this.type = type;
     }
 
-    public Expression getIdentifier() {
-        return identifier;
-    }
-
-    public IdentifierExpression getOpenSquareBracket() {
-        return openSquareBracket;
-    }
-
-    public IdentifierExpression getCloseSquareBracket() {
-        return closeSquareBracket;
+    public Expression getTypeExpression() {
+        return type;
     }
 
     @Override
@@ -39,8 +25,6 @@ public class TypeExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)identifier, openSquareBracket, closeSquareBracket).stream()
-                .filter(Objects::nonNull)
-                .iterator();
+        return Collections.singleton((SyntaxNode)type).iterator();
     }
 }

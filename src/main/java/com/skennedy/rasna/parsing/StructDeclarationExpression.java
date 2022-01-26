@@ -12,14 +12,14 @@ import java.util.List;
 public class StructDeclarationExpression extends Expression {
 
     private final IdentifierExpression structKeyword;
-    private final IdentifierExpression identifier;
+    private final TypeExpression typeDefinition;
     private final IdentifierExpression openCurly;
     private final List<Expression> members;
     private final IdentifierExpression closeCurly;
 
-    public StructDeclarationExpression(IdentifierExpression structKeyword, IdentifierExpression identifier, IdentifierExpression openCurly, List<Expression> members, IdentifierExpression closeCurly) {
+    public StructDeclarationExpression(IdentifierExpression structKeyword, TypeExpression typeDefinition, IdentifierExpression openCurly, List<Expression> members, IdentifierExpression closeCurly) {
         this.structKeyword = structKeyword;
-        this.identifier = identifier;
+        this.typeDefinition = typeDefinition;
         this.openCurly = openCurly;
         this.members = members;
         this.closeCurly = closeCurly;
@@ -29,8 +29,8 @@ public class StructDeclarationExpression extends Expression {
         return structKeyword;
     }
 
-    public IdentifierExpression getIdentifier() {
-        return identifier;
+    public TypeExpression getTypeDefinition() {
+        return typeDefinition;
     }
 
     public IdentifierExpression getOpenCurly() {
@@ -54,7 +54,7 @@ public class StructDeclarationExpression extends Expression {
     public Iterator<SyntaxNode> getChildren() {
         List<SyntaxNode> children = new ArrayList<>();
 
-        children.addAll(Arrays.asList((SyntaxNode)structKeyword, identifier, openCurly));
+        children.addAll(Arrays.asList((SyntaxNode)structKeyword, typeDefinition, openCurly));
         children.addAll(members);
         children.add(closeCurly);
 

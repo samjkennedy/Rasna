@@ -1,0 +1,131 @@
+struct Complex {
+    r: Real
+    i: Real
+}
+
+fn cMul(a: Complex, b: Complex): Complex {
+    realComp := a.r * b.r - a.i * b.i
+    imagComp := a.r * b.i + a.i * b.r
+
+    return Complex{realComp, imagComp}
+}
+
+fn cAdd(a: Complex, b: Complex): Complex {
+    realComp := a.r + b.r
+    imagComp := a.i + b.i
+
+    return Complex{realComp, imagComp}
+}
+
+fn mandelbrot(a: Complex): Int {
+    const ITERS := 50
+    z := Complex{0., 0.}
+    for (i := 0 to ITERS) {
+        z = z.cMul(z).cAdd(a)
+        if ((z.r*z.r + z.i*z.i) > 4.0) {
+            return i
+        }
+    }
+    return ITERS
+}
+
+fn sin(x: Real): Real {
+
+    const _PI: Real = 3.14159265359
+    const precision: Int = 60
+
+    sign: Int = -1
+    x1 := x mod (2. * _PI)
+
+    term: Real = 1.0
+    sum: Real = 0.0
+
+    for (iter: Int = 1 to precision) {
+        term = term * (x1 / (iter as Real))
+        if (iter mod 4 == 1) {
+            sum = sum + term
+        }
+        if (iter mod 4 == 3) {
+            sum = sum - term
+        }
+    }
+    return sum
+}
+
+fn cos(x: Real): Real {
+    const _PI: Real = 3.14159265359
+    return sin(x + _PI)
+}
+
+struct Color {
+    r: Real
+    g: Real
+    b: Real
+}
+
+fn toColor(i: Int): Color {
+    if (i >= 50) {
+        return Color{0., 0., 0.}
+    }
+
+    a := (i as Real) * 0.2
+
+    r := (sin(a) + 1.)/2.
+    g := (sin(a + 2.1) + 1.)/2.
+    b := (sin(a + 4.2) + 1.)/2.
+
+    return Color{r, g, b}
+}
+
+fn toAscii(i: Int): Char {
+    if (i >= 50) {
+        return '@'
+    }
+    if (i >= 25) {
+        return '+'
+    }
+    if (i >= 7) {
+        return '.'
+    }
+    return ' '
+}
+
+fn printCol(col: Color, maxVal: Real) {
+    print((col.r * maxVal) as Int)
+    print((col.g * maxVal) as Int)
+    print((col.b * maxVal) as Int)
+}
+
+
+fn main() {
+
+//    Uncomment this for an ascii mandelbrot instead
+//    print('\n')
+//    for (y := -1.0 to 1.05 by 0.05) {
+//        for (x := -2.0 to 0.5 by 0.0315) {
+//            print(mandelbrot(Complex{x, y}).toAscii())
+//        }
+//        print('\n')
+//    }
+
+    const SCALE := 20.
+    const FORMAT := "P3"
+    WIDTH := 16. * SCALE
+    HEIGHT := 8. * SCALE
+    const MAX_VAL := 255.
+
+    print(FORMAT)
+    print('\n')
+    print(WIDTH as Int)
+    print(HEIGHT as Int)
+    print(MAX_VAL as Int)
+
+    yStep := 2. / HEIGHT
+    xStep := 2.5 / WIDTH
+
+    for (y := -1.0 to 1.05 by yStep) {
+        for (x := -2.0 to 0.5 by xStep) {
+            mandelbrot(Complex{x, y}).toColor().printCol(255.)
+        }
+    }
+}

@@ -16,6 +16,8 @@ public class BoundScope {
     private final LinkedHashMap<String, VariableSymbol> definedVariables;
     private final LinkedHashMap<String, FunctionSymbol> definedFunctions;
     private final Map<String, TypeSymbol> definedTypes;
+    private final Map<String, TypeSymbol> definedGenericTypes;
+    private final Map<TypeSymbol, TypeSymbol> boundGenericTypes;
     private final Map<String, BoundScope> namespaces;
 
     public BoundScope(BoundScope parentScope) {
@@ -23,6 +25,8 @@ public class BoundScope {
         this.definedVariables = new LinkedHashMap<>();
         this.definedFunctions = new LinkedHashMap<>();
         this.definedTypes = new HashMap<>();
+        this.definedGenericTypes = new HashMap<>();
+        this.boundGenericTypes = new HashMap<>();
         this.namespaces = new HashMap<>();
     }
 
@@ -32,6 +36,8 @@ public class BoundScope {
         secondary.definedVariables.forEach(merged::declareVariable);
         secondary.definedFunctions.forEach(merged::declareFunction);
         secondary.definedTypes.forEach(merged::declareType);
+        secondary.definedGenericTypes.forEach(merged::declareGenericType);
+        secondary.boundGenericTypes.forEach(merged::bindGenericType);
         secondary.namespaces.forEach(merged::declareNamespace);
 
         return merged;
@@ -70,6 +76,28 @@ public class BoundScope {
         }
         if (parentScope != null) {
             return parentScope.tryLookupType(name);
+        }
+        return Optional.empty();
+    }
+
+    public Optional<TypeSymbol> tryLookupGenericType(String name) {
+
+        if (definedGenericTypes.containsKey(name)) {
+            return Optional.of(definedGenericTypes.get(name));
+        }
+        if (parentScope != null) {
+            return parentScope.tryLookupGenericType(name);
+        }
+        return Optional.empty();
+    }
+
+    public Optional<TypeSymbol> tryLookupBinding(TypeSymbol genericType) {
+
+        if (boundGenericTypes.containsKey(genericType)) {
+            return Optional.of(boundGenericTypes.get(genericType));
+        }
+        if (parentScope != null) {
+            return parentScope.tryLookupBinding(genericType);
         }
         return Optional.empty();
     }
@@ -116,6 +144,22 @@ public class BoundScope {
         definedTypes.put(name, type);
     }
 
+    public void declareGenericType(String name, TypeSymbol genericType) {
+        if (tryLookupType(name).isPresent()) {
+            throw new TypeAlreadyDeclaredException(name);
+        }
+        definedTypes.put(name, genericType);
+        definedGenericTypes.put(name, genericType);
+    }
+
+
+    public void bindGenericType(TypeSymbol genericType, TypeSymbol concreteType) {
+        if (tryLookupBinding(genericType).isPresent()) {
+            throw new TypeAlreadyDeclaredException(genericType.getName());
+        }
+        boundGenericTypes.put(genericType, concreteType);
+    }
+
     public void declareNamespace(String name, BoundScope scope) {
         if (tryLookupNamespace(name).isPresent()) {
             replaceNamespace(name, scope);
@@ -139,4 +183,5 @@ public class BoundScope {
     public LinkedHashMap<String, VariableSymbol> getDefinedVariables() {
         return definedVariables;
     }
+
 }
