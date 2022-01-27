@@ -8,22 +8,17 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class ErasedParameterisedTypeExpression extends Expression {
+public class ErasedParameterisedTypeExpression extends TypeExpression {
 
-    private final Expression type;
     private final IdentifierExpression openAngle;
     private final List<Expression> erasedParameters;
     private final IdentifierExpression closeAngle;
 
     public ErasedParameterisedTypeExpression(Expression type, IdentifierExpression openAngle, List<Expression> erasedParameters, IdentifierExpression closeAngle) {
-        this.type = type;
+        super(type);
         this.openAngle = openAngle;
         this.erasedParameters = erasedParameters;
         this.closeAngle = closeAngle;
-    }
-
-    public Expression getType() {
-        return type;
     }
 
     public IdentifierExpression getOpenAngle() {

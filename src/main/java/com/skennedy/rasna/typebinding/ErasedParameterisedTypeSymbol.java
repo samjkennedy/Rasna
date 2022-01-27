@@ -20,9 +20,15 @@ public class ErasedParameterisedTypeSymbol extends TypeSymbol {
     private static LinkedHashMap<String, VariableSymbol> eraseFieldTypes(LinkedHashMap<String, VariableSymbol> fields, Map<String, TypeSymbol> erasures) {
         for (Map.Entry<String, VariableSymbol> field : fields.entrySet()) {
             VariableSymbol variable = field.getValue();
-            if (erasures.containsKey(variable.getType().getName())) {
+            TypeSymbol type = variable.getType();
+            if (erasures.containsKey(type.getName())) {
 
-                VariableSymbol erasedVariable = new VariableSymbol(variable.getName(), erasures.get(variable.getType().getName()), variable.getGuard(), variable.isReadOnly(), variable.getDeclaration());
+                TypeSymbol erasedType = erasures.get(type.getName());
+                if (type instanceof ArrayTypeSymbol) {
+                    erasedType = new ArrayTypeSymbol(erasedType);
+                }
+
+                VariableSymbol erasedVariable = new VariableSymbol(variable.getName(), erasedType, variable.getGuard(), variable.isReadOnly(), variable.getDeclaration());
                 fields.replace(variable.getName(), variable, erasedVariable);
             }
         }

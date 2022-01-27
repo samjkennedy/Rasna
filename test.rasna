@@ -1,4 +1,4 @@
-//This really ain't a list but it's a Proof of Concept for a generic type
+//This really ain't a Seq but it's a Proof of Concept for a generic type
 struct Seq<T> {
     data: T[]
 }
@@ -6,7 +6,7 @@ struct Seq<T> {
 //fn <T> size(seq: Seq<T>): Int {
 //    return seq.data.len
 //}
-//
+
 //fn <T> get(seq: Seq<T>, index: Int): T {
 //    return seq.data[index]
 //}
@@ -25,10 +25,10 @@ fn printCol(col: Color) {
 
 fn main() {
 
-    seq := Seq{[Color{0.5, 0.5, 0.0}, Color{1.0, 1.0, 1.0}]}
+    seq := Seq{[1, 2]}
 
-    seq.data[1].printCol()
+    print(seq.data[1])
 
-//    print(list.size())
-//    print(list.get(0))
+    print(seq.size())
+    print(seq.get(0))
 }

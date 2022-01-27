@@ -225,25 +225,24 @@ public class Binder {
             TypeSymbol expectedType = structMembers.get(i).getType();
             if (!expectedType.isAssignableFrom(boundMember.getType())) {
 
-                // https://play.rust-lang.org/?version=stable&mode=release&edition=2018&gist=066e72731fbdbf212f68c25b5a4e3b72
-                //TODO: Just make this return a fucking
-                // Vec<Int> {
-                //  x: Int
-                //  y: Int
-                // }
-                // And let the llvm generate %integer = alloca { i32, i32 }, align 4 or
-                // %"Point<i32>" = type { i32, i32, float }
-
                 if (erasures.containsKey(expectedType.getName())) {
                     if (!erasures.get(expectedType.getName()).isAssignableFrom(boundMember.getType())) {
                         errors.add(BindingError.raiseTypeMismatch(erasures.get(expectedType.getName()), boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
                     }
+                //TODO: If the bound type is composite (i.e. <T> -> T[]) it is not erased correctly
                 } else if (genericParameters.contains(expectedType.getName())) {
-                    erasures.put(expectedType.getName(), boundMember.getType());
+                    erasures.put(expectedType.getName(), getBaseType(boundMember.getType()));
                 }
             }
         }
         return new ErasedParameterisedTypeSymbol(type.getName(), new LinkedHashMap<>(type.getFields()), erasures);
+    }
+
+    private TypeSymbol getBaseType(TypeSymbol type) {
+        if (type instanceof ArrayTypeSymbol) {
+            return getBaseType(((ArrayTypeSymbol) type).getType());
+        }
+        return type;
     }
 
     private BoundExpression bindCastExpression(CastExpression castExpression) {
@@ -1349,6 +1348,9 @@ public class Binder {
         }
         if (typeExpression.getTypeExpression() instanceof GenericTypeExpression) {
             return getTypeIdentifier((GenericTypeExpression) typeExpression.getTypeExpression());
+        }
+        if (typeExpression.getTypeExpression() instanceof ErasedParameterisedTypeExpression) {
+            return getTypeIdentifier((ErasedParameterisedTypeExpression) typeExpression.getTypeExpression());
         }
         throw new UnsupportedOperationException("Unhandled type expression type `" + typeExpression.getTypeExpression().getClass().getSimpleName() + "`");
     }
