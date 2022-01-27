@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
+import static com.skennedy.rasna.typebinding.TypeSymbol.ERROR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
@@ -197,42 +198,52 @@ public class Binder {
             return new BoundErrorExpression();
         }
 
-        for (int i = 0; i < structLiteralExpressionMembers.size(); i++) {
-            BoundExpression boundMember = members.get(i);
-            TypeSymbol expectedType = values.get(i).getType();
-            if (!expectedType.isAssignableFrom(boundMember.getType())) {
-
-                if (structLiteralExpression.getTypeExpression() instanceof GenericTypeExpression) {
-
-                    Map<String, TypeSymbol> erasures = new HashMap<>();
-                    //Check for generic binding
-                    if (currentScope.tryLookupGenericType(expectedType.getName()).isPresent()) {
-                        Optional<TypeSymbol> boundGenericType = currentScope.tryLookupBinding(expectedType);
-                        if (boundGenericType.isPresent()) {
-                            if (!boundGenericType.get().isAssignableFrom(boundMember.getType())) {
-                                errors.add(BindingError.raiseTypeMismatch(boundGenericType.get(), boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
-                            }
-                        } else {
-                            currentScope.bindGenericType(expectedType, boundMember.getType());
-                            erasures.put(expectedType.getName(), boundMember.getType());
-                        }
-                    }
-                    type = new ErasedParameterisedTypeSymbol(type.getName(), (LinkedHashMap)type.getFields(), erasures);
-                } else {
-
-                    //TODO: Can be argType mismatch, e.g. expected type X in position Y of function Z
-                    errors.add(BindingError.raiseTypeMismatch(expectedType, boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
-                }
-            }
-        }
-
         if (values.size() != members.size()) {
             //This could be a little misleading, need signature info in the functionsymbol
             errors.add(BindingError.raiseUnknownFunction((String) typeExpression.getValue(), members, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
+        if (type instanceof ParameterisedTypeSymbol) {
+            ErasedParameterisedTypeSymbol erasedType = eraseParameters(structLiteralExpression, (ParameterisedTypeSymbol)type, members, values);
+            if (currentScope.tryLookupType(erasedType.getName()).isEmpty()) {
+                currentScope.declareType(erasedType.getName(), erasedType);
+            }
+            return new BoundStructLiteralExpression(erasedType, members);
+        }
+
         return new BoundStructLiteralExpression(type, members);
+    }
+
+    private ErasedParameterisedTypeSymbol eraseParameters(StructLiteralExpression structLiteralExpression, ParameterisedTypeSymbol type, List<BoundExpression> literalMembers, List<VariableSymbol> structMembers) {
+        Map<String, TypeSymbol> erasures = new HashMap<>();
+
+        List<String> genericParameters = type.getGenericParameters();
+
+        for (int i = 0; i < literalMembers.size(); i++) {
+            BoundExpression boundMember = literalMembers.get(i);
+            TypeSymbol expectedType = structMembers.get(i).getType();
+            if (!expectedType.isAssignableFrom(boundMember.getType())) {
+
+                // https://play.rust-lang.org/?version=stable&mode=release&edition=2018&gist=066e72731fbdbf212f68c25b5a4e3b72
+                //TODO: Just make this return a fucking
+                // Vec<Int> {
+                //  x: Int
+                //  y: Int
+                // }
+                // And let the llvm generate %integer = alloca { i32, i32 }, align 4 or
+                // %"Point<i32>" = type { i32, i32, float }
+
+                if (erasures.containsKey(expectedType.getName())) {
+                    if (!erasures.get(expectedType.getName()).isAssignableFrom(boundMember.getType())) {
+                        errors.add(BindingError.raiseTypeMismatch(erasures.get(expectedType.getName()), boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
+                    }
+                } else if (genericParameters.contains(expectedType.getName())) {
+                    erasures.put(expectedType.getName(), boundMember.getType());
+                }
+            }
+        }
+        return new ErasedParameterisedTypeSymbol(type.getName(), new LinkedHashMap<>(type.getFields()), erasures);
     }
 
     private BoundExpression bindCastExpression(CastExpression castExpression) {
@@ -292,7 +303,7 @@ public class Binder {
 
     private BoundExpression bindMemberAccessorExpression(MemberAccessorExpression memberAccessorExpression) {
         BoundExpression boundOwner = bind(memberAccessorExpression.getOwner());
-        if (boundOwner instanceof BoundErrorExpression) {
+        if (boundOwner instanceof BoundErrorExpression || boundOwner.getType() == ERROR) {
             return boundOwner;
         }
 
@@ -714,7 +725,8 @@ public class Binder {
         return typeSymbol;
     }
 
-    private VariableSymbol buildVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression guard, boolean readOnly, Expression declaration) {
+    private VariableSymbol buildVariableSymbol(TypeSymbol type, IdentifierExpression identifier, BoundExpression
+            guard, boolean readOnly, Expression declaration) {
         return new VariableSymbol((String) identifier.getValue(), type, guard, readOnly, declaration);
     }
 
@@ -1030,7 +1042,8 @@ public class Binder {
         return new BoundEnumDeclarationExpression(type, members);
     }
 
-    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {
+    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression
+                                                                      functionDeclarationExpression) {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
@@ -1067,7 +1080,8 @@ public class Binder {
         return boundFunctionDeclarationExpression;
     }
 
-    private void typeCheckMainFunction(BoundFunctionDeclarationExpression boundMainFunction, FunctionDeclarationExpression mainFunction) {
+    private void typeCheckMainFunction(BoundFunctionDeclarationExpression
+                                               boundMainFunction, FunctionDeclarationExpression mainFunction) {
 
         if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.UNIT) {
             errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
@@ -1124,7 +1138,8 @@ public class Binder {
         return new BoundLambdaExpression(boundArguments, boundBody);
     }
 
-    private BoundFunctionParameterExpression bindFunctionArgumentExpression(FunctionParameterExpression argumentExpression) {
+    private BoundFunctionParameterExpression bindFunctionArgumentExpression(FunctionParameterExpression
+                                                                                    argumentExpression) {
 
         boolean reference = argumentExpression.getRefKeyword() != null;
 
@@ -1243,6 +1258,9 @@ public class Binder {
         //Create placeholder
         try {
             TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
+            if (type == null) {
+                return new BoundErrorExpression();
+            }
             currentScope.declareVariable((String) identifier.getValue(), new VariableSymbol((String) identifier.getValue(), type, null, false, variableDeclarationExpression));
         } catch (VariableAlreadyDeclaredException vade) {
             VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable((String) identifier.getValue()).get();
@@ -1276,21 +1294,6 @@ public class Binder {
         boolean readOnly = type == STRING || variableDeclarationExpression.getConstKeyword() != null;
         if (readOnly && (initialiser == null || !initialiser.isConstExpression())) {
             errors.add(BindingError.raiseNonConstAssignmentError(variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getSpan()));
-        }
-
-        if (type == TypeSymbol.FUNCTION) {
-            //We're defining a lambda
-            if (!(variableDeclarationExpression.getInitialiser() instanceof LambdaExpression)) {
-                throw new IllegalStateException("Functions can not be initialised by " + variableDeclarationExpression.getInitialiser().getClass());
-            }
-            BoundLambdaExpression lambdaExpression = bindLambdaExpression((LambdaExpression) variableDeclarationExpression.getInitialiser());
-
-            //TODO: guarded lambdas
-            FunctionSymbol function = new FunctionSymbol((String) variableDeclarationExpression.getIdentifier().getValue(), lambdaExpression.getBody().getType(), lambdaExpression.getArguments(), null);
-            currentScope.declareFunction(function.getName(), function);
-            return new BoundFunctionDeclarationExpression(function, lambdaExpression.getArguments(), new BoundBlockExpression(
-                    new BoundReturnExpression(lambdaExpression.getBody())
-            ));
         }
 
         VariableSymbol variable = buildVariableSymbol(type, identifier, guard, readOnly, variableDeclarationExpression);

@@ -4,7 +4,17 @@ struct Vec2<T> {
 }
 
 fn main() {
-    v1 := Vec2<Int>{1, 2}
-//    v2: Vec2<Real>{1.2, 2.3}
-//    v3: Vec2<(Int, Real)>{(2, 3.1), (8, 7.4)}
+    v1 := Vec2{1, 2}
+    print(v1.x)
+    print(v1.y)
+
+    print("========\n")
+    v2 := Vec2{3.4, 5.6}
+    print(v2.x)
+    print(v2.y)
+
+    print("========\n")
+    v3 := Vec2{true, false}
+    print(v3.x)
+    print(v3.y)
 }

@@ -13,13 +13,25 @@ public class ErasedParameterisedTypeSymbol extends TypeSymbol {
     public ErasedParameterisedTypeSymbol(String name, LinkedHashMap<String, VariableSymbol> fields, Map<String, TypeSymbol> erasures) {
         super(name, fields);
         this.name = name;
-        this.fields = fields;
         this.erasures = erasures;
+        this.fields =  eraseFieldTypes(fields, erasures);
+    }
+
+    private static LinkedHashMap<String, VariableSymbol> eraseFieldTypes(LinkedHashMap<String, VariableSymbol> fields, Map<String, TypeSymbol> erasures) {
+        for (Map.Entry<String, VariableSymbol> field : fields.entrySet()) {
+            VariableSymbol variable = field.getValue();
+            if (erasures.containsKey(variable.getType().getName())) {
+
+                VariableSymbol erasedVariable = new VariableSymbol(variable.getName(), erasures.get(variable.getType().getName()), variable.getGuard(), variable.isReadOnly(), variable.getDeclaration());
+                fields.replace(variable.getName(), variable, erasedVariable);
+            }
+        }
+        return fields;
     }
 
     @Override
     public String getName() {
-        return name;
+        return toString();
     }
 
     @Override
@@ -33,6 +45,6 @@ public class ErasedParameterisedTypeSymbol extends TypeSymbol {
 
     @Override
     public String toString() {
-        return getName() + "<" + erasures.values().stream().map(TypeSymbol::toString).collect(Collectors.joining(", ")) + ">";
+        return name + "<" + erasures.values().stream().map(TypeSymbol::toString).collect(Collectors.joining(", ")) + ">";
     }
 }
