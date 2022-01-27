@@ -16,13 +16,7 @@
 1
 1
 0
-Hello
-World
-1.414000
+HelloWorld1.414000
 2.718000
 3.141000
-H
-e
-l
-l
-o
+Hello

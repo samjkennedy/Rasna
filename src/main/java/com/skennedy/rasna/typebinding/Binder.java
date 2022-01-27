@@ -487,11 +487,10 @@ public class Binder {
         return new BoundArrayLiteralExpression(boundElements);
     }
 
-    private BoundPositionalAccessExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
-        IdentifierExpression identifier = arrayAccessExpression.getIdentifier();
-        Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifier.getValue());
-        if (variable.isEmpty()) {
-            throw new UndefinedVariableException((String) identifier.getValue());
+    private BoundExpression bindArrayAccessExpression(ArrayAccessExpression arrayAccessExpression) {
+        BoundExpression array = bind(arrayAccessExpression.getArray());
+        if (!(array.getType() instanceof ArrayTypeSymbol)) {
+            errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(array.getType()), array.getType(), arrayAccessExpression.getIndex().getSpan()));
         }
 
         BoundExpression index = bind(arrayAccessExpression.getIndex());
@@ -499,7 +498,7 @@ public class Binder {
         if (!index.getType().isAssignableFrom(INT)) {
             errors.add(BindingError.raiseTypeMismatch(INT, index.getType(), arrayAccessExpression.getIndex().getSpan()));
         }
-        return new BoundPositionalAccessExpression(new BoundVariableExpression(variable.get()), index);
+        return new BoundPositionalAccessExpression(array, index);
     }
 
     private BoundExpression bindArrayLengthExpression(ArrayLengthExpression arrayLengthExpression) {
@@ -514,7 +513,11 @@ public class Binder {
 
     private BoundExpression bindArrayAssignmentExpression(ArrayAssignmentExpression arrayAssignmentExpression) {
 
-        BoundPositionalAccessExpression boundArrayAccessExpression = bindArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
+        BoundExpression boundExpression = bindArrayAccessExpression(arrayAssignmentExpression.getArrayAccessExpression());
+        if (!(boundExpression instanceof BoundPositionalAccessExpression)) {
+            return boundExpression;
+        }
+        BoundPositionalAccessExpression boundArrayAccessExpression = (BoundPositionalAccessExpression) boundExpression;
 
         BoundExpression array = boundArrayAccessExpression.getArray();
         if (array.getType() instanceof TupleTypeSymbol) {
@@ -973,6 +976,8 @@ public class Binder {
 
         IdentifierExpression typeIdentifier = getTypeIdentifier(typeExpressiion);
 
+        currentScope = new BoundScope(currentScope);
+
         if (typeExpressiion instanceof GenericTypeExpression) {
             for (IdentifierExpression genericParameter : ((GenericTypeExpression) typeExpressiion).getGenericParameters()) {
                 TypeSymbol genericType = new TypeSymbol((String) genericParameter.getValue(), new LinkedHashMap<>());
@@ -980,7 +985,6 @@ public class Binder {
             }
         }
 
-        currentScope = new BoundScope(currentScope);
 
         List<BoundExpression> members = new ArrayList<>();
         for (Expression member : structDeclarationExpression.getMembers()) {

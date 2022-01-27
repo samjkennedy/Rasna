@@ -1,8 +1,12 @@
 ## LLVM TODO
 
-### Bugs
+### Bugs/Improvements
 
 - For loop scoping of iterator
+- Rust style alloc before assignment
+- Return references from functions
+
+### Features
 
 - Global variables
 - cmdline args

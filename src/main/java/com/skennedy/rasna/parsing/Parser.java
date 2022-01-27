@@ -620,6 +620,20 @@ public class Parser {
         inTopLevel = false;
         IdentifierExpression fnKeyword = matchToken(TokenType.FN_KEYWORD);
 
+        List<Expression> genericParameters = new ArrayList<>();
+        if (current().getTokenType() == TokenType.OPEN_ANGLE_BRACE) {
+            IdentifierExpression openAngle = matchToken(TokenType.OPEN_ANGLE_BRACE);
+
+            genericParameters.add(parseTypeExpression());
+            while (current().getTokenType() != TokenType.CLOSE_ANGLE_BRACE
+                    && current().getTokenType() != TokenType.EOF_TOKEN
+                    && current().getTokenType() != TokenType.BAD_TOKEN) {
+                matchToken(TokenType.COMMA);
+                genericParameters.add(parseTypeExpression());
+            }
+            IdentifierExpression closeAngle = matchToken(TokenType.CLOSE_ANGLE_BRACE);
+        }
+
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
@@ -644,7 +658,7 @@ public class Parser {
         BlockExpression body = parseBlockExpression();
 
         inTopLevel = true;
-        return new FunctionDeclarationExpression(fnKeyword, identifier, openParen, argumentExpressions, closeParen, typeExpression, body);
+        return new FunctionDeclarationExpression(fnKeyword, genericParameters, identifier, openParen, argumentExpressions, closeParen, typeExpression, body);
     }
 
     private VariableDeclarationExpression parseVariableDeclarationExpression() {
@@ -951,6 +965,19 @@ public class Parser {
                 IdentifierExpression typeIdentifier = matchToken(current().getTokenType());
 
                 return parseAhead(new TypeTestExpression(parsed, isKeyword, typeIdentifier));
+            case OPEN_SQUARE_BRACE:
+                IdentifierExpression openBrace = matchToken(TokenType.OPEN_SQUARE_BRACE);
+                Expression index = parseExpression();
+                IdentifierExpression closeBrace = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+
+                ArrayAccessExpression arrayAccessExpression = new ArrayAccessExpression(parsed, openBrace, index, closeBrace);
+                if (current().getTokenType() != TokenType.EQUALS) {
+                    return parseAhead(arrayAccessExpression);
+                }
+                IdentifierExpression equals = matchToken(TokenType.EQUALS);
+                Expression assignment = parseExpression();
+
+                return parseAhead(new ArrayAssignmentExpression(arrayAccessExpression, equals, assignment));
             default:
                 return parsed;
         }

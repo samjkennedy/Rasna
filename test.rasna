@@ -1,20 +1,34 @@
-struct Vec2<T> {
-    x: T
-    y: T
+//This really ain't a list but it's a Proof of Concept for a generic type
+struct Seq<T> {
+    data: T[]
+}
+
+//fn <T> size(seq: Seq<T>): Int {
+//    return seq.data.len
+//}
+//
+//fn <T> get(seq: Seq<T>, index: Int): T {
+//    return seq.data[index]
+//}
+
+struct Color {
+    r: Real
+    g: Real
+    b: Real
+}
+
+fn printCol(col: Color) {
+    print(col.r)
+    print(col.g)
+    print(col.b)
 }
 
 fn main() {
-    v1 := Vec2{1, 2}
-    print(v1.x)
-    print(v1.y)
 
-    print("========\n")
-    v2 := Vec2{3.4, 5.6}
-    print(v2.x)
-    print(v2.y)
+    seq := Seq{[Color{0.5, 0.5, 0.0}, Color{1.0, 1.0, 1.0}]}
 
-    print("========\n")
-    v3 := Vec2{true, false}
-    print(v3.x)
-    print(v3.y)
+    seq.data[1].printCol()
+
+//    print(list.size())
+//    print(list.get(0))
 }
