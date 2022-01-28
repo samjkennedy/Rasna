@@ -7,8 +7,6 @@ import com.skennedy.rasna.compilation.llvm.LLVMCompiler;
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
 import com.skennedy.rasna.diagnostics.TextSpan;
-import com.skennedy.rasna.graphing.HighLevelTreeGrapher;
-import com.skennedy.rasna.graphing.LowLevelTreeGrapher;
 import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.lowering.BoundProgramRewriter;
 import com.skennedy.rasna.lowering.LLVMLowerer;
@@ -101,24 +99,9 @@ public class Rasna {
                 return;
             }
 
-            //TODO: make this a flag
-            boolean graphProgram = false;
-            //Write first in case of errors in compilation or simulation
-            if (graphProgram) {
-                log.debug("Writing high level AST graph");
-                HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
-                highLevelTreeGrapher.graphAST(boundProgram);
-            }
-
             //Lower the program to a linear series of instructions
             BoundProgramRewriter rewriter = new LLVMLowerer();
             boundProgram = rewriter.rewrite(boundProgram);
-
-            if (graphProgram) {
-                log.debug("Writing low level AST graph");
-                LowLevelTreeGrapher lowLevelTreeGrapher = new LowLevelTreeGrapher();
-                lowLevelTreeGrapher.graphAST(boundProgram);
-            }
 
             boolean printProgram = false;
             if (printProgram) {

@@ -13,9 +13,6 @@ import java.util.function.Function;
 
 public abstract class BoundProgramRewriter {
 
-    //So that all branches of a block can point to the same end label
-    protected static BoundLabel blockEndLabel;
-
     public BoundProgram rewrite(BoundProgram program) {
 
         List<BoundExpression> rewrittenExpressions = new ArrayList<>();
@@ -26,7 +23,6 @@ public abstract class BoundProgramRewriter {
             } else {
                 rewrittenExpressions.add(rewrittenExpression);
             }
-            blockEndLabel = null;
         }
 
         BoundBlockExpression nestedProgram = new BoundBlockExpression(rewrittenExpressions);
@@ -58,7 +54,6 @@ public abstract class BoundProgramRewriter {
 
     protected BoundExpression rewriteExpression(BoundExpression expression) {
         switch (expression.getBoundExpressionType()) {
-
             case ARRAY_LITERAL_EXPRESSION:
                 return rewriteArrayLiteralExpression((BoundArrayLiteralExpression) expression);
             case POSITIONAL_ACCESS_EXPRESSION:
@@ -71,8 +66,6 @@ public abstract class BoundProgramRewriter {
             case TUPLE_LITERAL_EXPRESSION:
             case LITERAL:
             case VARIABLE_EXPRESSION:
-            case GOTO:
-            case LABEL:
             case NOOP:
             case INCREMENT:
             case TYPE_TEST_EXPRESSION:
@@ -104,8 +97,6 @@ public abstract class BoundProgramRewriter {
                 return rewriteVariableDeclaration((BoundVariableDeclarationExpression) expression);
             case WHILE:
                 return rewriteWhileExpression((BoundWhileExpression) expression);
-            case CONDITIONAL_GOTO:
-                return rewriteConditionalGoto((BoundConditionalGotoExpression) expression);
             case FUNCTION_CALL:
                 return rewriteFunctionCall((BoundFunctionCallExpression) expression);
             case FUNCTION_DECLARATION:
@@ -114,14 +105,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteReturnCall((BoundReturnExpression) expression);
             case MATCH_EXPRESSION:
                 return rewriteMatchExpression((BoundMatchExpression) expression);
-            case LAMBDA_FUNCTION:
-                return rewriteLambdaExpression((BoundLambdaExpression) expression);
-            case MAP_EXPRESSION:
-                return rewriteMapExpression((BoundMapExpression) expression);
             case ARRAY_DECLARATION_EXPRESSION:
                 return rewriteArrayDeclarationExpression((BoundArrayDeclarationExpression) expression);
-            case YIELD_EXPRESSION:
-                return rewriteYieldExpression((BoundYieldExpression) expression);
             case STRUCT_DECLARATION_EXPRESSION:
                 return rewriteStructDeclarationExpression((BoundStructDeclarationExpression) expression);
             case STRUCT_LITERAL_EXPRESSION:
@@ -202,15 +187,6 @@ public abstract class BoundProgramRewriter {
         return new BoundStructDeclarationExpression(structDeclarationExpression.getType(), members);
     }
 
-    private BoundExpression rewriteYieldExpression(BoundYieldExpression yieldExpression) {
-        BoundExpression rewrittenExpression = rewriteExpression(yieldExpression.getExpression());
-
-        if (rewrittenExpression == yieldExpression.getExpression()) {
-            return yieldExpression;
-        }
-        return new BoundYieldExpression(rewrittenExpression);
-    }
-
     private BoundExpression rewriteArrayDeclarationExpression(BoundArrayDeclarationExpression arrayDeclarationExpression) {
         BoundExpression rewrittenElementCount = rewriteExpression(arrayDeclarationExpression.getElementCount());
 
@@ -218,26 +194,6 @@ public abstract class BoundProgramRewriter {
             return arrayDeclarationExpression;
         }
         return new BoundArrayDeclarationExpression((ArrayTypeSymbol) arrayDeclarationExpression.getType(), rewrittenElementCount);
-    }
-
-    protected BoundExpression rewriteMapExpression(BoundMapExpression mapExpression) {
-
-        BoundExpression rewrittenMapper = rewriteExpression(mapExpression.getMapperFunction());
-        BoundExpression rewrittenOperand = rewriteExpression(mapExpression.getOperand());
-
-        if (rewrittenMapper == mapExpression.getMapperFunction() && rewrittenOperand == mapExpression.getOperand()) {
-            return mapExpression;
-        }
-        return new BoundMapExpression(rewrittenMapper, rewrittenOperand);
-    }
-
-    private BoundExpression rewriteLambdaExpression(BoundLambdaExpression lambdaExpression) {
-        BoundExpression rewrittenBody = rewriteExpression(lambdaExpression.getBody());
-
-        if (rewrittenBody == lambdaExpression.getBody()) {
-            return lambdaExpression;
-        }
-        return new BoundLambdaExpression(lambdaExpression.getArguments(), rewrittenBody);
     }
 
     protected BoundExpression rewriteMatchExpression(BoundMatchExpression matchExpression) {
@@ -833,14 +789,6 @@ public abstract class BoundProgramRewriter {
         return new BoundWhileExpression(condition, body);
     }
 
-    private BoundExpression rewriteConditionalGoto(BoundConditionalGotoExpression conditionalGotoExpression) {
-        BoundExpression condition = rewriteExpression(conditionalGotoExpression.getCondition());
-        if (condition == conditionalGotoExpression.getCondition()) {
-            return conditionalGotoExpression;
-        }
-        return new BoundConditionalGotoExpression(conditionalGotoExpression.getLabel(), condition, conditionalGotoExpression.jumpIfFalse());
-    }
-
     private BoundExpression rewriteTypeofIntrinsic(BoundTypeofExpression typeofExpression) {
 
         BoundExpression expression = rewriteExpression(typeofExpression.getExpression());
@@ -869,8 +817,7 @@ public abstract class BoundProgramRewriter {
             if (expr instanceof BoundLiteralExpression
                     || expr instanceof BoundVariableExpression
                     || expr instanceof BoundBinaryExpression
-                    || expr instanceof BoundFunctionCallExpression
-                    || expr instanceof BoundYieldExpression) {
+                    || expr instanceof BoundFunctionCallExpression) {
                 expressions.set(i, remapper.apply(expr));
             } else if (expr instanceof BoundBlockExpression) {
                 rewriteBlockInitialiser((BoundBlockExpression) expr, remapper);

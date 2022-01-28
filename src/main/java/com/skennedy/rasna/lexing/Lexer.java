@@ -177,13 +177,8 @@ public class Lexer {
                             tokens.add(new Token(TokenType.CHAR_LITERAL, new Location(filePath, lineNumber, cursor), parseChar(line)));
                             break;
                         case '.':
-                            if (lookAhead(line) == '.' && peek(line, 2) == '.') {
-                                tokens.add(new Token(TokenType.ELIPSIS, new Location(filePath, lineNumber, cursor)));
-                                cursor += 3;
-                            } else {
-                                tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));
-                                next();
-                            }
+                            tokens.add(new Token(TokenType.DOT, new Location(filePath, lineNumber, cursor)));
+                            next();
                             break;
                         case ':':
                             if (lookAhead(line) == ':') {

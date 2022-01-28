@@ -17,14 +17,12 @@ import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.SyntaxNode;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
@@ -111,12 +109,8 @@ public class Binder {
                 return bindMemberAssignmentExpression((MemberAssignmentExpression) expression);
             case TUPLE_LITERAL_EXPR:
                 return bindTupleLiteralExpression((TupleLiteralExpression) expression);
-            case MAP_EXPRESSION:
-                return bindMapExpression((MapExpression) expression);
             case ARRAY_DECLARATION_EXPR:
                 return bindArrayDeclarationExpression((ArrayDeclarationExpression) expression);
-            case YIELD_EXPRESSION:
-                return bindYieldExpression((YieldExpression) expression);
             case STRUCT_DECLARATION_EXPR:
                 return bindStructDeclarationExpression((StructDeclarationExpression) expression);
             case MEMBER_ACCESSOR_EXPR:
@@ -378,12 +372,6 @@ public class Binder {
         return new BoundErrorExpression();
     }
 
-    private BoundExpression bindYieldExpression(YieldExpression yieldExpression) {
-        BoundExpression expression = bind(yieldExpression.getExpression());
-
-        return new BoundYieldExpression(expression);
-    }
-
     private BoundExpression bindArrayDeclarationExpression(ArrayDeclarationExpression arrayDeclarationExpression) {
         BoundExpression elementCount = bind(arrayDeclarationExpression.getElementCount());
         if (!elementCount.getType().isAssignableFrom(INT)) {
@@ -392,19 +380,6 @@ public class Binder {
         ArrayTypeSymbol typeSymbol = new ArrayTypeSymbol(parseType(arrayDeclarationExpression.getTypeExpression()));
 
         return new BoundArrayDeclarationExpression(typeSymbol, elementCount);
-    }
-
-    private BoundExpression bindMapExpression(MapExpression mapExpression) {
-        BoundExpression boundMapperFunction = bind(mapExpression.getMapFunction());
-        if (!boundMapperFunction.getType().isAssignableFrom(TypeSymbol.FUNCTION)) {
-            throw new IllegalStateException("Map must take a function");
-        }
-        BoundExpression boundOperand = bind(mapExpression.getExpression());
-
-        if (!(boundOperand.getType() instanceof ArrayTypeSymbol)) {
-            throw new IllegalStateException("Map can only operate on array types");
-        }
-        return new BoundMapExpression(boundMapperFunction, boundOperand);
     }
 
     private BoundExpression bindTupleLiteralExpression(TupleLiteralExpression tupleLiteralExpression) {

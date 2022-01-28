@@ -8,7 +8,6 @@ import java.util.List;
 public enum TokenType {
 
     WHITESPACE(null),
-    LINE_BREAK("\n"),
     NUM_LITERAL(null),
     CHAR_LITERAL(null),
     STRING_LITERAL(null),
@@ -45,7 +44,6 @@ public enum TokenType {
     ARROW("->"),
     THICC_ARROW("=>"),
     DOT("."),
-    ELIPSIS("..."),
     COLON(":"),
     COLON_COLON("::"),
 
@@ -61,7 +59,6 @@ public enum TokenType {
     IN_KEYWORD("in"),
     TO_KEYWORD("to"),
     BY_KEYWORD("by"),
-    YIELD_KEYWORD("yield"),
     MOD_KEYWORD("mod"),
     TRUE_KEYWORD("true"),
     FALSE_KEYWORD("false"),
