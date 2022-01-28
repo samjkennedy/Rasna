@@ -109,8 +109,6 @@ public class Binder {
                 return bindMemberAssignmentExpression((MemberAssignmentExpression) expression);
             case TUPLE_LITERAL_EXPR:
                 return bindTupleLiteralExpression((TupleLiteralExpression) expression);
-            case LAMBDA_EXPRESSION:
-                return bindLambdaExpression((LambdaExpression) expression);
             case MAP_EXPRESSION:
                 return bindMapExpression((MapExpression) expression);
             case ARRAY_DECLARATION_EXPR:
@@ -1049,7 +1047,6 @@ public class Binder {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
-
         currentScope = new BoundScope(currentScope);
 
         if (!functionDeclarationExpression.getGenericParameters().isEmpty()) {
@@ -1072,10 +1069,15 @@ public class Binder {
 
         FunctionSymbol functionSymbol = new FunctionSymbol((String) identifier.getValue(), type, arguments, null);
         try {
-            //Declare the function in the parent scope
-            currentScope.getParentScope().declareFunction((String) identifier.getValue(), functionSymbol);
+            List<String> argumentIdentifiers = functionDeclarationExpression.getArguments().stream()
+                    .map(FunctionParameterExpression::getTypeExpression)
+                    .map(this::getTypeIdentifier)
+                    .map(IdentifierExpression::getValue)
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+            currentScope.getParentScope().declareFunction(buildSignature(functionDeclarationExpression.getIdentifier(), argumentIdentifiers), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
-            errors.add(BindingError.raiseFunctionAlreadyDeclared((String) identifier.getValue(), identifier.getSpan()));
+            errors.add(BindingError.raiseFunctionAlreadyDeclared(functionSymbol.getSignature(), identifier.getSpan()));
         }
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());
@@ -1093,8 +1095,26 @@ public class Binder {
         return boundFunctionDeclarationExpression;
     }
 
-    private void typeCheckMainFunction(BoundFunctionDeclarationExpression
-                                               boundMainFunction, FunctionDeclarationExpression mainFunction) {
+    private String buildSignature(IdentifierExpression identifier, List<String> typeIdentifiers) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(identifier.getValue());
+//        if (!functionDeclarationExpression.getGenericParameters().isEmpty()) {
+//            sb.append("<");
+//            for (Expression genericParameter : functionDeclarationExpression.getGenericParameters()) {
+//                if (genericParameter instanceof IdentifierExpression) {
+//                    sb.append(((IdentifierExpression) genericParameter).getValue());
+//                }
+//            }
+//            sb.append(">");
+//        }
+        sb.append("(");
+        sb.append(String.join(", ", typeIdentifiers));
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private void typeCheckMainFunction(BoundFunctionDeclarationExpression boundMainFunction, FunctionDeclarationExpression mainFunction) {
 
         if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.UNIT) {
             errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
@@ -1118,41 +1138,7 @@ public class Binder {
         }
     }
 
-    private BoundLambdaExpression bindLambdaExpression(LambdaExpression lambdaExpression) {
-
-        //IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
-
-        currentScope = new BoundScope(currentScope);
-
-        //Declare the arguments within the function's scope
-        List<BoundFunctionParameterExpression> boundArguments = new ArrayList<>();
-        for (FunctionParameterExpression argumentExpression : lambdaExpression.getArgumentExpressions()) {
-            boundArguments.add(bindFunctionArgumentExpression(argumentExpression));
-        }
-
-        BoundExpression boundBody = new BoundBlockExpression(
-                new BoundReturnExpression(bind(lambdaExpression.getExpression()))
-        );
-        TypeSymbol type = boundBody.getType();
-
-        String anonymousFunctionIdentifier = "lambda-function-" + UUID.randomUUID().toString();
-
-        FunctionSymbol functionSymbol = new FunctionSymbol(anonymousFunctionIdentifier, type, boundArguments, null);
-        try {
-            //Declare the function in the parent scope
-            currentScope.getParentScope().declareFunction(anonymousFunctionIdentifier, functionSymbol);
-        } catch (FunctionAlreadyDeclaredException fade) {
-            VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable(anonymousFunctionIdentifier).get();
-            errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, lambdaExpression.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
-        }
-
-        currentScope = currentScope.getParentScope();
-
-        return new BoundLambdaExpression(boundArguments, boundBody);
-    }
-
-    private BoundFunctionParameterExpression bindFunctionArgumentExpression(FunctionParameterExpression
-                                                                                    argumentExpression) {
+    private BoundFunctionParameterExpression bindFunctionArgumentExpression(FunctionParameterExpression argumentExpression) {
 
         boolean reference = argumentExpression.getRefKeyword() != null;
 
@@ -1185,52 +1171,39 @@ public class Binder {
     private BoundExpression bindFunctionCallExpression(FunctionCallExpression functionCallExpression) {
 
         IdentifierExpression identifier = functionCallExpression.getIdentifier();
-        Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction((String) identifier.getValue());
-        if (scopedFunction.isEmpty()) {
-            //TODO: Get arguments somehow
-            List<BoundExpression> boundArguments = new ArrayList<>();
-            List<FunctionCallArgumentExpression> functionCallExpressionArguments = functionCallExpression.getArguments();
-
-            for (FunctionCallArgumentExpression functionCallExpressionArgumentExpression : functionCallExpressionArguments) {
-                Expression functionCallExpressionArgument = functionCallExpressionArgumentExpression.getExpression();
-                if (functionCallExpressionArgument.getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
-                    List<BoundExpression> boundMembers = new ArrayList<>();
-                    for (Expression member : ((StructLiteralExpression) functionCallExpressionArgument).getMembers()) {
-                        boundMembers.add(bind(member));
-                    }
-                    boundArguments.add(new BoundStructLiteralExpression(TypeSymbol.ANY, boundMembers));
-                } else {
-                    BoundExpression boundArgument = bind(functionCallExpressionArgument);
-                    boundArguments.add(boundArgument);
-                }
-            }
-            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
-            return new BoundErrorExpression();
-        }
-        FunctionSymbol function = scopedFunction.get();
 
         List<BoundExpression> boundArguments = new ArrayList<>();
-        List<FunctionCallArgumentExpression> functionCallExpressionArguments = functionCallExpression.getArguments();
-        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
-            FunctionCallArgumentExpression argumentExpression = functionCallExpressionArguments.get(i);
-            Expression arg = argumentExpression.getExpression();
-            if (arg.getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
+        List<FunctionCallArgumentExpression> argExpressions = functionCallExpression.getArguments();
 
-                //TODO: This is permissible for now since there is only one possible method for the name, once overloading is possible (if overloading will be possible) this will no longer work
-                //errors.add(BindingError.raise("Struct literals are not allowed in function calls, please use the full constructor form instead", functionCallExpressionArguments.get(i).getSpan()));
-
+        for (FunctionCallArgumentExpression argExpression : argExpressions) {
+            Expression functionCallExpressionArgument = argExpression.getExpression();
+            if (functionCallExpressionArgument.getExpressionType() == ExpressionType.STRUCT_LITERAL_EXPRESSION) {
                 List<BoundExpression> boundMembers = new ArrayList<>();
-                for (Expression member : ((StructLiteralExpression) arg).getMembers()) {
+                StructLiteralExpression structLiteralExpression = (StructLiteralExpression) functionCallExpressionArgument;
+                for (Expression member : structLiteralExpression.getMembers()) {
                     boundMembers.add(bind(member));
                 }
-                BoundStructLiteralExpression boundStructLiteralExpression = new BoundStructLiteralExpression(function.getArguments().get(i).getType(), boundMembers);
-
-                boundArguments.add(boundStructLiteralExpression);
+                boundArguments.add(new BoundStructLiteralExpression(getTypeSymbol(getTypeIdentifier(structLiteralExpression.getTypeExpression())), boundMembers));
             } else {
-                BoundExpression boundArgument = bind(arg);
+                BoundExpression boundArgument = bind(functionCallExpressionArgument);
                 boundArguments.add(boundArgument);
             }
         }
+
+        List<String> argumentTypeIdentifiers = boundArguments.stream()
+                .map(BoundExpression::getType)
+                .map(TypeSymbol::toString)
+                .collect(Collectors.toList());
+        String signature = buildSignature(functionCallExpression.getIdentifier(), argumentTypeIdentifiers);
+
+        Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction(signature);
+
+        if (scopedFunction.isEmpty()) {
+            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+            return new BoundErrorExpression();
+        }
+
+        FunctionSymbol function = scopedFunction.get();
 
         if (function.getArguments().size() != functionCallExpression.getArguments().size()) {
             errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
@@ -1238,21 +1211,21 @@ public class Binder {
         }
 
         List<BoundFunctionParameterExpression> parameters = function.getArguments();
-        for (int i = 0; i < functionCallExpressionArguments.size(); i++) {
+        for (int i = 0; i < argExpressions.size(); i++) {
             BoundExpression boundArgument = boundArguments.get(i);
             if (!parameters.get(i).getType().isAssignableFrom(boundArgument.getType())) {
-                errors.add(BindingError.raiseTypeMismatch(parameters.get(i).getType(), boundArgument.getType(), functionCallExpressionArguments.get(i).getSpan()));
+                errors.add(BindingError.raiseTypeMismatch(parameters.get(i).getType(), boundArgument.getType(), argExpressions.get(i).getSpan()));
             }
-            boolean passByRef = functionCallExpressionArguments.get(i).getRefKeyword() != null;
+            boolean passByRef = argExpressions.get(i).getRefKeyword() != null;
             if (parameters.get(i).isReference()) {
                 if (boundArgument instanceof BoundLiteralExpression || boundArgument instanceof BoundStructLiteralExpression) {
-                    errors.add(BindingError.raise("Literals cannot be passed by reference:", functionCallExpressionArguments.get(i).getSpan()));
+                    errors.add(BindingError.raise("Literals cannot be passed by reference:", argExpressions.get(i).getSpan()));
                 }
                 if (!passByRef) {
-                    errors.add(BindingError.raise("Argument " + i + " of `" + function.getSignature() + "` must be passed with the `ref` keyword", functionCallExpressionArguments.get(i).getSpan()));
+                    errors.add(BindingError.raise("Argument " + i + " of `" + function.getSignature() + "` must be passed with the `ref` keyword", argExpressions.get(i).getSpan()));
                 }
             } else if (passByRef) {
-                errors.add(BindingError.raise("Argument " + i + " of `" + function.getSignature() + "` is not passed with the `ref` keyword", functionCallExpressionArguments.get(i).getSpan()));
+                errors.add(BindingError.raise("Argument " + i + " of `" + function.getSignature() + "` is not passed with the `ref` keyword", argExpressions.get(i).getSpan()));
             }
         }
 

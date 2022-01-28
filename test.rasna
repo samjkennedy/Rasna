@@ -1,31 +1,27 @@
-//This really ain't a List but it's a Proof of Concept for a generic type
-type List<T> struct {
-    data: T[]
-}
-
-//fn <T> size(list: List<T>): Int {
-//    return list.data.len
+//interface shape {
+//    area(): Int
 //}
 
-fn <T> put(t: T) {
-    print(t)
+struct Rect {
+    width: Real
+    height: Real
 }
 
-//TODO: functions that take erased types, e.g:
-//TODO: fn get(intList: List<Int>, index: Int): Int { ... }
+struct Circle {
+    radius: Real
+}
 
-//fn <T> get(list: List<T>, index: Int): T {
-//    return list.data[index]
-//}
+fn area(rect: Rect): Real {
+    return rect.width * rect.height
+}
+fn area(circle: Circle): Real {
+    return 3.14159 * (circle.radius * circle.radius)
+}
 
 fn main() {
+    c := Circle{3.}
+    r := Rect{2., 3.}
 
-//    list := List{[1, 2]}
-//
-//    print(list.data[1])
-
-    put(1)
-
-//    print(list.size())
-//    print(list.get(0))
+    print(c.area())
+    print(r.area())
 }
