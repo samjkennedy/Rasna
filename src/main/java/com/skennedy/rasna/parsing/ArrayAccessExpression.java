@@ -9,13 +9,13 @@ import java.util.Iterator;
 
 public class ArrayAccessExpression extends Expression {
 
-    private final IdentifierExpression identifier;
+    private final Expression array;
     private final IdentifierExpression openBrace;
     private final Expression index;
     private final IdentifierExpression closeBrace;
 
-    public ArrayAccessExpression(IdentifierExpression identifier, IdentifierExpression openBrace, Expression index, IdentifierExpression closeBrace) {
-        this.identifier = identifier;
+    public ArrayAccessExpression(Expression array, IdentifierExpression openBrace, Expression index, IdentifierExpression closeBrace) {
+        this.array = array;
         this.openBrace = openBrace;
         this.index = index;
         this.closeBrace = closeBrace;
@@ -28,11 +28,11 @@ public class ArrayAccessExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)identifier, openBrace, index, closeBrace).iterator();
+        return Arrays.asList((SyntaxNode)array, openBrace, index, closeBrace).iterator();
     }
 
-    public IdentifierExpression getIdentifier() {
-        return identifier;
+    public Expression getArray() {
+        return array;
     }
 
     public IdentifierExpression getOpenBrace() {

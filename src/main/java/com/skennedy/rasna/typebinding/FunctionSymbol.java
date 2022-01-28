@@ -33,11 +33,15 @@ public class FunctionSymbol extends Symbol {
         return guard;
     }
 
-
     public String getSignature() {
         return getName() + "(" + arguments.stream()
                 .map(BoundFunctionParameterExpression::getSignature)
                 .collect(Collectors.joining(", "))
                 + "): " + type;
+    }
+
+    @Override
+    public String toString() {
+        return getSignature();
     }
 }

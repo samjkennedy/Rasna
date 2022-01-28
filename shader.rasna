@@ -120,9 +120,6 @@ fn frag(u: Real, v: Real): Col {
     st := Vec2{fract(u * 4.), fract(v * 4.)} //Tile
     st = st.rotate2D(0.25 * PI) //Rotate 45 degrees
 
-    //mono := box(st, Vec2(0.7), 0.01)
-    //color := Col{mono, mono, mono}
-
     return Col{st.x, st.y, 0.}
 }
 

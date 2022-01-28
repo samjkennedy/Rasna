@@ -927,6 +927,28 @@ public class LLVMCompiler implements Compiler {
         if (typeSymbol instanceof EnumTypeSymbol) {
             return i32Type;
         }
+        if (typeSymbol instanceof ErasedParameterisedTypeSymbol) {
+            Optional<LLVMTypeRef> maybeType = scope.tryLookupType(typeSymbol);
+            if (maybeType.isPresent()) {
+                return maybeType.get();
+            }
+            LLVMTypeRef structTypeRef = LLVMStructCreateNamed(context, typeSymbol.getName());
+            scope.declareType(typeSymbol, structTypeRef);
+
+            PointerPointer<Pointer> elementTypes = new PointerPointer<>(typeSymbol.getFields().size());
+
+            List<LLVMTypeRef> memberTypes = typeSymbol.getFields().values().stream()
+                    .map(VariableSymbol::getType)
+                    .map(type -> getLlvmTypeRef(type, context))
+                    .collect(Collectors.toList());
+            for (int i = 0; i < memberTypes.size(); i++) {
+                elementTypes.put(i, memberTypes.get(i));
+            }
+
+            LLVMStructSetBody(structTypeRef, elementTypes, memberTypes.size(), 0);
+
+            return structTypeRef;
+        }
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {
             return type.get();

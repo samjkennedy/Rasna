@@ -172,7 +172,7 @@ public class Rasna {
 
                     //TODO: only do this with a -r flag
 
-                    boolean run = false;
+                    boolean run = true;
                     if (run) {
                         Process process;
                         start = Instant.now();
