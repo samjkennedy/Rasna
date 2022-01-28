@@ -1,34 +1,31 @@
-//This really ain't a Seq but it's a Proof of Concept for a generic type
-struct Seq<T> {
+//This really ain't a List but it's a Proof of Concept for a generic type
+type List<T> struct {
     data: T[]
 }
 
-//fn <T> size(seq: Seq<T>): Int {
-//    return seq.data.len
+//fn <T> size(list: List<T>): Int {
+//    return list.data.len
 //}
 
-//fn <T> get(seq: Seq<T>, index: Int): T {
-//    return seq.data[index]
+fn <T> put(t: T) {
+    print(t)
+}
+
+//TODO: functions that take erased types, e.g:
+//TODO: fn get(intList: List<Int>, index: Int): Int { ... }
+
+//fn <T> get(list: List<T>, index: Int): T {
+//    return list.data[index]
 //}
-
-struct Color {
-    r: Real
-    g: Real
-    b: Real
-}
-
-fn printCol(col: Color) {
-    print(col.r)
-    print(col.g)
-    print(col.b)
-}
 
 fn main() {
 
-    seq := Seq{[1, 2]}
+//    list := List{[1, 2]}
+//
+//    print(list.data[1])
 
-    print(seq.data[1])
+    put(1)
 
-    print(seq.size())
-    print(seq.get(0))
+//    print(list.size())
+//    print(list.get(0))
 }

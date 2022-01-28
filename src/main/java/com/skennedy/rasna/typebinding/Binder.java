@@ -1045,14 +1045,24 @@ public class Binder {
         return new BoundEnumDeclarationExpression(type, members);
     }
 
-    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression
-                                                                      functionDeclarationExpression) {
+    private BoundExpression bindFunctionDeclarationExpression(FunctionDeclarationExpression functionDeclarationExpression) {
 
         IdentifierExpression identifier = functionDeclarationExpression.getIdentifier();
 
-        TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
 
         currentScope = new BoundScope(currentScope);
+
+        if (!functionDeclarationExpression.getGenericParameters().isEmpty()) {
+            for (Expression genericParam : functionDeclarationExpression.getGenericParameters()) {
+                if (genericParam.getExpressionType() != ExpressionType.TYPE_EXPR) {
+                    throw new UnsupportedOperationException("Generic function parameters can only be of type TYPE_EXPR, got `" + genericParam.getExpressionType() + "`");
+                }
+                IdentifierExpression generic = getTypeIdentifier((TypeExpression)genericParam);
+                TypeSymbol genericType = new TypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
+                currentScope.declareType((String)generic.getValue(), genericType);
+            }
+        }
+        TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
 
         //Declare the arguments within the function's scope
         List<BoundFunctionParameterExpression> arguments = new ArrayList<>();
