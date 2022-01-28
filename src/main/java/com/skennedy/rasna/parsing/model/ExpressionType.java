@@ -25,9 +25,7 @@ public enum ExpressionType {
     IF_EXPR,
     IMPORT,
     INCREMENT_EXPR,
-    LAMBDA_EXPRESSION,
     LITERAL_EXPR,
-    MAP_EXPRESSION,
     MATCH_CASE_EXPRESSION,
     MATCH_EXPRESSION,
     MEMBER_ACCESSOR_EXPR,
@@ -48,8 +46,5 @@ public enum ExpressionType {
     TYPE_TEST_EXPR,
     UNARY_EXPR,
     VAR_DECLARATION_EXPR,
-    WHILE_EXPR,
-    YIELD_EXPRESSION
-
-
+    WHILE_EXPR
 }

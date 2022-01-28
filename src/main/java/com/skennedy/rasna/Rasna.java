@@ -3,21 +3,15 @@ package com.skennedy.rasna;
 import com.skennedy.assertclauses.Assert;
 import com.skennedy.flags.Flag;
 import com.skennedy.flags.Flags;
-import com.skennedy.rasna.compilation.CompileTarget;
-import com.skennedy.rasna.compilation.Compiler;
-import com.skennedy.rasna.compilation.CompilerFactory;
+import com.skennedy.rasna.compilation.llvm.LLVMCompiler;
 import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.diagnostics.Error;
 import com.skennedy.rasna.diagnostics.TextSpan;
-import com.skennedy.rasna.graphing.HighLevelTreeGrapher;
-import com.skennedy.rasna.graphing.LowLevelTreeGrapher;
 import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.lowering.BoundProgramRewriter;
-import com.skennedy.rasna.lowering.JVMLowerer;
-import com.skennedy.rasna.lowering.LowererFactory;
+import com.skennedy.rasna.lowering.LLVMLowerer;
 import com.skennedy.rasna.parsing.Parser;
 import com.skennedy.rasna.parsing.Program;
-import com.skennedy.rasna.simulation.Simulator;
 import com.skennedy.rasna.typebinding.Binder;
 import com.skennedy.rasna.typebinding.BindingWarning;
 import com.skennedy.rasna.typebinding.BoundProgram;
@@ -40,35 +34,11 @@ public class Rasna {
     private static final Logger log = LogManager.getLogger(Rasna.class);
 
     public static void main(String[] args) throws IOException {
-        Flag<String> modeFlag = Flags.stringFlag()
-                .withName("m")
-                .withDefaultValue("sim")
-                .withDescription("The mode for the compiler, sim simulates the program, com compiles it. Default is sim")
-                .build();
         Flag<String> fileFlag = Flags.stringFlag()
                 .withName("f")
                 .withDescription("The file to compile")
                 .build();
-        Flag<String> targetFlag = Flags.stringFlag()
-                .withName("t")
-                .withDefaultValue("jvm")
-                .withDescription("The target for the compiler, possible values: {jvm, llvm}")
-                .build();
         Flags.parse(args);
-
-        Mode mode;
-        if ("sim".equals(modeFlag.getValue())) {
-            log.debug("Rasna is in simulation mode");
-            mode = Mode.SIMULATION;
-        } else if ("com".equals(modeFlag.getValue())) {
-            log.debug("Rasna is in compilation mode");
-            mode = Mode.COMPILATION;
-        } else {
-            Flags.usage();
-            System.exit(1);
-            return;
-        }
-        CompileTarget compileTarget = CompileTarget.fromId(targetFlag.getValue());
 
         String fileNameWithExt = (String) Assert.that(fileFlag.getValue()).isNotBlank().get();
         String[] fileParts = fileNameWithExt.split("\\.");
@@ -129,24 +99,9 @@ public class Rasna {
                 return;
             }
 
-            //TODO: make this a flag
-            boolean graphProgram = false;
-            //Write first in case of errors in compilation or simulation
-            if (graphProgram) {
-                log.debug("Writing high level AST graph");
-                HighLevelTreeGrapher highLevelTreeGrapher = new HighLevelTreeGrapher();
-                highLevelTreeGrapher.graphAST(boundProgram);
-            }
-
             //Lower the program to a linear series of instructions
-            BoundProgramRewriter rewriter = LowererFactory.getLowerer(compileTarget);
+            BoundProgramRewriter rewriter = new LLVMLowerer();
             boundProgram = rewriter.rewrite(boundProgram);
-
-            if (graphProgram) {
-                log.debug("Writing low level AST graph");
-                LowLevelTreeGrapher lowLevelTreeGrapher = new LowLevelTreeGrapher();
-                lowLevelTreeGrapher.graphAST(boundProgram);
-            }
 
             boolean printProgram = false;
             if (printProgram) {
@@ -154,56 +109,34 @@ public class Rasna {
                 System.out.println(code);
                 System.out.print(ConsoleColors.RESET);
             }
+            log.debug("Compiling file {} to LLVM", fileNameWithExt);
+            LLVMCompiler compiler = new LLVMCompiler();
+            compiler.compile(boundProgram, fileName);
+            Instant end = Instant.now();
+            log.debug("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
 
-            switch (mode) {
-                case SIMULATION:
-                    log.debug("Simulating program {}", fileNameWithExt);
-                    Simulator simulator = new Simulator();
-                    System.out.print(ConsoleColors.GREEN_BOLD_BRIGHT);
-                    simulator.simulate(boundProgram);
-                    System.out.print(ConsoleColors.RESET);
-                    break;
-                case COMPILATION:
-                    log.debug("Compiling file {} for {}", fileNameWithExt, compileTarget.name());
-                    Compiler compiler = CompilerFactory.create(compileTarget);
-                    compiler.compile(boundProgram, fileName);
-                    Instant end = Instant.now();
-                    log.debug("Compiled in {}ms", end.toEpochMilli() - start.toEpochMilli());
+            //TODO: only do this with a -r flag
 
-                    //TODO: only do this with a -r flag
-
-                    boolean run = true;
-                    if (run) {
-                        Process process;
-                        start = Instant.now();
-                        switch (compileTarget) {
-                            case JVM:
-                                process = Runtime.getRuntime().exec("java " + fileName);
-                                break;
-                            case LLVM:
-                                //TODO: This is windows specific
-                                process = Runtime.getRuntime().exec(fileName + ".exe");
-                                break;
-                            default:
-                                throw new IllegalStateException("Unexpected compile target: " + compileTarget);
-                        }
-                        end = Instant.now();
-                        InputStream inputStream = process.getInputStream();
-                        char c = (char) inputStream.read();
-                        System.out.print(ConsoleColors.CYAN_BOLD);
-                        while (c != '\uFFFF') {
-                            System.out.print(c);
-                            c = (char) inputStream.read();
-                        }
-                        System.out.print(ConsoleColors.RED_BOLD);
-                        InputStream errorStream = process.getErrorStream();
-                        c = (char) errorStream.read();
-                        while (c != '\uFFFF') {
-                            System.out.print(c);
-                            c = (char) errorStream.read();
-                        }
-                        System.out.print(ConsoleColors.RESET);
-                    }
+            boolean run = true;
+            if (run) {
+                Process process;
+                //TODO: This is windows specific
+                process = Runtime.getRuntime().exec(fileName + ".exe");
+                InputStream inputStream = process.getInputStream();
+                char c = (char) inputStream.read();
+                System.out.print(ConsoleColors.CYAN_BOLD);
+                while (c != '\uFFFF') {
+                    System.out.print(c);
+                    c = (char) inputStream.read();
+                }
+                System.out.print(ConsoleColors.RED_BOLD);
+                InputStream errorStream = process.getErrorStream();
+                c = (char) errorStream.read();
+                while (c != '\uFFFF') {
+                    System.out.print(c);
+                    c = (char) errorStream.read();
+                }
+                System.out.print(ConsoleColors.RESET);
             }
 
         } catch (IOException ioe) {
@@ -234,7 +167,7 @@ public class Rasna {
         char[] charArray = line.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             char c = charArray[i];
-            if (i < location.getColumn() || i > location.getColumn() + (String.valueOf(error.getToken().getValue())).length()-1) {
+            if (i < location.getColumn() || i > location.getColumn() + (String.valueOf(error.getToken().getValue())).length() - 1) {
                 System.out.print(ConsoleColors.CYAN_BOLD);
             } else {
                 System.out.print(ConsoleColors.RED_BOLD);

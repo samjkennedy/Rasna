@@ -153,8 +153,6 @@ public class Parser {
                 return parseReturnExpression();
             case MATCH_KEYWORD:
                 return parseMatchExpression();
-            case YIELD_KEYWORD:
-                return parseYieldExpression();
             case FN_KEYWORD:
                 return parseFunctionDeclarationExpression();
             case IMPORT_KEYWORD:
@@ -336,13 +334,6 @@ public class Parser {
         //TODO: This might be more than just an identifier, e.g. method call: getVal().x
         //      Eventually ditch the need for the identifier and use whatever was evaluated last
         return memberAccessorExpression;
-    }
-
-    private Expression parseYieldExpression() {
-        IdentifierExpression yieldKeyword = matchToken(TokenType.YIELD_KEYWORD);
-        Expression expression = parseExpression();
-
-        return new YieldExpression(yieldKeyword, expression);
     }
 
     private Expression parseMatchExpression() {
@@ -705,39 +696,6 @@ public class Parser {
         }
 
         return new VariableDeclarationExpression(constKeyword, typeExpression, colon, identifier, bar, guard, equals, initialiser);
-    }
-
-    private Expression parseLambdaExpression() {
-
-        List<FunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
-        //Multi-variable lambda, TODO:
-        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
-            IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-            while (current().getTokenType() != TokenType.CLOSE_PARENTHESIS
-                    && current().getTokenType() != TokenType.EOF_TOKEN
-                    && current().getTokenType() != TokenType.BAD_TOKEN) {
-                functionParameterExpressions.add(parseFunctionArgumentExpression());
-
-                if (current().getTokenType() == TokenType.COMMA) {
-                    matchToken(TokenType.COMMA);
-                }
-            }
-            IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-        } else {
-
-            TypeExpression typeExpression = parseTypeExpression();
-            IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
-
-            //TODO: Lambda guards
-            if (current().getTokenType() == TokenType.BAR) {
-                throw new UnsupportedOperationException("Lambda variable guards are not yet supported");
-            }
-            functionParameterExpressions.add(new FunctionParameterExpression(null, null, typeExpression, identifier, null, null));
-        }
-        IdentifierExpression arrow = matchToken(TokenType.ARROW);
-        Expression expression = parseExpression();
-
-        return new LambdaExpression(functionParameterExpressions, arrow, expression);
     }
 
     private Expression parseParenthesisedExpression() {
