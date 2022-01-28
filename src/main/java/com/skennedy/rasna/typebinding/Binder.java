@@ -14,8 +14,10 @@ import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
 import com.skennedy.rasna.parsing.*;
 import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
+import com.skennedy.rasna.parsing.model.SyntaxNode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -1077,7 +1079,13 @@ public class Binder {
                     .collect(Collectors.toList());
             currentScope.getParentScope().declareFunction(buildSignature(functionDeclarationExpression.getIdentifier(), argumentIdentifiers), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
-            errors.add(BindingError.raiseFunctionAlreadyDeclared(functionSymbol.getSignature(), identifier.getSpan()));
+            List<SyntaxNode> children = new ArrayList<>();
+            children.add(functionDeclarationExpression.getFnKeyword());
+            children.add(functionDeclarationExpression.getIdentifier());
+            children.add(functionDeclarationExpression.getOpenParen());
+            children.addAll(functionDeclarationExpression.getArguments());
+            children.add(functionDeclarationExpression.getCloseParen());
+            errors.add(BindingError.raiseFunctionAlreadyDeclared(functionSymbol.getSignature(), Expression.getSpan(children)));
         }
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());

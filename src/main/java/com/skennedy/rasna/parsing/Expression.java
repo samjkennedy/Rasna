@@ -22,4 +22,11 @@ public abstract class Expression implements SyntaxNode {
 
         return new TextSpan(start, end);
     }
+
+    public static TextSpan getSpan(List<SyntaxNode> children) {
+        Location start = children.get(0).getSpan().getStart();
+        Location end = children.get(children.size() - 1).getSpan().getEnd();
+
+        return new TextSpan(start, end);
+    }
 }
