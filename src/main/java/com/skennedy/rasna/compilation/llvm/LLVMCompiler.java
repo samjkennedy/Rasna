@@ -1,6 +1,5 @@
 package com.skennedy.rasna.compilation.llvm;
 
-import com.skennedy.rasna.compilation.Compiler;
 import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
 import com.skennedy.rasna.typebinding.*;
 import org.apache.logging.log4j.LogManager;
@@ -121,7 +120,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMVerifyModule;
 import static org.bytedeco.llvm.global.LLVM.LLVMVoidType;
 import static org.bytedeco.llvm.global.LLVM.LLVMVoidTypeInContext;
 
-public class LLVMCompiler implements Compiler {
+public class LLVMCompiler {
 
     private static final Logger log = LogManager.getLogger(LLVMCompiler.class);
 
@@ -139,7 +138,6 @@ public class LLVMCompiler implements Compiler {
 
     private Scope scope;
 
-    @Override
     public void compile(BoundProgram program, String outputFileName) throws IOException {
 
         // Stage 1: Initialize LLVM components
