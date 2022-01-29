@@ -427,7 +427,11 @@ public class Parser {
 
     private Expression parseReturnExpression() {
         IdentifierExpression returnKeyword = matchToken(TokenType.RETURN_KEYWORD);
-        Expression returnValue = parseExpression();
+
+        Expression returnValue = null;
+        if (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE) {
+            returnValue = parseExpression();
+        }
 
         return new ReturnExpression(returnKeyword, returnValue);
     }

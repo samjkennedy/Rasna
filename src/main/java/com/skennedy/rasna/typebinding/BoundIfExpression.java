@@ -23,7 +23,7 @@ public class BoundIfExpression implements BoundExpression {
     @Override
     public TypeSymbol getType() {
         return body.getType();
-    }
+    } //TODO: Union type between body and else
 
     @Override
     public Iterator<BoundExpression> getChildren() {

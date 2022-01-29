@@ -499,7 +499,6 @@ public abstract class BoundProgramRewriter {
                 && elseBody == boundIfExpression.getElseBody()) {
             return boundIfExpression;
         }
-
         return new BoundIfExpression(condition, body, elseBody);
     }
 

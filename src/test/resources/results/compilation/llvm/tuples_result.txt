@@ -1,5 +1,0 @@
-Cannot assign non constant value to constant `IdentifierExpression<s>`:
-9:
-10:     s: String = t.0
-11:     print(s)
-
