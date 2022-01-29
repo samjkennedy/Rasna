@@ -28,33 +28,9 @@ fn main() {
 
     print(2.5 as Int)
 
-    t: Tuple = ("Hello", "World!")
-
-    for (n: Int = 0 to len(t)) {
-        s: String = t[n] as String
-        print(s)
-    }
-
-    for (x: Any in t) {
-         s: String = x as String
-         print(s)
-    }
-
-    t = (true, false)
-    for (el: Any in t) {
-         x: Bool = el as Bool
-         print(x)
-    }
-
-    t = (2.5,3.)
-    for (el: Any in t) {
-         x: Real = el as Real
-         print(x)
-    }
-
-    t = (2.5,3.)
-    for (el: Any in t) {
-         x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
+    rs := [2.5, 3., 4]
+    for (el: Real in rs) {
+         x: Real = el as Int as Real
          print(x)
     }
 }

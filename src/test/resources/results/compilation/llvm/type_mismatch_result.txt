@@ -28,8 +28,3 @@ Expected type `String` but got `Int`:
 11:     s: String = int()
 12: }
 
-Cannot assign non constant value to constant `IdentifierExpression<s>`:
-10:
-11:     s: String = int()
-12: }
-

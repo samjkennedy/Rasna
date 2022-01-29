@@ -1,75 +1,15 @@
-Type Tuple is not defined in the scope:
-29:
-30:     t: Tuple = ("Hello", "World!")
-31:
-
-Unknown identifier `t`:
-31:
-32:     for (n: Int = 0 to len(t)) {
-33:         s: String = t[n] as String
-
-Function len is not defined in the scope for arguments (Error):
-31:
-32:     for (n: Int = 0 to len(t)) {
-33:         s: String = t[n] as String
-
-Expected type `Int` but got `Error`:
-31:
-32:     for (n: Int = 0 to len(t)) {
-33:         s: String = t[n] as String
-
-Unknown identifier `t`:
-36:
-37:     for (x: Any in t) {
-38:          s: String = x as String
-
-Expected type `Any[]` but got `Error`:
-36:
-37:     for (x: Any in t) {
-38:          s: String = x as String
-
-Unknown identifier `t`:
-41:
-42:     t = (true, false)
-43:     for (el: Any in t) {
-
-Unknown identifier `t`:
-42:     t = (true, false)
-43:     for (el: Any in t) {
-44:          x: Bool = el as Bool
-
-Expected type `Any[]` but got `Error`:
-42:     t = (true, false)
-43:     for (el: Any in t) {
-44:          x: Bool = el as Bool
-
-Unknown identifier `t`:
-47:
-48:     t = (2.5,3.)
-49:     for (el: Any in t) {
-
-Unknown identifier `t`:
-48:     t = (2.5,3.)
-49:     for (el: Any in t) {
-50:          x: Real = el as Real
-
-Expected type `Any[]` but got `Error`:
-48:     t = (2.5,3.)
-49:     for (el: Any in t) {
-50:          x: Real = el as Real
-
-Unknown identifier `t`:
-53:
-54:     t = (2.5,3.)
-55:     for (el: Any in t) {
-
-Unknown identifier `t`:
-54:     t = (2.5,3.)
-55:     for (el: Any in t) {
-56:          x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
-
-Expected type `Any[]` but got `Error`:
-54:     t = (2.5,3.)
-55:     for (el: Any in t) {
-56:          x: Int = el as Real as Int as Real as Int as Real as Int as Real as Int
-
+3.000000
+3
+3.000000
+3.500000
+2.500000
+1.500000
+-0.500000
+5.000000
+3.000000
+1.750000
+1.333333
+2
+2.000000
+3.000000
+4.000000

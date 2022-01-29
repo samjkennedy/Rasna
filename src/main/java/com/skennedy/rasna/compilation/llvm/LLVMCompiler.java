@@ -199,7 +199,7 @@ public class LLVMCompiler {
                     if (LLVMVerifyFunction(main, LLVMPrintMessageAction) != 0) {
                         log.error("Error when validating main function:");
                         LLVMDumpModule(module);
-                        System.exit(1);
+                        return;
                     }
                 } else {
                     scope = new Scope(scope);
@@ -220,7 +220,7 @@ public class LLVMCompiler {
                     if (LLVMVerifyFunction(func, LLVMPrintMessageAction) != 0) {
                         log.error("Error when validating function `" + functionSymbol.getSignature() + "`:");
                         LLVMDumpModule(module);
-                        System.exit(1);
+                        return;
                     }
                     scope = scope.getParentScope();
                     scope.declareFunction(functionSymbol, func);
@@ -240,7 +240,7 @@ public class LLVMCompiler {
         if (LLVMPrintModuleToFile(module, llFile, error) != 0) {
             log.error("Failed to write module to file");
             LLVMDisposeMessage(error);
-            System.exit(1);
+            return;
         }
         log.debug("Wrote IR to " + outputFileName + ".ll");
         Process process = Runtime.getRuntime().exec("C:\\Program Files\\LLVM\\bin\\clang " + outputFileName + ".ll -o " + outputFileName + ".exe");
@@ -835,7 +835,7 @@ public class LLVMCompiler {
         LLVMBuildCondBr(builder, condition, thenBlock, elseBlock);
 
         LLVMPositionBuilderAtEnd(builder, thenBlock);
-        visit(ifExpression.getBody(), builder, context, function);
+        LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
 
         boolean thenTerminated = LLVMGetBasicBlockTerminator(thenBlock) != null;
         if (!thenTerminated) {
@@ -843,17 +843,18 @@ public class LLVMCompiler {
         }
 
         LLVMPositionBuilderAtEnd(builder, elseBlock);
-        visit(ifExpression.getElseBody(), builder, context, function);
+        LLVMValueRef elseVal = visit(ifExpression.getElseBody(), builder, context, function);
 
         boolean elseTerminated = LLVMGetBasicBlockTerminator(elseBlock) != null;
         if (!elseTerminated) {
             LLVMBuildBr(builder, endBlock);
         }
 
-        if (elseTerminated && thenTerminated) {
-            LLVMDeleteBasicBlock(endBlock);
-        } else {
+        if (!elseTerminated || !thenTerminated) {
             LLVMPositionBuilderAtEnd(builder, endBlock);
+            return null;//LLVMBuildSelect(builder, condition, thenVal, elseVal, "cond");
+        } else {
+            LLVMDeleteBasicBlock(endBlock);
         }
         return null;
     }

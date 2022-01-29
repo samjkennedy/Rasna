@@ -427,6 +427,7 @@ public class Parser {
 
     private Expression parseReturnExpression() {
         IdentifierExpression returnKeyword = matchToken(TokenType.RETURN_KEYWORD);
+
         Expression returnValue = parseExpression();
 
         return new ReturnExpression(returnKeyword, returnValue);
@@ -745,8 +746,8 @@ public class Parser {
             List<Expression> genericParameters = new ArrayList<>();
             genericParameters.add(parseTypeExpression());
             while (current().getTokenType() != TokenType.CLOSE_ANGLE_BRACE
-                && current().getTokenType() != TokenType.EOF_TOKEN
-                && current().getTokenType() != TokenType.BAD_TOKEN) {
+                    && current().getTokenType() != TokenType.EOF_TOKEN
+                    && current().getTokenType() != TokenType.BAD_TOKEN) {
                 matchToken(TokenType.COMMA);
                 genericParameters.add(parseTypeExpression());
             }

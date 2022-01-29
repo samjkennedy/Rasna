@@ -22,6 +22,11 @@ public class TypeSymbol extends Symbol {
 
     private final LinkedHashMap<String, VariableSymbol> fields;
 
+    // Read as right can implicitly be casted to left
+    private static final Map<TypeSymbol, TypeSymbol> implicitCasts = Map.of(
+            REAL, INT
+    );
+
     public TypeSymbol(String name, LinkedHashMap<String, VariableSymbol> fields) {
         super(name);
         this.fields = fields;
@@ -45,9 +50,10 @@ public class TypeSymbol extends Symbol {
         if (this.toString().equals(other.toString())) {
             return true;
         }
-        //TODO: More sophisticated casting -> all INTs are REALs
-        return this == ANY;
+        return implicitCasts.get(this) == other;
     }
+
+
 
     @Override
     public String toString() {

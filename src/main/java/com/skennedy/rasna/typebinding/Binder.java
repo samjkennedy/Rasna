@@ -1,6 +1,7 @@
 package com.skennedy.rasna.typebinding;
 
 import com.skennedy.rasna.diagnostics.BindingError;
+import com.skennedy.rasna.diagnostics.TextSpan;
 import com.skennedy.rasna.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.rasna.exceptions.InvalidOperationException;
 import com.skennedy.rasna.exceptions.TypeAlreadyDeclaredException;
@@ -199,7 +200,7 @@ public class Binder {
         }
 
         if (type instanceof ParameterisedTypeSymbol) {
-            ErasedParameterisedTypeSymbol erasedType = eraseParameters(structLiteralExpression, (ParameterisedTypeSymbol)type, members, values);
+            ErasedParameterisedTypeSymbol erasedType = eraseParameters(structLiteralExpression, (ParameterisedTypeSymbol) type, members, values);
             if (currentScope.tryLookupType(erasedType.getName()).isEmpty()) {
                 currentScope.declareType(erasedType.getName(), erasedType);
             }
@@ -220,10 +221,8 @@ public class Binder {
             if (!expectedType.isAssignableFrom(boundMember.getType())) {
 
                 if (erasures.containsKey(expectedType.getName())) {
-                    if (!erasures.get(expectedType.getName()).isAssignableFrom(boundMember.getType())) {
-                        errors.add(BindingError.raiseTypeMismatch(erasures.get(expectedType.getName()), boundMember.getType(), structLiteralExpression.getMembers().get(i).getSpan()));
-                    }
-                //TODO: If the bound type is composite (i.e. <T> -> T[]) it is not erased correctly
+                    literalMembers.set(i, typeCheck(erasures.get(expectedType.getName()), boundMember, structLiteralExpression.getMembers().get(i).getSpan()));
+                    //TODO: If the bound type is composite (i.e. <T> -> T[]) it is not erased correctly
                 } else if (genericParameters.contains(expectedType.getName())) {
                     erasures.put(expectedType.getName(), getBaseType(boundMember.getType()));
                 }
@@ -451,9 +450,7 @@ public class Binder {
             if (type == null) {
                 type = boundElement.getType();
             } else {
-                if (!type.isAssignableFrom(boundElement.getType())) {
-                    errors.add(BindingError.raiseTypeMismatch(type, boundElement.getType(), arrayLiteralExpression.getElements().get(i).getSpan()));
-                }
+                boundElement = typeCheck(type, boundElement, arrayLiteralExpression.getElements().get(i).getSpan());
             }
             boundElements.add(boundElement);
         }
@@ -519,9 +516,7 @@ public class Binder {
 
         BoundExpression assignment = bind(memberAssignmentExpression.getAssignment());
 
-        if (!boundMemberAccessorExpression.getMember().getType().isAssignableFrom(assignment.getType())) {
-            errors.add(BindingError.raiseTypeMismatch(boundMemberAccessorExpression.getMember().getType(), assignment.getType(), memberAssignmentExpression.getAssignment().getSpan()));
-        }
+        assignment = typeCheck(boundMemberAccessorExpression.getMember().getType(), assignment, memberAssignmentExpression.getAssignment().getSpan());
 
         if (boundMemberAccessorExpression.getMember() instanceof BoundVariableExpression) { //Always true right now
             BoundVariableExpression variableExpression = (BoundVariableExpression) boundMemberAccessorExpression.getMember();
@@ -744,34 +739,39 @@ public class Binder {
             if (left.getType() instanceof EnumTypeSymbol && right.getType() instanceof EnumTypeSymbol && left.getType().getName().equals(right.getType().getName())) {
                 operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), INT, INT);
             } else {
+                if (right.getType().isAssignableFrom(left.getType())) {
+                    left = typeCheck(right.getType(), left, binaryExpression.getLeft().getSpan());
+                } else if (left.getType().isAssignableFrom(right.getType())) {
+                    right = typeCheck(left.getType(), right, binaryExpression.getRight().getSpan());
+                }
                 operator = BoundBinaryOperator.bind(binaryExpression.getOperation(), left.getType(), right.getType());
             }
 
             //TODO: This is hella broken for const variables
-            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-
-                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
-
-                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-
-                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
-
-                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
-            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
-
-                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
-            } else if (left.isConstExpression() && left.getType() == STRING && right.isConstExpression() && right.getType() == STRING) {
-
-                if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.CONCATENATION) {
-                    return new BoundLiteralExpression(left.getConstValue() + (String) right.getConstValue());
-                }
-                if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
-                    return new BoundLiteralExpression(left.getConstValue().equals(right.getConstValue()));
-                }
-            }
+//            if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+//
+//                return calculateConstantExpression((int) left.getConstValue(), operator, (int) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.BOOL && right.isConstExpression() && right.getType() == TypeSymbol.BOOL) {
+//
+//                return calculateConstantExpression((boolean) left.getConstValue(), operator, (boolean) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+//
+//                return calculateConstantExpression((double) left.getConstValue(), operator, (double) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.INT && right.isConstExpression() && right.getType() == TypeSymbol.REAL) {
+//
+//                return calculateConstantExpression(Integer.valueOf((int) left.getConstValue()).doubleValue(), operator, (double) right.getConstValue());
+//            } else if (left.isConstExpression() && left.getType() == TypeSymbol.REAL && right.isConstExpression() && right.getType() == TypeSymbol.INT) {
+//
+//                return calculateConstantExpression((double) left.getConstValue(), operator, Integer.valueOf((int) right.getConstValue()).doubleValue());
+//            } else if (left.isConstExpression() && left.getType() == STRING && right.isConstExpression() && right.getType() == STRING) {
+//
+//                if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.CONCATENATION) {
+//                    return new BoundLiteralExpression(left.getConstValue() + (String) right.getConstValue());
+//                }
+//                if (operator.getBoundOpType() == BoundBinaryOperator.BoundBinaryOperation.EQUALS) {
+//                    return new BoundLiteralExpression(left.getConstValue().equals(right.getConstValue()));
+//                }
+//            }
 
             return new BoundBinaryExpression(left, operator, right);
         } catch (InvalidOperationException ioe) {
@@ -937,9 +937,7 @@ public class Binder {
             return new BoundAssignmentExpression(variable, variable.getGuard(), initialiser);
         }
 
-        if (!variable.getType().isAssignableFrom(initialiser.getType())) {
-            errors.add(BindingError.raiseTypeMismatch(variable.getType(), initialiser.getType(), assignmentExpression.getAssignment().getSpan()));
-        }
+        initialiser = typeCheck(variable.getType(), initialiser, assignmentExpression.getAssignment().getSpan());
 
         return new BoundAssignmentExpression(variable, variable.getGuard(), initialiser);
     }
@@ -958,7 +956,6 @@ public class Binder {
                 currentScope.declareGenericType(genericType.getName(), genericType);
             }
         }
-
 
         List<BoundExpression> members = new ArrayList<>();
         for (Expression member : structDeclarationExpression.getMembers()) {
@@ -1031,9 +1028,9 @@ public class Binder {
                 if (genericParam.getExpressionType() != ExpressionType.TYPE_EXPR) {
                     throw new UnsupportedOperationException("Generic function parameters can only be of type TYPE_EXPR, got `" + genericParam.getExpressionType() + "`");
                 }
-                IdentifierExpression generic = getTypeIdentifier((TypeExpression)genericParam);
-                TypeSymbol genericType = new TypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
-                currentScope.declareType((String)generic.getValue(), genericType);
+                IdentifierExpression generic = getTypeIdentifier((TypeExpression) genericParam);
+                TypeSymbol genericType = new TypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
+                currentScope.declareType((String) generic.getValue(), genericType);
             }
         }
         TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
@@ -1196,9 +1193,8 @@ public class Binder {
         List<BoundFunctionParameterExpression> parameters = function.getArguments();
         for (int i = 0; i < argExpressions.size(); i++) {
             BoundExpression boundArgument = boundArguments.get(i);
-            if (!parameters.get(i).getType().isAssignableFrom(boundArgument.getType())) {
-                errors.add(BindingError.raiseTypeMismatch(parameters.get(i).getType(), boundArgument.getType(), argExpressions.get(i).getSpan()));
-            }
+            boundArgument = typeCheck(parameters.get(i).getType(), boundArgument, argExpressions.get(i).getSpan());
+
             boolean passByRef = argExpressions.get(i).getRefKeyword() != null;
             if (parameters.get(i).isReference()) {
                 if (boundArgument instanceof BoundLiteralExpression || boundArgument instanceof BoundStructLiteralExpression) {
@@ -1260,7 +1256,7 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(type, initialiser.getType(), variableDeclarationExpression.getInitialiser().getSpan()));
         }
 
-        boolean readOnly = type == STRING || variableDeclarationExpression.getConstKeyword() != null;
+        boolean readOnly = variableDeclarationExpression.getConstKeyword() != null;
         if (readOnly && (initialiser == null || !initialiser.isConstExpression())) {
             errors.add(BindingError.raiseNonConstAssignmentError(variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getSpan()));
         }
@@ -1319,5 +1315,20 @@ public class Binder {
             return getTypeIdentifier((ErasedParameterisedTypeExpression) typeExpression.getTypeExpression());
         }
         throw new UnsupportedOperationException("Unhandled type expression type `" + typeExpression.getTypeExpression().getClass().getSimpleName() + "`");
+    }
+
+    private BoundExpression typeCheck(TypeSymbol expected, BoundExpression expression, TextSpan location) {
+
+        TypeSymbol actual = expression.getType();
+
+        if (expected == actual) {
+            return expression;
+        }
+        if (expected.isAssignableFrom(actual)) {
+            return new BoundCastExpression(expression, expected);
+        }
+
+        errors.add(BindingError.raiseTypeMismatch(expected, actual, location));
+        return new BoundErrorExpression();
     }
 }
