@@ -957,7 +957,6 @@ public class Binder {
             }
         }
 
-
         List<BoundExpression> members = new ArrayList<>();
         for (Expression member : structDeclarationExpression.getMembers()) {
             members.add(bind(member));
@@ -1257,7 +1256,7 @@ public class Binder {
             errors.add(BindingError.raiseTypeMismatch(type, initialiser.getType(), variableDeclarationExpression.getInitialiser().getSpan()));
         }
 
-        boolean readOnly = type == STRING || variableDeclarationExpression.getConstKeyword() != null;
+        boolean readOnly = variableDeclarationExpression.getConstKeyword() != null;
         if (readOnly && (initialiser == null || !initialiser.isConstExpression())) {
             errors.add(BindingError.raiseNonConstAssignmentError(variableDeclarationExpression.getIdentifier(), variableDeclarationExpression.getSpan()));
         }

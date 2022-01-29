@@ -1,12 +1,12 @@
 fn multiReturn(a: Int): (String, Bool) {
     match (a) {
-        1    => return ("Hello", true)
-        else => return ("World", false)
+        1    => return ("Hello\n", true)
+        else => return ("World\n", false)
     }
 }
 
 fn main() {
-    t := ("Hello", 1, true)
+    t := ("Hello\n", 1, true)
 
     s: String = t.0
     print(s)

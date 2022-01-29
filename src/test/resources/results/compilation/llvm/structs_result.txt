@@ -1,25 +1,23 @@
-Cannot assign non constant value to constant `IdentifierExpression<s>`:
-35: struct S {
-36:     s: String
-37: }
-
-Cannot assign non constant value to constant `IdentifierExpression<str>`:
-51:     bool: Bool
-52:     str: String
-53: }
-
-Type V2RR is not defined in the scope:
-55: fn main() {
-56:     v2: V2R = V2RR{1.0}
-57:     print(v2.x)
-
-Expected type `V2R` but got `Error`:
-55: fn main() {
-56:     v2: V2R = V2RR{1.0}
-57:     print(v2.x)
-
-Value `s: String` is constant and cannot be reassigned:
-70:     print(s.s)
-71:     s.s = "Goodbye"
-72:     print(s.s)
-
+1.000000
+1.000000
+1.414214
+1.000000
+2.000000
+3.000000
+3.741657
+Hello
+Goodbye
+7
+8
+0
+1
+1.141000
+3.141500
+1
+1.000000
+1
+Hi
+1
+1.000000
+1
+Hi
