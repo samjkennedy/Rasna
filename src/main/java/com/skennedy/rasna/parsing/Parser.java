@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Parser {
@@ -37,7 +38,8 @@ public class Parser {
             TokenType.STRUCT_KEYWORD,
             TokenType.IMPORT_KEYWORD,
             TokenType.NAMESPACE_KEYWORD,
-            TokenType.ENUM_KEYWORD
+            TokenType.ENUM_KEYWORD,
+            TokenType.INTERFACE_KEYWORD
     );
     private boolean inTopLevel = true;
 
@@ -161,12 +163,70 @@ public class Parser {
                 return parseNamespaceExpression();
             case ENUM_KEYWORD:
                 return parseEnumDeclaration();
+            case INTERFACE_KEYWORD:
+                return parseInterface();
             case EOF_TOKEN:
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
                 return new NoOpExpression();
         }
+    }
+
+    private Expression parseInterface() {
+        IdentifierExpression interfaceKeyword = matchToken(TokenType.INTERFACE_KEYWORD);
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        IdentifierExpression openCurly = matchToken(TokenType.OPEN_CURLY_BRACE);
+
+        List<FunctionSignatureExpression> signatureExpressions = new ArrayList<>();
+        while (current().getTokenType() != TokenType.CLOSE_CURLY_BRACE
+                && current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN) {
+            FunctionSignatureExpression signatureExpression = parseFunctionSignature();
+        }
+        IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
+
+        return new InterfaceExpression(interfaceKeyword, identifier, openCurly, signatureExpressions, closeCurly);
+    }
+
+    private FunctionSignatureExpression parseFunctionSignature() {
+        List<Expression> genericParameters = new ArrayList<>();
+        if (current().getTokenType() == TokenType.OPEN_ANGLE_BRACE) {
+            IdentifierExpression openAngle = matchToken(TokenType.OPEN_ANGLE_BRACE);
+
+            genericParameters.add(parseTypeExpression());
+            while (current().getTokenType() != TokenType.CLOSE_ANGLE_BRACE
+                    && current().getTokenType() != TokenType.EOF_TOKEN
+                    && current().getTokenType() != TokenType.BAD_TOKEN) {
+                matchToken(TokenType.COMMA);
+                genericParameters.add(parseTypeExpression());
+            }
+            IdentifierExpression closeAngle = matchToken(TokenType.CLOSE_ANGLE_BRACE);
+            throw new UnsupportedOperationException("Generic parameters in interfaces are not yet implemented");
+        }
+
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+
+        List<FunctionParameterExpression> argumentExpressions = new ArrayList<>();
+        while (current().getTokenType() != TokenType.EOF_TOKEN
+                && current().getTokenType() != TokenType.BAD_TOKEN
+                && current().getTokenType() != TokenType.CLOSE_PARENTHESIS) {
+            argumentExpressions.add(parseFunctionArgumentExpression());
+
+            if (current().getTokenType() == TokenType.COMMA) {
+                matchToken(TokenType.COMMA);
+            }
+        }
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+        TypeExpression typeExpression = null;
+        if (current().getTokenType() == TokenType.COLON) {
+            matchToken(TokenType.COLON);
+            typeExpression = parseTypeExpression();
+        }
+
+        return new FunctionSignatureExpression(identifier, openParen, argumentExpressions, closeParen, typeExpression);
     }
 
     private Expression parseEnumDeclaration() {

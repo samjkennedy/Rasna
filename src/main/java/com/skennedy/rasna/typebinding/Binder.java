@@ -12,6 +12,7 @@ import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.lexing.model.Token;
 import com.skennedy.rasna.lexing.model.TokenType;
 import com.skennedy.rasna.lowering.BoundArrayLengthExpression;
+import com.skennedy.rasna.lowering.BoundNoOpExpression;
 import com.skennedy.rasna.parsing.*;
 import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
@@ -130,9 +131,21 @@ public class Binder {
                 return bindTupleIndexExpression((TupleIndexExpression) expression);
             case ENUM_DECLARATION_EXPR:
                 return bindEnumDeclarationExpression((EnumDeclarationExpression) expression);
+            case INTERFACE_EXPR:
+                return bindInterface((InterfaceExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindInterface(InterfaceExpression interfaceExpression) {
+
+        String name = (String) interfaceExpression.getIdentifier().getValue();
+        InterfaceTypeSymbol type = new InterfaceTypeSymbol(name, new LinkedHashMap<>(), signatures);
+
+        currentScope.declareInterface(name, type);
+
+        return new BoundNoOpExpression(); //interfaces are erased at binding time
     }
 
     private BoundExpression bindTupleIndexExpression(TupleIndexExpression tupleIndexExpression) {
@@ -594,9 +607,15 @@ public class Binder {
         BoundExpression iterable = bind(forInExpression.getIterable());
 
         TypeSymbol iteratorType = parseType(forInExpression.getTypeExpression());
+        if (iteratorType == ERROR) {
+            return new BoundErrorExpression();
+        }
 
         //Type inference
         TypeSymbol iterableType = iterable.getType();
+        if (iterableType == ERROR) {
+            return new BoundErrorExpression();
+        }
         if (iteratorType == UNIT) {
             if (iterableType == STRING) {
                 iteratorType = CHAR;
@@ -652,6 +671,10 @@ public class Binder {
             IdentifierExpression identifier = getTypeIdentifier(typeExpression);
 
             typeSymbol = getTypeSymbol(identifier);
+        }
+        if (typeSymbol == null) {
+            errors.add(BindingError.raiseUnknownType((String)getTypeIdentifier(typeExpression).getValue(), typeExpression.getSpan()));
+            return ERROR;
         }
 
         //TODO: This doesn't do N-Dimensional arrays yet

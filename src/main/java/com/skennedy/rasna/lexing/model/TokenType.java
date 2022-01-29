@@ -46,6 +46,7 @@ public enum TokenType {
     DOT("."),
     COLON(":"),
     COLON_COLON("::"),
+    //ANGLE_COLON("<:"),
 
     //Keywords
     OR_KEYWORD("or"),
@@ -74,6 +75,7 @@ public enum TokenType {
     IS_KEYWORD("is"),
     REF_KEYWORD("ref"),
     ENUM_KEYWORD("enum"),
+    INTERFACE_KEYWORD("interface"),
 
     //Types
     ANY_KEYWORD("Any"),

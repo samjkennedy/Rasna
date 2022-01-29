@@ -1,31 +1,32 @@
-fn multiReturn(a: Int): (String, Bool) {
-    match (a) {
-        1    => return ("Hello\n", true)
-        else => return ("World\n", false)
-    }
+interface Shape {
+    area(): Real
+}
+
+struct Rect { // <: Shape {
+    width: Real
+    height: Real
+}
+
+struct Circle { // <: Shape {
+    radius: Real
+}
+
+fn area(rect: Rect): Real {
+    return rect.width * rect.height
+}
+
+fn area(circle: Circle): Real {
+    return 3.14159 * circle.radius * circle.radius
 }
 
 fn main() {
-    t := ("Hello\n", 1, true)
+    r : Shape = Rect{2., 3.}
+    //c : Shape = Circle{2.}
 
-    s: String = t.0
-    print(s)
-
-    print(t.0)
-    print(t.1)
-    print(t.2)
-
-    sb := multiReturn(2)
-    print(sb.0)
-    print(sb.1)
-
-    //Tuples of only one element require a trailing comma:
-    singleton: (Int) = (10,)
-    print(singleton.0)
-
-    nested := (1, (2, (3, true)))
-    print(nested.0)
-    print((nested.1).0)
-    print(((nested.1).1).0)
-    print(((nested.1).1).1)
+    print(r.area())
+    //print(c.area())
+//    shapes: Shape[] = [r, c]
+//    for (shape in shapes) {
+//        print(shape.area())
+//    }
 }
