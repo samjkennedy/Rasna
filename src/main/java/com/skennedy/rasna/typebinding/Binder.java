@@ -221,7 +221,7 @@ public class Binder {
             if (!expectedType.isAssignableFrom(boundMember.getType())) {
 
                 if (erasures.containsKey(expectedType.getName())) {
-                    literalMembers.set(i, typeCheck(expectedType, boundMember, structLiteralExpression.getMembers().get(i).getSpan()));
+                    literalMembers.set(i, typeCheck(erasures.get(expectedType.getName()), boundMember, structLiteralExpression.getMembers().get(i).getSpan()));
                     //TODO: If the bound type is composite (i.e. <T> -> T[]) it is not erased correctly
                 } else if (genericParameters.contains(expectedType.getName())) {
                     erasures.put(expectedType.getName(), getBaseType(boundMember.getType()));

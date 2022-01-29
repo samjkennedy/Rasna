@@ -1,54 +1,20 @@
-//Basic noargs method
-fn foo(): Int {
-    return 1
-}
-
-//Void method with args
-fn printFromTo(fromVal: Int, toVal: Int) {
-    for (i: Int = 0 to 5) {
-        print(i)
-    }
-}
-
-//Bool arg method with control flow - BFS to check all branches return a value
-fn choice(check: Bool): Int {
-    if (check) {
-        return 1
-    }
-    return 2
- }
-
-fn echo2or0(x: Bool) {
-    if (x) {
-        print(2)
-    } else {
-        print(0)
-    }
-}
-
-//Seems that args are passed by value not by reference, TODO: Provide a way to pass by reference?
-fn mut(a: Int) {
-    a = a + 1
-}
-
-//Two arg method
-fn sum(a: Int, b: Int): Int {
-    return a + b
+struct Vec2<T> {
+    x: T
+    y: T
 }
 
 fn main() {
-    echo2or0(true)
-    echo2or0(false)
+    v1 := Vec2{1, 2}
+    print(v1.x)
+    print(v1.y)
 
-    print(sum(3, 9))
+    print("========\n")
+    v2 := Vec2{3.4, 5.6}
+    print(v2.x)
+    print(v2.y)
 
-    print(sum(foo(), foo()))
-    print(sum(sum(1, 2), sum(10, 11)))
-
-    print(foo())
-    print(choice(true))
-    print(choice(false))
-    print(sum(choice(true), 5))
-
-    printFromTo(0, 5)
+    print("========\n")
+    v3 := Vec2{true, false}
+    print(v3.x)
+    print(v3.y)
 }
