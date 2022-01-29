@@ -1,15 +1,8 @@
-Expected type `T` but got `Int`:
-5: fn main() {
-6:     v1 := Vec2{1, 2}
-7:     print(v1.x)
-
-Expected type `T` but got `Real`:
-10:     print("========\n")
-11:     v2 := Vec2{3.4, 5.6}
-12:     print(v2.x)
-
-Expected type `T` but got `Bool`:
-15:     print("========\n")
-16:     v3 := Vec2{true, false}
-17:     print(v3.x)
-
+1
+2
+========
+3.400000
+5.600000
+========
+1
+0

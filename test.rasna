@@ -1,20 +1,21 @@
-struct Vec2<T> {
-    x: T
-    y: T
-}
-
 fn main() {
-    v1 := Vec2{1, 2}
-    print(v1.x)
-    print(v1.y)
+    i: Int = 1
+    print(i > 1)
+    print(i >= 1)
+    print(i < 1)
+    print(i <= 1)
+    print(i == 1)
+    print(i != 1)
 
-    print("========\n")
-    v2 := Vec2{3.4, 5.6}
-    print(v2.x)
-    print(v2.y)
+    print(true)
+    print(false)
 
-    print("========\n")
-    v3 := Vec2{true, false}
-    print(v3.x)
-    print(v3.y)
+    print(true or false)
+    print(true and false)
+    print(true and true)
+    print(true or true)
+    print(false or false)
+    print(false and false)
+    print(false and true)
+    print(false or true)
 }

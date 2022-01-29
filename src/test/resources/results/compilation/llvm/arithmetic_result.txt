@@ -3,4 +3,4 @@
 20
 5
 1
-10:22:43.540 [main] ERROR com.skennedy.rasna.compilation.llvm.LLVMCompiler - Error when validating function `max(Int, Int): Int`:
+10:30:13.654 [main] ERROR com.skennedy.rasna.compilation.llvm.LLVMCompiler - Error when validating function `max(Int, Int): Int`:
