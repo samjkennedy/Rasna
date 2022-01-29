@@ -434,10 +434,7 @@ public class Binder {
     }
 
     private BoundExpression bindReturnExpression(ReturnExpression returnExpression) {
-        BoundExpression returnValue = null;
-        if (returnExpression.getReturnValue() != null) {
-            bind(returnExpression.getReturnValue());
-        }
+        BoundExpression returnValue = bind(returnExpression.getReturnValue());
 
         return new BoundReturnExpression(returnValue);
     }

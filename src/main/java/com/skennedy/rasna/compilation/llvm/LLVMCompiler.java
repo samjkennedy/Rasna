@@ -850,9 +850,13 @@ public class LLVMCompiler {
             LLVMBuildBr(builder, endBlock);
         }
 
-        LLVMPositionBuilderAtEnd(builder, endBlock);
-
-        return LLVMBuildSelect(builder, condition, thenVal, elseVal, "cond");
+        if (!elseTerminated || !thenTerminated) {
+            LLVMPositionBuilderAtEnd(builder, endBlock);
+            return null;//LLVMBuildSelect(builder, condition, thenVal, elseVal, "cond");
+        } else {
+            LLVMDeleteBasicBlock(endBlock);
+        }
+        return null;
     }
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
