@@ -2,12 +2,12 @@ interface Shape {
     area(): Real
 }
 
-struct Rect { // <: Shape {
+struct Rect {
     width: Real
     height: Real
 }
 
-struct Circle { // <: Shape {
+struct Circle {
     radius: Real
 }
 
@@ -24,21 +24,16 @@ fn area(circle: Circle): Real {
     return 3.14159 * circle.radius * circle.radius
 }
 
-//fn measure(shape: Shape) {
-//    print(shape.area())
-//}
+fn measure(shape: Shape) {
+    print(shape.area())
+}
 
 fn main() {
     r := Rect{2., 3.}
     c := Circle{2.}
     v := Vector{1.2, 3.4}
 
-    //r.measure()
-    //c.measure()
-    //v.measure() //Will not compile
-    //print(c.area())
-//    shapes: Shape[] = [r, c]
-//    for (shape in shapes) {
-//        print(shape.area())
-//    }
+//    r.measure()
+//    c.measure()
+//    v.measure() //Should not compile
 }

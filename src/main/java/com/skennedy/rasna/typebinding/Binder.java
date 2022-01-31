@@ -142,9 +142,26 @@ public class Binder {
 
         String name = (String) interfaceExpression.getIdentifier().getValue();
 
+        InterfaceTypeSymbol tempType = new InterfaceTypeSymbol(name, new ArrayList<>());
+
         List<BoundFunctionSignatureExpression> boundFunctionSignatureExpressions = new ArrayList<>();
         for (FunctionSignatureExpression signatureExpression : interfaceExpression.getSignatureExpressions()) {
-            boundFunctionSignatureExpressions.add(bindFunctionSignatureExpression(signatureExpression));
+            BoundFunctionSignatureExpression functionSignatureExpression = bindFunctionSignatureExpression(signatureExpression);
+
+            List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
+            VariableSymbol self = new VariableSymbol("self", tempType, null, true, null);
+            functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
+            functionParameterExpressions.addAll(functionSignatureExpression.getFunctionParameterExpressions());
+
+            FunctionSymbol interfaceFunction = new FunctionSymbol(functionSignatureExpression.getIdentifier(), functionSignatureExpression.getReturnType(), functionParameterExpressions, null);
+
+            List<String> argumentIdentifiers = functionParameterExpressions.stream()
+                    .map(BoundFunctionParameterExpression::getType)
+                    .map(Object::toString)
+                    .collect(Collectors.toList());
+            currentScope.declareFunction(buildSignature(signatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
+
+            boundFunctionSignatureExpressions.add(functionSignatureExpression);
         }
 
         InterfaceTypeSymbol type = new InterfaceTypeSymbol(name, boundFunctionSignatureExpressions);
@@ -164,23 +181,26 @@ public class Binder {
 
         String identifier = (String) signatureExpression.getIdentifier().getValue();
 
+        List<BoundFunctionParameterExpression> boundFunctionParameterExpressions = new ArrayList<>();
         for (FunctionParameterExpression argumentExpression : signatureExpression.getArgumentExpressions()) {
 
             TypeSymbol typeSymbol = getTypeSymbol(getTypeIdentifier(argumentExpression.getTypeExpression()));
             String name = argumentExpression.getIdentifier().getValue().toString();
-            VariableSymbol variableSymbol = new VariableSymbol(name, typeSymbol, argumentExpression.getGuard() == null ? null : bind(argumentExpression.getGuard()), argumentExpression.getConstKeyword() != null, argumentExpression);
+            BoundExpression guard = argumentExpression.getGuard() == null ? null : bind(argumentExpression.getGuard());
+            VariableSymbol variableSymbol = new VariableSymbol(name, typeSymbol, guard, argumentExpression.getConstKeyword() != null, argumentExpression);
             try {
                 currentScope.declareVariable(name, variableSymbol);
             } catch (VariableAlreadyDeclaredException vade) {
                 VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable(name).get();
                 errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, argumentExpression.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
             }
+            boundFunctionParameterExpressions.add(new BoundFunctionParameterExpression(argumentExpression.getRefKeyword() != null, variableSymbol, guard));
         }
         TypeSymbol returnType = getTypeSymbol(getTypeIdentifier(signatureExpression.getTypeExpression()));
 
         currentScope = currentScope.getParentScope();
 
-        return new BoundFunctionSignatureExpression();
+        return new BoundFunctionSignatureExpression(identifier, boundFunctionParameterExpressions, returnType);
     }
 
     private BoundExpression bindTupleIndexExpression(TupleIndexExpression tupleIndexExpression) {
