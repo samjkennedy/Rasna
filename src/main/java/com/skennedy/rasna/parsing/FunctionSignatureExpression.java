@@ -25,6 +25,26 @@ public class FunctionSignatureExpression extends Expression {
         this.typeExpression = typeExpression;
     }
 
+    public IdentifierExpression getIdentifier() {
+        return identifier;
+    }
+
+    public IdentifierExpression getOpenParen() {
+        return openParen;
+    }
+
+    public List<FunctionParameterExpression> getArgumentExpressions() {
+        return argumentExpressions;
+    }
+
+    public IdentifierExpression getCloseParen() {
+        return closeParen;
+    }
+
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
+    }
+
     @Override
     public ExpressionType getExpressionType() {
         return ExpressionType.FUNC_SIGNATURE_EXPR;

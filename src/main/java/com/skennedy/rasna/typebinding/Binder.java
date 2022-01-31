@@ -141,11 +141,46 @@ public class Binder {
     private BoundExpression bindInterface(InterfaceExpression interfaceExpression) {
 
         String name = (String) interfaceExpression.getIdentifier().getValue();
-        InterfaceTypeSymbol type = new InterfaceTypeSymbol(name, new LinkedHashMap<>(), signatures);
 
-        currentScope.declareInterface(name, type);
+        List<BoundFunctionSignatureExpression> boundFunctionSignatureExpressions = new ArrayList<>();
+        for (FunctionSignatureExpression signatureExpression : interfaceExpression.getSignatureExpressions()) {
+            boundFunctionSignatureExpressions.add(bindFunctionSignatureExpression(signatureExpression));
+        }
 
-        return new BoundNoOpExpression(); //interfaces are erased at binding time
+        InterfaceTypeSymbol type = new InterfaceTypeSymbol(name, boundFunctionSignatureExpressions);
+
+        try {
+            currentScope.declareType(name, type);
+        } catch (TypeAlreadyDeclaredException tade) {
+            errors.add(BindingError.raiseTypeAlreadyDeclared(name, interfaceExpression.getIdentifier().getSpan()));
+        }
+
+        return new BoundNoOpExpression();
+    }
+
+    private BoundFunctionSignatureExpression bindFunctionSignatureExpression(FunctionSignatureExpression signatureExpression) {
+
+        currentScope = new BoundScope(currentScope);
+
+        String identifier = (String) signatureExpression.getIdentifier().getValue();
+
+        for (FunctionParameterExpression argumentExpression : signatureExpression.getArgumentExpressions()) {
+
+            TypeSymbol typeSymbol = getTypeSymbol(getTypeIdentifier(argumentExpression.getTypeExpression()));
+            String name = argumentExpression.getIdentifier().getValue().toString();
+            VariableSymbol variableSymbol = new VariableSymbol(name, typeSymbol, argumentExpression.getGuard() == null ? null : bind(argumentExpression.getGuard()), argumentExpression.getConstKeyword() != null, argumentExpression);
+            try {
+                currentScope.declareVariable(name, variableSymbol);
+            } catch (VariableAlreadyDeclaredException vade) {
+                VariableSymbol alreadyDeclaredVariable = currentScope.tryLookupVariable(name).get();
+                errors.add(BindingError.raiseVariableAlreadyDeclared(alreadyDeclaredVariable, argumentExpression.getSpan(), alreadyDeclaredVariable.getDeclaration().getSpan()));
+            }
+        }
+        TypeSymbol returnType = getTypeSymbol(getTypeIdentifier(signatureExpression.getTypeExpression()));
+
+        currentScope = currentScope.getParentScope();
+
+        return new BoundFunctionSignatureExpression();
     }
 
     private BoundExpression bindTupleIndexExpression(TupleIndexExpression tupleIndexExpression) {
@@ -673,7 +708,7 @@ public class Binder {
             typeSymbol = getTypeSymbol(identifier);
         }
         if (typeSymbol == null) {
-            errors.add(BindingError.raiseUnknownType((String)getTypeIdentifier(typeExpression).getValue(), typeExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownType((String) getTypeIdentifier(typeExpression).getValue(), typeExpression.getSpan()));
             return ERROR;
         }
 

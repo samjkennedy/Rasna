@@ -183,6 +183,7 @@ public class Parser {
                 && current().getTokenType() != TokenType.EOF_TOKEN
                 && current().getTokenType() != TokenType.BAD_TOKEN) {
             FunctionSignatureExpression signatureExpression = parseFunctionSignature();
+            signatureExpressions.add(signatureExpression);
         }
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
