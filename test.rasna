@@ -1,40 +1,9 @@
-interface Shape {
-    area(): Real
+fn sum(a: Int, b: Int): Int {
+    return a + b
 }
 
-struct Rect {
-    width: Real
-    height: Real
-}
-
-struct Circle {
-    radius: Real
-}
-
-struct Vector {
-    x: Real
-    y: Real
-}
-
-fn area(rect: Rect): Real {
-    return rect.width * rect.height
-}
-
-fn area(circle: Circle): Real {
-    return 3.14159 * circle.radius * circle.radius
-}
-
-//At compile time this should be replaced with one function per subtype
-fn measure(shape: Shape) {
-    print(shape.area())
-}
 
 fn main() {
-    r := Rect{2., 3.}
-    c := Circle{2.}
-    v := Vector{1.2, 3.4}
-
-//    r.measure()
-//    c.measure()
-//    v.measure() //Should not compile
+    num: (Int|Real) = 1
+    num = 1.3
 }

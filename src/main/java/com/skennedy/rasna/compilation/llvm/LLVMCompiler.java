@@ -114,6 +114,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructCreateNamed;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructSetBody;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructTypeInContext;
+import static org.bytedeco.llvm.global.LLVM.LLVMTokenTypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMTrunc;
 import static org.bytedeco.llvm.global.LLVM.LLVMTypeOf;
 import static org.bytedeco.llvm.global.LLVM.LLVMVerifyFunction;
@@ -772,7 +773,6 @@ public class LLVMCompiler {
         return null;
     }
 
-
     private LLVMValueRef visit(BoundCStyleForExpression cStyleForExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         scope = new Scope(scope);
@@ -865,6 +865,7 @@ public class LLVMCompiler {
         LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
 
         LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
+
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
         scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
@@ -874,6 +875,13 @@ public class LLVMCompiler {
 
         val = dereference(builder, val, "val");
 
+        if (variableDeclarationExpression.getType() instanceof UnionTypeSymbol) {
+            UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) variableDeclarationExpression.getType();
+
+            int offset = unionTypeSymbol.getTypes().indexOf(variableDeclarationExpression.getInitialiser().getType());
+
+            ptr = LLVMBuildStructGEP(builder, ptr, offset, "");
+        }
         return LLVMBuildStore(builder, val, ptr);
     }
 
@@ -948,6 +956,18 @@ public class LLVMCompiler {
             LLVMStructSetBody(structTypeRef, elementTypes, memberTypes.size(), 0);
 
             return structTypeRef;
+        }
+        if (typeSymbol instanceof UnionTypeSymbol) {
+            UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) typeSymbol;
+
+            PointerPointer<Pointer> llvmTypes = new PointerPointer<>(unionTypeSymbol.getTypes().size());
+            List<TypeSymbol> types = unionTypeSymbol.getTypes();
+            for (int i = 0; i < types.size(); i++) {
+                TypeSymbol type = types.get(i);
+                LLVMTypeRef llvmTypeRef = getLlvmTypeRef(type, context);
+                llvmTypes.put(i, llvmTypeRef);
+            }
+            return LLVMStructTypeInContext(context, llvmTypes, types.size(), 0);
         }
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {

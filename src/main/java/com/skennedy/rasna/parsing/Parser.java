@@ -799,10 +799,32 @@ public class Parser {
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
             IdentifierExpression openParenthesis = matchToken(TokenType.OPEN_PARENTHESIS);
 
-            List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
-            IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
+            TypeExpression typeExpression = parseTypeExpression();
+            if (current().getTokenType() == TokenType.COMMA) {
+                IdentifierExpression comma = matchToken(TokenType.COMMA);
+                DelimitedExpression<TypeExpression>delimitedExpression = new DelimitedExpression<>(typeExpression, comma);
 
-            type = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
+                List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
+
+                delimitedExpressions.add(0, delimitedExpression);
+                IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+                type = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
+
+            } else if (current().getTokenType() == TokenType.BAR) {
+                IdentifierExpression bar = matchToken(TokenType.BAR);
+                DelimitedExpression<TypeExpression>delimitedExpression = new DelimitedExpression<>(typeExpression, bar);
+
+                List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.BAR, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
+
+                delimitedExpressions.add(0, delimitedExpression);
+                IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+                type = new UnionTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
+            } else {
+                errors.add(Error.raiseUnexpectedToken(TokenType.COMMA, current()));
+                type = null;
+            }
         } else {
             type = parseTypeKeyword();
         }

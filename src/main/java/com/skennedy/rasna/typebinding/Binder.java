@@ -723,6 +723,13 @@ public class Binder {
                     .map(this::parseType)
                     .collect(Collectors.toList());
             typeSymbol = new TupleTypeSymbol(boundTypes);
+        } else if (typeExpression.getTypeExpression() instanceof UnionTypeExpression) {
+            List<TypeSymbol> boundTypes = ((UnionTypeExpression) typeExpression.getTypeExpression()).getTypeExpressions()
+                    .stream()
+                    .map(DelimitedExpression::getExpression)
+                    .map(this::parseType)
+                    .collect(Collectors.toList());
+            typeSymbol = new UnionTypeSymbol(boundTypes);
         } else {
             IdentifierExpression identifier = getTypeIdentifier(typeExpression);
 
