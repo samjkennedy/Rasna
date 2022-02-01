@@ -76,7 +76,7 @@ for (N: Int = 0 to 10 | N % 2 == 0) {
 
 ### Everything is an expression
 
-In Rasna, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a Intiable:
+In Rasna, everything is an expression and so everything can be assigned. This means instead of ternary expressions, an if expression can be assigned to a variable:
 
 ```rust
 i: Int = if (x > y) 1 else 2
@@ -139,33 +139,6 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
      return i - 1
  }
  ```
-   
- ### Structs
- 
- Structs are no more than structured data:
- 
- ```rust
- struct V3R {
-     x: Real
-     y: Real
-     z: Real
- }
- ```
- 
- They are initialised with a special constructor syntax taking arguments in the order they were defined:
- 
- ```rust
- v3: V3R = V3R{1.0, 2.0, 3.0}
- ```
- 
- Unlike languages like c++ and Rust, structs cannot contain member functions. 
- Once defined, a struct can be used in the return types and arguments of functions just like any other type:
- 
- ```rust
- fn mag3(v: V3R): Real {
-     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
- }
- ```
  
  ### Uniform Function Call Syntax
  
@@ -198,6 +171,33 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
      
      //Methods can be chained a la OOP
      v6: Vector = v2.add(v1).add(v2).mul(5)
+ }
+ ```
+   
+ ### Structs
+ 
+ Structs are no more than structured data:
+ 
+ ```rust
+ struct V3R {
+     x: Real
+     y: Real
+     z: Real
+ }
+ ```
+ 
+ They are initialised with a special constructor syntax taking arguments in the order they were defined:
+ 
+ ```rust
+ v3: V3R = V3R{1.0, 2.0, 3.0}
+ ```
+ 
+ Unlike languages like c++ and Rust, structs cannot contain member functions. 
+ Once defined, a struct can be used in the return types and arguments of functions just like any other type:
+ 
+ ```rust
+ fn mag3(v: V3R): Real {
+     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
  }
  ```
  
@@ -275,6 +275,79 @@ The variable `c` will be of the type `Color`, which compiles down to a const i32
     
     if (Color.Red < Color.Green) { //Evaluates to true
         ...
+```
+
+### Interfaces and Duck Typing
+
+Rasna is not an Object Oriented language, but offers some features that will be familiar to object oriented programmers.
+One such feature is <b>interfaces</b>, defined like so:
+
+```go
+interface Shape {
+    area(): Real
+    perim(): Real
+}
+```
+
+The general syntax is:
+
+```
+interface [identifier] {
+    [one or more function signatures]
+}
+```
+
+From then on, any type with methods that satisfy this interface is implicitly a `Shape`, e.g. a Rect struct like so:
+
+```rust
+struct Rect {
+    width: Real
+    height: Real
+}
+
+fn area(rect: Rect): Real {
+    return rect.width * rect.height
+}
+
+fn perim(rect: Rect): Real {
+    return 2 * rect.height + 2 * r.width
+}
+```
+
+#### From here on the features are planned and not yet implemented
+
+Notice that the interface implicitly declares the functions as `area(self: Shape): Real`, allowing the benefits of UFCS.
+
+This is known as [Duck Typing](https://en.wikipedia.org/wiki/Duck_typing), if it looks like a duck and quacks like a duck, it's probably a duck.
+
+Now you can declare a variable of the type `Shape` with a `Rect` initialiser:
+
+```rust
+    s: Shape = Rect{2.0, 3.0}
+    print(s.area()) //prints 6
+    print(s.perim()) //prints 10
+```
+
+If another struct `Circle` were declared and it fulfilled the `Shape` interface, `s` could be reassigned to a circle without incurring a type mismatch. 
+Additionally circles and rects can now be contained within Shape collections like a `Shape[]`
+
+If a struct must adhere to an interface, the `<:` operator can be used to incur a compile time error if a struct does not fulfill all of an interface's requirements.
+
+```go
+interface Shape {
+    area(): Real
+    perim(): Real
+}
+
+struct Rect <: Shape {
+    width: Real
+    height: Real
+}
+
+fn area(rect: Rect): Real {
+    return rect.width * rect.height
+}
+//Compile time error as `Rect` does not implement `perim(): Real`
 ```
 
 ## Acknowledgements

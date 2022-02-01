@@ -33,7 +33,7 @@ public class TypeSymbol extends Symbol {
     }
 
     public static List<TypeSymbol> getPrimitives() {
-        return Arrays.asList(BOOL, CHAR, INT, REAL, STRING, TYPE, ANY);
+        return Arrays.asList(UNIT, BOOL, CHAR, INT, REAL, STRING, TYPE, ANY);
     }
 
     public Map<String, VariableSymbol> getFields() {

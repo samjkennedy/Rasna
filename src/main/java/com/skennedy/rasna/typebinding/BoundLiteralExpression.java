@@ -18,6 +18,9 @@ public class BoundLiteralExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
+        if (value == null) {
+            return TypeSymbol.UNIT;
+        }
         if (value instanceof Character) {
             return TypeSymbol.CHAR;
         }
