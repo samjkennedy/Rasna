@@ -8,6 +8,7 @@ import java.util.List;
 public enum TokenType {
 
     WHITESPACE(null),
+    UNIT_LITERAL(null),
     NUM_LITERAL(null),
     CHAR_LITERAL(null),
     STRING_LITERAL(null),
@@ -79,12 +80,14 @@ public enum TokenType {
 
     //Types
     ANY_KEYWORD("Any"),
+    UNIT_KEYWORD("Unit"),
     BOOL_KEYWORD("Bool"),
     CHAR_KEYWORD("Char"),
     INT_KEYWORD("Int"),
     REAL_KEYWORD("Real"),
     STRING_KEYWORD("String"),
     FUNCTION_KEYWORD("Function"),
+    ERROR_KEYWORD("Error"),
 
     //Intrinsics
     PRINT_INTR("print"),

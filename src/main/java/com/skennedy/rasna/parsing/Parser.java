@@ -109,6 +109,11 @@ public class Parser {
             case OPEN_SQUARE_BRACE:
                 return parseArrayLiteralExpression();
             case OPEN_PARENTHESIS:
+                if (nextToken().getTokenType() == TokenType.CLOSE_PARENTHESIS) {
+                    IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+                    matchToken(TokenType.CLOSE_PARENTHESIS);
+                    return new IdentifierExpression(new Token(TokenType.UNIT_LITERAL, Location.fromOffset(openParen.getSpan().getStart(), 0), null), TokenType.UNIT_LITERAL, null);
+                }
                 return parseParenthesisedExpression();
             case TYPEOF_INTR:
                 return parseTypeofIntrinsic();
@@ -847,6 +852,9 @@ public class Parser {
     private IdentifierExpression parseTypeKeyword() {
         IdentifierExpression typeKeyword;
         switch (current().getTokenType()) {
+            case UNIT_KEYWORD:
+                typeKeyword = matchToken(TokenType.UNIT_KEYWORD);
+                break;
             case INT_KEYWORD:
                 typeKeyword = matchToken(TokenType.INT_KEYWORD);
                 break;

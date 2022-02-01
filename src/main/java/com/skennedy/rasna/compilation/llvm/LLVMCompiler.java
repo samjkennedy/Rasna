@@ -78,6 +78,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMFPToSI;
 import static org.bytedeco.llvm.global.LLVM.LLVMFunctionType;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetBasicBlockTerminator;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetGlobalPassRegistry;
+import static org.bytedeco.llvm.global.LLVM.LLVMGetInsertBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetParam;
 import static org.bytedeco.llvm.global.LLVM.LLVMGetTypeKind;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
@@ -878,7 +879,7 @@ public class LLVMCompiler {
 
     private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol, LLVMContextRef context) {
         if (typeSymbol == UNIT) {
-            return LLVMVoidTypeInContext(context);
+            return LLVMStructTypeInContext(context, new PointerPointer(0), 0, 1);
         }
         if (typeSymbol == BOOL) {
             return i1Type;
@@ -1126,7 +1127,16 @@ public class LLVMCompiler {
         if (literalExpression.getType() == STRING) {
             return buildString(literalExpression, builder, context);
         }
+        if (literalExpression.getType() == UNIT) {
+            return buildUnit(builder, context);
+        }
         throw new UnsupportedOperationException("Literals of type `" + literalExpression.getType() + "` are not yet supported in LLVM");
+    }
+
+    private LLVMValueRef buildUnit(LLVMBuilderRef builder, LLVMContextRef context) {
+        LLVMTypeRef unitStructType = LLVMStructTypeInContext(context, new PointerPointer<>(0), 0, 1);
+        LLVMValueRef unitStructPtr = LLVMBuildAlloca(builder, unitStructType, "");
+        return LLVMBuildLoad(builder, unitStructPtr, "");
     }
 
     private LLVMValueRef buildString(BoundLiteralExpression literalExpression, LLVMBuilderRef builder, LLVMContextRef context) {
@@ -1297,15 +1307,13 @@ public class LLVMCompiler {
             scope.declareVariable(argument.getArgument(), val);
         }
 
-        if (functionSymbol.getType() != UNIT) {
-            //Assign return value
-            LLVMTypeRef retValType = getLlvmTypeRef(functionSymbol.getType(), context);
-            LLVMValueRef retval = LLVMBuildAlloca(builder, retValType, functionSymbol.getName() + "-retval");
-            returnStack.push(retval);
-            //Create return block
-            LLVMBasicBlockRef returnBlock = LLVMAppendBasicBlockInContext(context, function, "return");
-            returnBlocks.push(returnBlock);
-        }
+        //Assign return value
+        LLVMTypeRef retValType = getLlvmTypeRef(functionSymbol.getType(), context);
+        LLVMValueRef retval = LLVMBuildAlloca(builder, retValType, functionSymbol.getName() + "-retval");
+        returnStack.push(retval);
+        //Create return block
+        LLVMBasicBlockRef returnBlock = LLVMAppendBasicBlockInContext(context, function, "return");
+        returnBlocks.push(returnBlock);
 
         //Visit body
         for (BoundExpression expression : functionDeclarationExpression.getBody().getExpressions()) {
@@ -1316,11 +1324,15 @@ public class LLVMCompiler {
         //Build return value
         TypeSymbol returnType = functionSymbol.getType();
         if (returnType == UNIT) {
-            return LLVMBuildRetVoid(builder);
+            LLVMBasicBlockRef block = LLVMGetInsertBlock(builder);
+            if (LLVMGetBasicBlockTerminator(block) == null) {
+                LLVMBuildBr(builder, returnBlocks.peek());
+            }
+
+            LLVMPositionBuilderAtEnd(builder, returnBlocks.pop());
+            return LLVMBuildRet(builder, buildUnit(builder, context));
         }
-
         LLVMPositionBuilderAtEnd(builder, returnBlocks.pop());
-
         return LLVMBuildRet(builder, LLVMBuildLoad(builder, returnStack.pop(), functionSymbol.getName() + "-retval"));
     }
 

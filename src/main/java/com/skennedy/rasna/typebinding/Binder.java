@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.skennedy.rasna.typebinding.TypeSymbol.*;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.ERROR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
@@ -370,7 +371,7 @@ public class Binder {
         TypeSymbol type;
         if (boundOwner instanceof BoundTypeExpression) {
             type = ((BoundTypeExpression) boundOwner).getTypeSymbol();
-        } else if (TypeSymbol.getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
+        } else if (getPrimitives().contains(boundOwner.getType()) || boundOwner.getType() instanceof TupleTypeSymbol) {
             type = boundOwner.getType();
         } else if (boundOwner.getType() instanceof ArrayTypeSymbol) {
             type = boundOwner.getType();
@@ -478,7 +479,7 @@ public class Binder {
             type = boundMatchCaseExpression.getType();
             if (boundMatchCaseExpression.getCaseExpression() != null
                     && !operand.getType().isAssignableFrom(boundMatchCaseExpression.getCaseExpression().getType())
-                    && boundMatchCaseExpression.getCaseExpression().getType() != TypeSymbol.BOOL) {
+                    && boundMatchCaseExpression.getCaseExpression().getType() != BOOL) {
                 errors.add(BindingError.raiseTypeMismatch(operand.getType(), boundMatchCaseExpression.getCaseExpression().getType(), caseExpression.getCaseExpression().getSpan()));
             }
             boundMatchCaseExpressions.add(boundMatchCaseExpression);
@@ -713,7 +714,7 @@ public class Binder {
 
         TypeSymbol typeSymbol;
         if (typeExpression == null) {
-            return TypeSymbol.UNIT;
+            return UNIT;
         }
         if (typeExpression.getTypeExpression() instanceof TupleTypeExpression) {
             List<TypeSymbol> boundTypes = ((TupleTypeExpression) typeExpression.getTypeExpression()).getTypeExpressions()
@@ -742,26 +743,29 @@ public class Binder {
     private TypeSymbol getTypeSymbol(IdentifierExpression identifier) {
         TypeSymbol typeSymbol;
         switch (identifier.getTokenType()) {
+            case UNIT_KEYWORD:
+                typeSymbol = UNIT;
+                break;
             case CHAR_KEYWORD:
-                typeSymbol = TypeSymbol.CHAR;
+                typeSymbol = CHAR;
                 break;
             case INT_KEYWORD:
                 typeSymbol = INT;
                 break;
             case BOOL_KEYWORD:
-                typeSymbol = TypeSymbol.BOOL;
+                typeSymbol = BOOL;
                 break;
             case STRING_KEYWORD:
-                typeSymbol = TypeSymbol.STRING;
+                typeSymbol = STRING;
                 break;
             case REAL_KEYWORD:
-                typeSymbol = TypeSymbol.REAL;
+                typeSymbol = REAL;
                 break;
             case FUNCTION_KEYWORD:
-                typeSymbol = TypeSymbol.FUNCTION;
+                typeSymbol = FUNCTION;
                 break;
             case ANY_KEYWORD:
-                typeSymbol = TypeSymbol.ANY;
+                typeSymbol = ANY;
                 break;
             default:
                 Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifier.getValue()).or(() -> currentScope.tryLookupGenericType((String) identifier.getValue()));
@@ -783,8 +787,8 @@ public class Binder {
     private BoundExpression bindIfExpression(IfExpression ifExpression) {
 
         BoundExpression condition = bind(ifExpression.getCondition());
-        if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
-            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.BOOL, condition.getType(), ifExpression.getCondition().getSpan()));
+        if (!condition.getType().isAssignableFrom(BOOL)) {
+            errors.add(BindingError.raiseTypeMismatch(BOOL, condition.getType(), ifExpression.getCondition().getSpan()));
         }
         BoundExpression body = bind(ifExpression.getBody());
 
@@ -941,7 +945,8 @@ public class Binder {
 
         if (identifierExpression.getTokenType() == TokenType.NUM_LITERAL
                 || identifierExpression.getTokenType() == TokenType.STRING_LITERAL
-                || identifierExpression.getTokenType() == TokenType.CHAR_LITERAL) {
+                || identifierExpression.getTokenType() == TokenType.CHAR_LITERAL
+                || identifierExpression.getTokenType() == TokenType.UNIT_LITERAL) {
             return new BoundLiteralExpression(identifierExpression.getValue());
 
         } else if (identifierExpression.getTokenType() == TokenType.TRUE_KEYWORD) {
@@ -1116,7 +1121,8 @@ public class Binder {
         //Declare the arguments within the function's scope
         List<BoundFunctionParameterExpression> arguments = new ArrayList<>();
         for (FunctionParameterExpression argumentExpression : functionDeclarationExpression.getArguments()) {
-            arguments.add(bindFunctionArgumentExpression(argumentExpression));
+            BoundFunctionParameterExpression boundArgument = bindFunctionArgumentExpression(argumentExpression);
+            arguments.add(boundArgument);
         }
 
         FunctionSymbol functionSymbol = new FunctionSymbol((String) identifier.getValue(), type, arguments, null);
@@ -1174,23 +1180,23 @@ public class Binder {
 
     private void typeCheckMainFunction(BoundFunctionDeclarationExpression boundMainFunction, FunctionDeclarationExpression mainFunction) {
 
-        if (boundMainFunction.getFunctionSymbol().getType() != TypeSymbol.UNIT) {
-            errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
+        if (boundMainFunction.getFunctionSymbol().getType() != UNIT) {
+            errors.add(BindingError.raiseTypeMismatch(UNIT, boundMainFunction.getFunctionSymbol().getType(), mainFunction.getTypeExpression().getSpan()));
         }
         List<BoundFunctionParameterExpression> arguments = boundMainFunction.getArguments();
         if (!arguments.isEmpty()) {
             if (arguments.size() == 1) {
                 BoundFunctionParameterExpression argumentExpression = arguments.get(0);
-                if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
-                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
+                if (!argumentExpression.getType().equals(new ArrayTypeSymbol(STRING))) {
+                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getSpan()));
                 }
             } else {
                 BoundFunctionParameterExpression argumentExpression = arguments.get(0);
-                if (!argumentExpression.getType().equals(new ArrayTypeSymbol(TypeSymbol.STRING))) {
-                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(TypeSymbol.STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getTypeExpression().getSpan()));
+                if (!argumentExpression.getType().equals(new ArrayTypeSymbol(STRING))) {
+                    errors.add(BindingError.raiseTypeMismatch(new ArrayTypeSymbol(STRING), argumentExpression.getType(), mainFunction.getArguments().get(0).getTypeExpression().getSpan()));
                 }
                 for (int i = 1; i < arguments.size(); i++) {
-                    errors.add(BindingError.raiseTypeMismatch(TypeSymbol.UNIT, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getTypeExpression().getSpan()));
+                    errors.add(BindingError.raiseTypeMismatch(UNIT, boundMainFunction.getArguments().get(i).getType(), mainFunction.getArguments().get(i).getTypeExpression().getSpan()));
                 }
             }
         }
@@ -1214,8 +1220,8 @@ public class Binder {
         BoundExpression guard = null;
         if (argumentExpression.getGuard() != null) {
             guard = bind(argumentExpression.getGuard());
-            if (guard.getType() != TypeSymbol.BOOL) {
-                errors.add(BindingError.raiseTypeMismatch(TypeSymbol.BOOL, guard.getType(), argumentExpression.getGuard().getSpan()));
+            if (guard.getType() != BOOL) {
+                errors.add(BindingError.raiseTypeMismatch(BOOL, guard.getType(), argumentExpression.getGuard().getSpan()));
             }
         }
 
@@ -1313,7 +1319,7 @@ public class Binder {
         BoundExpression guard = null;
         if (variableDeclarationExpression.getGuard() != null) {
             guard = bind(variableDeclarationExpression.getGuard());
-            assert guard.getType().isAssignableFrom(TypeSymbol.BOOL);
+            assert guard.getType().isAssignableFrom(BOOL);
         }
 
         TypeSymbol type = parseType(variableDeclarationExpression.getTypeExpression());
@@ -1348,8 +1354,8 @@ public class Binder {
     private BoundExpression bindWhileExpression(WhileExpression whileExpression) {
 
         BoundExpression condition = bind(whileExpression.getCondition());
-        if (!condition.getType().isAssignableFrom(TypeSymbol.BOOL)) {
-            throw new TypeMismatchException(TypeSymbol.BOOL, condition.getType());
+        if (!condition.getType().isAssignableFrom(BOOL)) {
+            throw new TypeMismatchException(BOOL, condition.getType());
         }
 
         if (condition.isConstExpression()) {
