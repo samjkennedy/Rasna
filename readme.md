@@ -314,7 +314,9 @@ fn perim(rect: Rect): Real {
 }
 ```
 
-Notice that the interface implicitly declares the functions as `area(shape: Shape): Real`, allowing the benefits of UFCS.
+#### From here on the features are planned and not yet implemented
+
+Notice that the interface implicitly declares the functions as `area(self: Shape): Real`, allowing the benefits of UFCS.
 
 This is known as [Duck Typing](https://en.wikipedia.org/wiki/Duck_typing), if it looks like a duck and quacks like a duck, it's probably a duck.
 
