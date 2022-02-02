@@ -973,11 +973,18 @@ public class Binder {
         }
 
         Optional<VariableSymbol> variable = currentScope.tryLookupVariable((String) identifierExpression.getValue());
-        if (variable.isPresent()) {
+        if (variable.isEmpty()) {
+            errors.add(BindingError.raiseUnknownIdentifier((String) identifierExpression.getValue(), identifierExpression.getSpan()));
+            return new BoundErrorExpression();
+        }
+        if (variable.get().getDeclaration().getExpressionType() != ExpressionType.VAR_DECLARATION_EXPR) {
             return new BoundVariableExpression(variable.get());
         }
-        errors.add(BindingError.raiseUnknownIdentifier((String) identifierExpression.getValue(), identifierExpression.getSpan()));
-        return new BoundErrorExpression();
+        if (((VariableDeclarationExpression)variable.get().getDeclaration()).getInitialiser() == null) {
+            errors.add(BindingError.raiseUninitialisedVariable((String) identifierExpression.getValue(), identifierExpression.getSpan()));
+            return new BoundErrorExpression();
+        }
+        return new BoundVariableExpression(variable.get());
     }
 
     private BoundExpression bindIncrementExpression(IncrementExpression incrementExpression) {
