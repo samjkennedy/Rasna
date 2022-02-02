@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Parser {
@@ -397,8 +396,6 @@ public class Parser {
             return parseMemberAccessorExpression(memberAccessorExpression);
         }
 
-        //TODO: This might be more than just an identifier, e.g. method call: getVal().x
-        //      Eventually ditch the need for the identifier and use whatever was evaluated last
         return memberAccessorExpression;
     }
 
@@ -445,11 +442,13 @@ public class Parser {
                 caseExpressions.add(new MatchCaseExpression(caseExpression, arrow, thenExpression));
             }
         }
-        IdentifierExpression elseKeyword = matchToken(TokenType.ELSE_KEYWORD);
-        IdentifierExpression arrow = matchToken(TokenType.THICC_ARROW);
-        Expression thenExpression = parseExpression();
+        if (current().getTokenType() == TokenType.ELSE_KEYWORD) {
+            IdentifierExpression elseKeyword = matchToken(TokenType.ELSE_KEYWORD);
+            IdentifierExpression arrow = matchToken(TokenType.THICC_ARROW);
+            Expression thenExpression = parseExpression();
 
-        caseExpressions.add(new MatchCaseExpression(elseKeyword, arrow, thenExpression));
+            caseExpressions.add(new MatchCaseExpression(elseKeyword, arrow, thenExpression));
+        }
         IdentifierExpression closeCurly = matchToken(TokenType.CLOSE_CURLY_BRACE);
 
         return new MatchExpression(matchKeyword, identifier, openCurly, caseExpressions, closeCurly);
@@ -799,32 +798,11 @@ public class Parser {
         if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
             IdentifierExpression openParenthesis = matchToken(TokenType.OPEN_PARENTHESIS);
 
-            TypeExpression typeExpression = parseTypeExpression();
-            if (current().getTokenType() == TokenType.COMMA) {
-                IdentifierExpression comma = matchToken(TokenType.COMMA);
-                DelimitedExpression<TypeExpression>delimitedExpression = new DelimitedExpression<>(typeExpression, comma);
+            List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
 
-                List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
+            IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
 
-                delimitedExpressions.add(0, delimitedExpression);
-                IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-                type = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
-
-            } else if (current().getTokenType() == TokenType.BAR) {
-                IdentifierExpression bar = matchToken(TokenType.BAR);
-                DelimitedExpression<TypeExpression>delimitedExpression = new DelimitedExpression<>(typeExpression, bar);
-
-                List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.BAR, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
-
-                delimitedExpressions.add(0, delimitedExpression);
-                IdentifierExpression closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-                type = new UnionTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
-            } else {
-                errors.add(Error.raiseUnexpectedToken(TokenType.COMMA, current()));
-                type = null;
-            }
+            type = new TupleTypeExpression(openParenthesis, delimitedExpressions, closeParenthesis);
         } else {
             type = parseTypeKeyword();
         }

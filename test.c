@@ -1,6 +1,11 @@
 int main() {
 
-    int n = 0;
-    int i = 1 > n ? 5 : 3;
-    return 0;
+    int n = 1;
+    if (n == 0) {
+        printf("%s\n", "Zero");
+    } else if (n == 1) {
+        printf("%s\n", "One");
+    } else {
+        printf("%s\n", "Unknown");
+    }
 }

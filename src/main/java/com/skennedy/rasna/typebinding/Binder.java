@@ -485,7 +485,11 @@ public class Binder {
             boundMatchCaseExpressions.add(boundMatchCaseExpression);
         }
 
-        return new BoundMatchExpression(type, operand, boundMatchCaseExpressions);
+        //Ensure exhaustiveness of the match statement
+        BoundMatchExpression boundMatchExpression = new BoundMatchExpression(type, operand, boundMatchCaseExpressions);
+        errors.addAll(MatchAnalyser.analyse(boundMatchExpression, matchExpression, currentScope));
+
+        return boundMatchExpression;
     }
 
     private BoundMatchCaseExpression bindCaseExpression(MatchCaseExpression matchCaseExpression) {
