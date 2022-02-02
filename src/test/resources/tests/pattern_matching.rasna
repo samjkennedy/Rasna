@@ -1,45 +1,59 @@
+enum Color {
+    Red
+    Green
+    Blue
+}
+
+enum CYMK {
+    Cyan
+    Yellow
+    Magenta
+    Black
+}
+
+fn printCol(c: Color) {
+    match (c) {
+        Color.Red   => print("Red")
+        Color.Green => print("Green")
+        Color.Blue  => print("Blue")
+    }
+}
+
+fn printCYMK(c: CYMK) {
+    match (c) {
+        CYMK.Cyan => print("Cyan")
+        CYMK.Yellow => print("Yellow")
+        CYMK.Magenta => print("Magenta")
+        else => print("Black")
+    }
+}
+
 fn main() {
     x: Int = 1
 
     //Literal matching
     match (x) {
-        1 -> print(1)
-        2 -> print(2)
-        else -> print(0)
+        1 => print(1)
+        2 => print(2)
+        else => print(0)
     }
 
     //Multiple matches
     for (z: Int = 0 to 5) {
         match (z) {
-            1 or 2 -> print(1)
-            else -> print(0)
+            1 or 2 => print(1)
+            else => print(0)
         }
     }
 
-    ////Guards
-    //match x {
-    //
-    //}
-    //
+    //enum matches
+    for (c := Color.Red to Color.Blue) {
+        c.printCol()
+        print("\n")
+    }
 
-    ////range matching
-    //match x {
-    //    0 to 9 -> print(1),
-    //    10 to 99 -> print(2),
-    //    else print(0)
-    //}
-
-    //Matching arrays and tuples
-    //....
-
-
-    t: Tuple = ("Hello", true, 1, 2.4)
-    for (v: Any in t) {
-        match (v) {
-            b: Bool -> print(b)
-            i: Int -> print(i)
-            s: String -> print(s)
-            else -> print("Unknown type")
-        }
+    for (c := CYMK.Cyan to CYMK.Black) {
+        c.printCYMK()
+        print("\n")
     }
 }

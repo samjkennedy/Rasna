@@ -1,9 +1,9 @@
 Hello
 Hello
 1
-true
+1
 World
-false
+0
 10
 1
 2

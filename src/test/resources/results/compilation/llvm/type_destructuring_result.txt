@@ -63,9 +63,5 @@ Unexpected token: CLOSE_CURLY_BRACE
 10:     }
 11: }
 
-Expected ELSE_KEYWORD but got CLOSE_CURLY_BRACE 
-10:     }
-11: }
-
-Expected THICC_ARROW but got EOF_TOKEN 
-Unexpected token: EOF_TOKEN 
+Expected CLOSE_CURLY_BRACE but got EOF_TOKEN 
+Expected CLOSE_CURLY_BRACE but got EOF_TOKEN 

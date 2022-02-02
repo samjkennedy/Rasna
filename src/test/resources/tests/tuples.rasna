@@ -1,8 +1,10 @@
 fn multiReturn(a: Int): (String, Bool) {
+    ret: (String, Bool)
     match (a) {
-        1    => return ("Hello\n", true)
-        else => return ("World\n", false)
+        1    => ret = ("Hello\n", true)
+        else => ret = ("World\n", false)
     }
+    return ret
 }
 
 fn main() {

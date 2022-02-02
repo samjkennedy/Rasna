@@ -4,6 +4,7 @@ import com.skennedy.rasna.lexing.model.Location;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.OpType;
 import com.skennedy.rasna.typebinding.BoundExpression;
+import com.skennedy.rasna.typebinding.EnumTypeSymbol;
 import com.skennedy.rasna.typebinding.TupleTypeSymbol;
 import com.skennedy.rasna.typebinding.TypeSymbol;
 import com.skennedy.rasna.typebinding.VariableSymbol;
@@ -127,7 +128,23 @@ public class BindingError {
 
     public static BindingError raiseOutOfBounds(int index, TupleTypeSymbol type, TextSpan span) {
 
-        return new BindingError("Index [" + index + "] out of bounds for tuple of type `" + type + "`", span);
+        return new BindingError("Index [" + index + "] out of bounds for tuple of type `" + type + "`:", span);
+    }
+
+    public static BindingError raiseNonExhaustiveEnumMatchExpression(EnumTypeSymbol enumTypeSymbol, List<VariableSymbol> members, TextSpan span) {
+
+        return new BindingError("Non exhaustive handling of enum type `" + enumTypeSymbol.getName() + "` in match expression. Missing cases: `" +
+                members.stream().map(VariableSymbol::getName).collect(Collectors.joining(", ")) + "`:", span);
+    }
+
+    public static BindingError raiseNonExhaustiveMatchExpression(BoundExpression operand, TextSpan span) {
+
+        return new BindingError("Non exhaustive handling of type `" + operand.getType() + "`. Consider adding an else case:", span);
+    }
+
+    public static BindingError raiseUninitialisedVariable(String identifier, TextSpan span) {
+
+        return new BindingError("Variable `" + identifier + "` has not been initialised:", span);
     }
 
     public String getMessage() {

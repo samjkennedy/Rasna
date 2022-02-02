@@ -68,7 +68,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
-import static org.bytedeco.llvm.global.LLVM.LLVMDeleteBasicBlock;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeBuilder;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeMessage;
 import static org.bytedeco.llvm.global.LLVM.LLVMDisposeModule;
@@ -772,7 +771,6 @@ public class LLVMCompiler {
         return null;
     }
 
-
     private LLVMValueRef visit(BoundCStyleForExpression cStyleForExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         scope = new Scope(scope);
@@ -827,6 +825,43 @@ public class LLVMCompiler {
             return thenVal;
         }
 
+
+        /*
+        define dso_local i32 @main() #0 {
+        entry:
+          %retval = alloca i32, align 4
+          %n = alloca i32, align 4
+          store i32 0, i32* %retval, align 4
+          store i32 1, i32* %n, align 4
+          %0 = load i32, i32* %n, align 4
+          %cmp = icmp eq i32 %0, 0
+          br i1 %cmp, label %if.then, label %if.else
+
+        if.then:                                          ; preds = %entry
+          %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03OFAPEBGM@?$CFs?6?$AA@", i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @"??_C@_04PCJGBDOP@Zero?$AA@", i64 0, i64 0))
+          br label %if.end6
+
+        if.else:                                          ; preds = %entry
+          %1 = load i32, i32* %n, align 4
+          %cmp1 = icmp eq i32 %1, 1
+          br i1 %cmp1, label %if.then2, label %if.else4
+
+        if.then2:                                         ; preds = %if.else
+          %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03OFAPEBGM@?$CFs?6?$AA@", i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03EHAPBBEA@One?$AA@", i64 0, i64 0))
+          br label %if.end
+
+        if.else4:                                         ; preds = %if.else
+          %call5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03OFAPEBGM@?$CFs?6?$AA@", i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @"??_C@_07NBCGADJA@Unknown?$AA@", i64 0, i64 0))
+          br label %if.end
+
+        if.end:                                           ; preds = %if.else4, %if.then2
+          br label %if.end6
+
+        if.end6:                                          ; preds = %if.end, %if.then
+          %2 = load i32, i32* %retval, align 4
+          ret i32 %2
+        }
+         */
         LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.then");
         LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if.else");
         LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
@@ -837,6 +872,7 @@ public class LLVMCompiler {
 
         LLVMPositionBuilderAtEnd(builder, thenBlock);
         LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
+        thenBlock = LLVMGetInsertBlock(builder);
 
         boolean thenTerminated = LLVMGetBasicBlockTerminator(thenBlock) != null;
         if (!thenTerminated) {
@@ -846,25 +882,20 @@ public class LLVMCompiler {
         LLVMPositionBuilderAtEnd(builder, elseBlock);
         LLVMValueRef elseVal = visit(ifExpression.getElseBody(), builder, context, function);
 
-        boolean elseTerminated = LLVMGetBasicBlockTerminator(elseBlock) != null;
-        if (!elseTerminated) {
-            LLVMBuildBr(builder, endBlock);
-        }
+        LLVMBuildBr(builder, endBlock);
+        LLVMPositionBuilderAtEnd(builder, endBlock);
 
-        if (!elseTerminated || !thenTerminated) {
-            LLVMPositionBuilderAtEnd(builder, endBlock);
-            return null;//LLVMBuildSelect(builder, condition, thenVal, elseVal, "cond");
-        } else {
-            LLVMDeleteBasicBlock(endBlock);
+        if (elseVal != null && thenVal != null) {
+            //return LLVMBuildSelect(builder, condition, thenVal, elseVal, "");
         }
         return null;
     }
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
 
         LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
+
         LLVMValueRef ptr = LLVMBuildAlloca(builder, type, variableDeclarationExpression.getVariable().getName());
         scope.declarePointer(variableDeclarationExpression.getVariable(), ptr);
 
@@ -872,8 +903,16 @@ public class LLVMCompiler {
             return ptr;
         }
 
+        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
         val = dereference(builder, val, "val");
 
+        if (variableDeclarationExpression.getType() instanceof UnionTypeSymbol) {
+            UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) variableDeclarationExpression.getType();
+
+            int offset = unionTypeSymbol.getTypes().indexOf(variableDeclarationExpression.getInitialiser().getType());
+
+            ptr = LLVMBuildStructGEP(builder, ptr, offset, "");
+        }
         return LLVMBuildStore(builder, val, ptr);
     }
 
@@ -948,6 +987,18 @@ public class LLVMCompiler {
             LLVMStructSetBody(structTypeRef, elementTypes, memberTypes.size(), 0);
 
             return structTypeRef;
+        }
+        if (typeSymbol instanceof UnionTypeSymbol) {
+            UnionTypeSymbol unionTypeSymbol = (UnionTypeSymbol) typeSymbol;
+
+            PointerPointer<Pointer> llvmTypes = new PointerPointer<>(unionTypeSymbol.getTypes().size());
+            List<TypeSymbol> types = unionTypeSymbol.getTypes();
+            for (int i = 0; i < types.size(); i++) {
+                TypeSymbol type = types.get(i);
+                LLVMTypeRef llvmTypeRef = getLlvmTypeRef(type, context);
+                llvmTypes.put(i, llvmTypeRef);
+            }
+            return LLVMStructTypeInContext(context, llvmTypes, types.size(), 0);
         }
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {
