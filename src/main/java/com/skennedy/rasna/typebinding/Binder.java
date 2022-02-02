@@ -1416,7 +1416,7 @@ public class Binder {
 
         TypeSymbol actual = expression.getType();
 
-        if (expected == actual) {
+        if (expected.equals(actual)) {
             return expression;
         }
         if (expected.isAssignableFrom(actual)) {

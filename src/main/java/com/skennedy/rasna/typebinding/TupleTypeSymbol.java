@@ -48,6 +48,24 @@ public class TupleTypeSymbol extends TypeSymbol {
         return true;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof TupleTypeSymbol)) {
+            return false;
+        }
+        TupleTypeSymbol other = (TupleTypeSymbol) o;
+        if (types.size() != other.getTypes().size()) {
+            return false;
+        }
+
+        for (int i = 0; i < types.size(); i++) {
+            if (!types.get(i).isAssignableFrom(other.getTypes().get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static String buildName(List<TypeSymbol> types) {
         return "(" + types.stream()
                 .map(TypeSymbol::toString)

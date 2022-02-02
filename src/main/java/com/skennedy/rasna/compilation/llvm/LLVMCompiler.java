@@ -893,7 +893,6 @@ public class LLVMCompiler {
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
-        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
 
         LLVMTypeRef type = getLlvmTypeRef(variableDeclarationExpression.getType(), context);
 
@@ -904,6 +903,7 @@ public class LLVMCompiler {
             return ptr;
         }
 
+        LLVMValueRef val = visit(variableDeclarationExpression.getInitialiser(), builder, context, function);
         val = dereference(builder, val, "val");
 
         if (variableDeclarationExpression.getType() instanceof UnionTypeSymbol) {

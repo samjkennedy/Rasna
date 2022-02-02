@@ -1,0 +1,5 @@
+Function sort is not defined in the scope for arguments (Int[]):
+16:     arr := [6, 2, 8, 3, 4, 9, 5, 1, 7, 0]
+17:     for (a in sort(arr)) print(a)
+18:
+

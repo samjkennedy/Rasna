@@ -128,9 +128,4 @@ Expected THICC_ARROW but got CLOSE_PARENTHESIS
 45:     for (i: Int in evens) {
 46:         print(i)
 
-Expected ELSE_KEYWORD but got CLOSE_CURLY_BRACE 
-47:     }
-48: }
-
-Expected THICC_ARROW but got EOF_TOKEN 
-Unexpected token: EOF_TOKEN 
+Expected CLOSE_CURLY_BRACE but got EOF_TOKEN 
