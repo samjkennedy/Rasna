@@ -1,17 +1,15 @@
-interface Shape {
-    area(): Real
-}
-
-struct Rect {
-    width: Real
-    height: Real
-}
-
-fn area(rect: Rect): Real {
-    return rect.width * rect.height
+fn multiReturn(a: Int): (String, Bool) {
+    ret: (String, Bool) = ("dummy", true)
+    match (a) {
+        1    => ret = ("Hello\n", true)
+        else => ret = ("World\n", false)
+    }
+    return ret
 }
 
 fn main() {
-    r := Rect{3, 2}
-    print(r.area() as Int)
+    t := multiReturn(1)
+
+    s: String = t.0
+    print(s)
 }

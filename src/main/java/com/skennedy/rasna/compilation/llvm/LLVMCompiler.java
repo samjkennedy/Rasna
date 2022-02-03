@@ -65,6 +65,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
+import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -1191,47 +1192,19 @@ public class LLVMCompiler {
     }
 
     private LLVMValueRef buildString(BoundLiteralExpression literalExpression, LLVMBuilderRef builder, LLVMContextRef context) {
-        LLVMTypeRef arrayStructType = getLlvmTypeRef(new ArrayTypeSymbol(CHAR), context);
         String value = (String) literalExpression.getValue();
-        int length = value.length();
+        LLVMValueRef charPtrRef = LLVMBuildGlobalStringPtr(builder, (String) literalExpression.getValue(), "string");
 
-        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(CHAR, context), length + 1);
-        LLVMValueRef compoundliteral = LLVMBuildAlloca(builder, sizeInBytes, ".compoundliteral");
+        LLVMTypeRef stringTypeRef = getLlvmTypeRef(STRING, context);
 
-        LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
-        if (value.isEmpty()) {
-            return structPtr;
-        }
+        LLVMValueRef stringPtr = LLVMBuildAlloca(builder, stringTypeRef, "");
 
-        char init = value.charAt(0);
-        PointerPointer<Pointer> indices = new PointerPointer<>(2)
-                .put(0, LLVMConstInt(i64Type, 0, 0))
-                .put(1, LLVMConstInt(i64Type, 0, 0));
-        LLVMValueRef prev = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arrayinit.begin");
-        LLVMBuildStore(builder, LLVMConstInt(i8Type, init, 0), prev);
+        LLVMValueRef sizeVal = LLVMBuildStructGEP(builder, stringPtr, 0, "");
+        LLVMBuildStore(builder, LLVMConstInt(i32Type, value.length(), 0), sizeVal);
+        LLVMValueRef stringVal = LLVMBuildStructGEP(builder, stringPtr, 1, "");
+        LLVMBuildStore(builder, charPtrRef, stringVal);
 
-        indices = new PointerPointer<>(1)
-                .put(0, LLVMConstInt(i64Type, 1, 0));
-        for (int i = 1; i < value.length(); i++) {
-            char c = value.charAt(i);
-            prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
-            LLVMBuildStore(builder, LLVMConstInt(i8Type, c, 0), prev);
-        }
-        prev = LLVMBuildInBoundsGEP(builder, prev, indices, 1, "arrayinit.element");
-        LLVMBuildStore(builder, LLVMConstInt(i8Type, '\0', 0), prev);
-
-        indices = new PointerPointer<>(2)
-                .put(0, LLVMConstInt(i64Type, 0, 0))
-                .put(1, LLVMConstInt(i64Type, 0, 0));
-        LLVMValueRef arraydecay = LLVMBuildInBoundsGEP(builder, compoundliteral, indices, 2, "arraydecay");
-
-        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
-        LLVMValueRef sizeVal = LLVMConstInt(i32Type, length, 0);
-        LLVMBuildStore(builder, sizeVal, sizePtr);
-        LLVMValueRef dataPtrPtr = LLVMBuildStructGEP(builder, structPtr, 1, "data");
-        LLVMBuildStore(builder, arraydecay, dataPtrPtr);
-
-        return structPtr;
+        return stringPtr;
     }
 
     private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {

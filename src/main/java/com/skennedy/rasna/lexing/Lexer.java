@@ -264,8 +264,12 @@ public class Lexer {
                         sb.append('\"');
                         next();
                         break;
+                    case '\\':
+                        sb.append('\\');
+                        next();
+                        break;
                     default:
-                        throw new IllegalStateException("Illegal escape character in string literal");
+                        throw new IllegalStateException("Illegal escape character `" + charAt(line, cursor + 1) + "`  in string literal");
                 }
                 next();
             } else {

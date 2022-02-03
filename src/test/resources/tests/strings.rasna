@@ -1,6 +1,6 @@
 fn main() {
-    s: String = "Hello!"
+    s: String = "Hello!\n"
     print(s)
-    escaped: String = "\"escaped\"!"
+    escaped: String = "\"escaped\"!\\n\n"
     print(escaped)
 }

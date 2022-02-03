@@ -1,1 +1,2 @@
-Hello!"escaped"!
+Hello!
+"escaped"!\n

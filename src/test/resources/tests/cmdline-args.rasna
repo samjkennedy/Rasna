@@ -1,5 +1,5 @@
 fn main(args: String[]) {
-    if (len(args) == 0) {
+    if (args.len == 0) {
         print("No args provided")
         //exit()
     } else {

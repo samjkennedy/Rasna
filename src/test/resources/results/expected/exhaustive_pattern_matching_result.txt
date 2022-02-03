@@ -1,9 +1,9 @@
-Non exhaustive handling of enum type `Color` in match expression. Missing cases: `Yellow, Orange`
+Non exhaustive handling of enum type `Color` in match expression. Missing cases: `Yellow, Orange`:
 8: fn printCol(c: Color) {
 9:     match (c) {
 10:         Color.Red   => print("Red")
 
-Non exhaustive handling of type `Int`. Consider adding an else case
+Non exhaustive handling of type `Int`. Consider adding an else case:
 19:
 20:     match (i) {
 21:         0 => print("Zero")
