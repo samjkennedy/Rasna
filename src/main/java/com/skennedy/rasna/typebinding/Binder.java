@@ -250,33 +250,39 @@ public class Binder {
         }
         TypeSymbol type = optionalTypeSymbol.get();
 
-        List<BoundExpression> members = new ArrayList<>();
+        List<BoundExpression> boundArgs = new ArrayList<>();
         List<Expression> structLiteralExpressionMembers = structLiteralExpression.getMembers();
-        for (Expression member : structLiteralExpressionMembers) {
-            members.add(bind(member));
+        List<VariableSymbol> members = new ArrayList<>(type.getFields().values());
+        for (int i = 0; i < structLiteralExpressionMembers.size(); i++) {
+
+            Expression arg = structLiteralExpressionMembers.get(i);
+            BoundExpression boundArg = bind(arg);
+            boundArg = typeCheck(members.get(i).getType(), boundArg, arg.getSpan());
+
+            boundArgs.add(boundArg);
         }
 
         List<VariableSymbol> values = new ArrayList<>(type.getFields().values());
         if (values.size() != structLiteralExpression.getMembers().size()) {
-            errors.add(BindingError.raiseUnknownStruct((String) typeExpression.getValue(), members, structLiteralExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownStruct((String) typeExpression.getValue(), boundArgs, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
-        if (values.size() != members.size()) {
+        if (values.size() != boundArgs.size()) {
             //This could be a little misleading, need signature info in the functionsymbol
-            errors.add(BindingError.raiseUnknownFunction((String) typeExpression.getValue(), members, structLiteralExpression.getSpan()));
+            errors.add(BindingError.raiseUnknownFunction((String) typeExpression.getValue(), boundArgs, structLiteralExpression.getSpan()));
             return new BoundErrorExpression();
         }
 
         if (type instanceof ParameterisedTypeSymbol) {
-            ErasedParameterisedTypeSymbol erasedType = eraseParameters(structLiteralExpression, (ParameterisedTypeSymbol) type, members, values);
+            ErasedParameterisedTypeSymbol erasedType = eraseParameters(structLiteralExpression, (ParameterisedTypeSymbol) type, boundArgs, values);
             if (currentScope.tryLookupType(erasedType.getName()).isEmpty()) {
                 currentScope.declareType(erasedType.getName(), erasedType);
             }
-            return new BoundStructLiteralExpression(erasedType, members);
+            return new BoundStructLiteralExpression(erasedType, boundArgs);
         }
 
-        return new BoundStructLiteralExpression(type, members);
+        return new BoundStructLiteralExpression(type, boundArgs);
     }
 
     private ErasedParameterisedTypeSymbol eraseParameters(StructLiteralExpression structLiteralExpression, ParameterisedTypeSymbol type, List<BoundExpression> literalMembers, List<VariableSymbol> structMembers) {

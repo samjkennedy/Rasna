@@ -89,26 +89,6 @@ public class LLVMCompilerIntegrationTest extends CompilerBaseIntegrationTest {
         String expectedResult = read("results/expected", filename.split("\\.")[0] + "_result.txt").trim();
         String actualResult = read("results/compilation", "llvm/" + filename.split("\\.")[0] + "_result.txt").trim();
 
-        String[] expectedLines = expectedResult.split(StringUtils.LF);
-        String[] actualLines = actualResult.split(StringUtils.LF);
-
-        assertEquals(expectedLines.length, actualLines.length);
-
-        //This sucks but it works
-        for (int l = 0; l < expectedLines.length; l++) {
-            try {
-                int a = Integer.parseInt(actualLines[l]);
-                int e = Integer.parseInt(expectedLines[l]);
-                assertEquals(e, a);
-            } catch (NumberFormatException nfe) {
-                try {
-                    double a = Double.parseDouble(actualLines[l]);
-                    double e = Double.parseDouble(expectedLines[l]);
-                    assertEquals(e, a, 0.000001d);
-                } catch (NumberFormatException nfe2) {
-                    assertEquals(expectedLines[l], actualLines[l]);
-                }
-            }
-        }
+        assertEquals(expectedResult, actualResult);
     }
 }

@@ -4,7 +4,10 @@
 1
 0
 0
-Hello
-true
-1
-Unknown type
+Red
+Green
+Blue
+Cyan
+Yellow
+Magenta
+Black

@@ -1,10 +1,10 @@
-Hello
-Hello
-1
-1
-8öÔy0
-10
-1
-2
-3
-1
+Variable `ret` has not been initialised:
+5:     }
+6:     return ret
+7: }
+
+Expected type `(String, Bool)` but got `Error`:
+5:     }
+6:     return ret
+7: }
+
