@@ -133,8 +133,6 @@ public class LLVMCompiler {
     private LLVMTypeRef realType;
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
-    private LLVMValueRef trueStr; //for printing bools nicely
-    private LLVMValueRef falseStr; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
 
     private Scope scope;
