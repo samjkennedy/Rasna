@@ -223,6 +223,9 @@ public class Lexer {
                 case '"':
                     c = '\"';
                     break;
+                case '4':
+                    c = '\4';
+                    break;
                 default:
                     throw new IllegalStateException("Illegal escape character in char literal");
             }

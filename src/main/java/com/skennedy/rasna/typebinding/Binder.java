@@ -18,6 +18,7 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.SyntaxNode;
 
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,13 +28,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.skennedy.rasna.typebinding.TypeSymbol.*;
+import static com.skennedy.rasna.typebinding.TypeSymbol.ANY;
+import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.ERROR;
+import static com.skennedy.rasna.typebinding.TypeSymbol.FILE;
+import static com.skennedy.rasna.typebinding.TypeSymbol.FUNCTION;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
+import static com.skennedy.rasna.typebinding.TypeSymbol.getPrimitives;
 
 public class Binder {
 
@@ -43,6 +48,7 @@ public class Binder {
 
     public Binder() {
         currentScope = new BoundScope(null);
+        BuiltInFunctions.getBuiltinFunctions().forEach(function -> currentScope.declareFunction(buildSignature(function.getName(), function.getArguments().stream().map(BoundFunctionParameterExpression::getType).map(TypeSymbol::toString).collect(Collectors.toList())), function));
     }
 
     public BoundProgram bind(Program program) {
@@ -162,7 +168,7 @@ public class Binder {
                     .map(BoundFunctionParameterExpression::getType)
                     .map(Object::toString)
                     .collect(Collectors.toList());
-            currentScope.declareFunction(buildSignature(signatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
+            currentScope.declareFunction(buildSignature((String)signatureExpression.getIdentifier().getValue(), argumentIdentifiers), interfaceFunction);
 
             boundFunctionSignatureExpressions.add(functionSignatureExpression);
         }
@@ -1177,7 +1183,7 @@ public class Binder {
                     .map(IdentifierExpression::getValue)
                     .map(Object::toString)
                     .collect(Collectors.toList());
-            currentScope.getParentScope().declareFunction(buildSignature(functionDeclarationExpression.getIdentifier(), argumentIdentifiers), functionSymbol);
+            currentScope.getParentScope().declareFunction(buildSignature((String)functionDeclarationExpression.getIdentifier().getValue(), argumentIdentifiers), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
             List<SyntaxNode> children = new ArrayList<>();
             children.add(functionDeclarationExpression.getFnKeyword());
@@ -1203,10 +1209,10 @@ public class Binder {
         return boundFunctionDeclarationExpression;
     }
 
-    private String buildSignature(IdentifierExpression identifier, List<String> typeIdentifiers) {
+    private String buildSignature(String name, List<String> typeIdentifiers) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(identifier.getValue());
+        sb.append(name);
 //        if (!functionDeclarationExpression.getGenericParameters().isEmpty()) {
 //            sb.append("<");
 //            for (Expression genericParameter : functionDeclarationExpression.getGenericParameters()) {
@@ -1302,7 +1308,7 @@ public class Binder {
                 .map(BoundExpression::getType)
                 .map(TypeSymbol::toString)
                 .collect(Collectors.toList());
-        String signature = buildSignature(functionCallExpression.getIdentifier(), argumentTypeIdentifiers);
+        String signature = buildSignature((String)functionCallExpression.getIdentifier().getValue(), argumentTypeIdentifiers);
 
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction(signature);
 
@@ -1399,7 +1405,7 @@ public class Binder {
 
         BoundExpression condition = bind(whileExpression.getCondition());
         if (!condition.getType().isAssignableFrom(BOOL)) {
-            throw new TypeMismatchException(BOOL, condition.getType());
+            errors.add(BindingError.raiseTypeMismatch(BOOL, condition.getType(), whileExpression.getCondition().getSpan()));
         }
 
         if (condition.isConstExpression()) {

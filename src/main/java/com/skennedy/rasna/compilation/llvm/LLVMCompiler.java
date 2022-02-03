@@ -23,6 +23,8 @@ import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.READ_CHAR;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.WRITE_CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.FILE;
@@ -30,7 +32,6 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
-import static org.bytedeco.llvm.global.LLVM.LLVMAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
@@ -86,7 +87,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeTarget;
-import static org.bytedeco.llvm.global.LLVM.LLVMInt16TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt1TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt32TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt64TypeInContext;
@@ -176,6 +176,8 @@ public class LLVMCompiler {
         fopen = LLVMAddFunction(module, "fopen", LLVMFunctionType(fileType, fopenTypes, 2, 0));
 
         buildPrintbMethod(context, module, builder);
+
+        buildBuiltInFunctions(context, module, builder);
 
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
@@ -279,6 +281,65 @@ public class LLVMCompiler {
         LLVMDisposeModule(module);
         LLVMDisposeBuilder(builder);
         LLVMContextDispose(context);
+    }
+
+    private void buildBuiltInFunctions(LLVMContextRef context, LLVMModuleRef module, LLVMBuilderRef builder) {
+        for (FunctionSymbol builtInFunction : BuiltInFunctions.getBuiltinFunctions()) {
+            if (builtInFunction == READ_CHAR) {
+                LLVMValueRef fgetc = LLVMAddFunction(module, "fgetc", LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
+                LLVMValueRef readChar = LLVMAddFunction(module, "readChar", LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
+
+                LLVMSetFunctionCallConv(readChar, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, readChar, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef fp = LLVMGetParam(readChar, 0);
+                PointerPointer<Pointer> readArgs = new PointerPointer<>(1)
+                        .put(0, fp);
+
+                LLVMBuildRet(builder, LLVMBuildCall(builder, fgetc, readArgs, 1, "readchar"));
+
+                if (LLVMVerifyFunction(readChar, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating readChar function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(builtInFunction, readChar);
+
+            } else if (builtInFunction == WRITE_CHAR) {
+
+                LLVMValueRef fputc = LLVMAddFunction(module, "fputc", LLVMFunctionType(LLVMInt32TypeInContext(context), new PointerPointer<>(2)
+                        .put(0, getLlvmTypeRef(CHAR, context))
+                        .put(1, getLlvmTypeRef(FILE, context)), 2, 0));
+
+                LLVMValueRef writeChar = LLVMAddFunction(module, "writeChar", LLVMFunctionType(LLVMVoidTypeInContext(context), new PointerPointer<>(2)
+                        .put(0, getLlvmTypeRef(FILE, context))
+                        .put(1, getLlvmTypeRef(CHAR, context)), 2, 0));
+                LLVMSetFunctionCallConv(writeChar, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, writeChar, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef c = LLVMGetParam(writeChar, 0);
+                LLVMValueRef fp = LLVMGetParam(writeChar, 1);
+                PointerPointer<Pointer> writeArgs = new PointerPointer<>(2)
+                        .put(0, fp)
+                        .put(1, c);
+                LLVMBuildCall(builder, fputc, writeArgs, 2, "writechar");
+
+                LLVMBuildRetVoid(builder);
+
+                if (LLVMVerifyFunction(writeChar, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating writeChar function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(builtInFunction, writeChar);
+            } else {
+                throw new UnsupportedOperationException("Built in function `" + builtInFunction.getSignature() + "` has not been implemented in LLVM");
+            }
+        }
     }
 
     private void buildPrintbMethod(LLVMContextRef context, LLVMModuleRef module, LLVMBuilderRef builder) {

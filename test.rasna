@@ -1,5 +1,8 @@
 fn main() {
     f := open("test.txt", "w")
-    f.write("Hello, world!")
-    f.close()
+
+    for (c in "Hello, world!\n") {
+        f.writeChar(c)
+    }
+    print("Finished!\n")
 }
