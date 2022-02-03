@@ -1,0 +1,17 @@
+interface Shape {
+    area(): Real
+}
+
+struct Rect {
+    width: Real
+    height: Real
+}
+
+fn area(rect: Rect): Real {
+    return rect.width * rect.height
+}
+
+fn main() {
+    r := Rect{3, 2}
+    print(r.area() as Int)
+}
