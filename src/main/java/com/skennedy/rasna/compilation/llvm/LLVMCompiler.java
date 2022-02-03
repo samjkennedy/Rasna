@@ -65,7 +65,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildXor;
 import static org.bytedeco.llvm.global.LLVM.LLVMCCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstInt;
 import static org.bytedeco.llvm.global.LLVM.LLVMConstReal;
-import static org.bytedeco.llvm.global.LLVM.LLVMConstStringInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextCreate;
 import static org.bytedeco.llvm.global.LLVM.LLVMContextDispose;
 import static org.bytedeco.llvm.global.LLVM.LLVMCreateBuilderInContext;
@@ -134,8 +133,9 @@ public class LLVMCompiler {
     private LLVMTypeRef realType;
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
+    private LLVMValueRef trueStr; //for printing bools nicely
+    private LLVMValueRef falseStr; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
-    private LLVMValueRef snprintf; //TODO: https://en.cppreference.com/w/cpp/io/c/fprintf
 
     private Scope scope;
 
@@ -163,11 +163,6 @@ public class LLVMCompiler {
         //Declare printf function and string formatter once
         printf = LLVMAddFunction(module, "printf", LLVMFunctionType(i32Type, LLVMPointerType(LLVMInt8TypeInContext(context), 0), 1, 1));//No idea what AddressSpace is for yet
 
-        PointerPointer<Pointer> snprintfTypes = new PointerPointer<>(3)
-                .put(0, LLVMPointerType(LLVMInt8TypeInContext(context), 0))
-                .put(1, LLVMInt32TypeInContext(context))
-                .put(2, LLVMPointerType(LLVMInt8TypeInContext(context), 0));
-        snprintf = LLVMAddFunction(module, "snprintf", LLVMFunctionType(LLVMInt16TypeInContext(context), snprintfTypes, 3, 1));
         buildPrintbMethod(context, module, builder);
 
         for (BoundExpression expression : program.getExpressions()) {
@@ -283,13 +278,10 @@ public class LLVMCompiler {
         LLVMValueRef x = LLVMGetParam(printB, 0);
 
         //printf("%s\n, x ? "true" : "false");)
-
-        //TODO: I think the strings need to be char[]*
-        //LLVMValueRef cond = LLVMBuildSelect(builder, x, LLVMConstStringInContext(context, "true", 4, 0) , LLVMConstStringInContext(context, "false", 5, 0), "cond");
-        LLVMValueRef cond = LLVMBuildSelect(builder, x, LLVMConstInt(i32Type, 1, 0), LLVMConstInt(i32Type, 0, 0), "cond");
+        LLVMValueRef cond = LLVMBuildSelect(builder, x, LLVMBuildGlobalStringPtr(builder, "true", "true") , LLVMBuildGlobalStringPtr(builder, "false", "false"), "cond");
 
         PointerPointer<Pointer> printArgs = new PointerPointer<>(2)
-                .put(0, LLVMBuildGlobalStringPtr(builder, "%d\n", "str"))
+                .put(0, LLVMBuildGlobalStringPtr(builder, "%s\n", "str"))
                 .put(1, cond);
 
         LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
@@ -1207,40 +1199,10 @@ public class LLVMCompiler {
         return stringPtr;
     }
 
-    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-
-        LLVMValueRef snprintfFormatPtr = LLVMBuildGlobalStringPtr(builder, "%s%s", "snprintfFormat");
-        LLVMValueRef bufferSize = dereference(builder, LLVMConstInt(i32Type, 100, 0), "");
-
-        LLVMValueRef leftSize = LLVMBuildStructGEP(builder, left, 0, "");
-        LLVMValueRef rightSize = LLVMBuildStructGEP(builder, right, 0, "");
-        LLVMValueRef leftData = LLVMBuildStructGEP(builder, left, 1, "");
-        LLVMValueRef rightData = LLVMBuildStructGEP(builder, right, 1, "");
-
-        leftSize = dereference(builder, leftSize, "l.size");
-        rightSize = dereference(builder, rightSize, "r.size");
-        leftData = dereference(builder, leftData, "l.data");
-        rightData = dereference(builder, rightData, "r.data");
-
-        LLVMValueRef sizeVal = LLVMBuildAdd(builder, leftSize, rightSize, "");
-
-        LLVMValueRef structPtr = LLVMBuildAlloca(builder, getLlvmTypeRef(STRING, context), "");
-
-        LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
-        LLVMValueRef dataPtr = dereference(builder, LLVMBuildStructGEP(builder, structPtr, 1, "data"), "");
-
-        PointerPointer<Pointer> args = new PointerPointer<>(5)
-                .put(0, dataPtr)
-                .put(1, bufferSize)
-                .put(2, snprintfFormatPtr)
-                .put(3, leftData)
-                .put(4, rightData);
-        LLVMValueRef remainder = LLVMBuildCall(builder, snprintf, args, 5, "snprintf");
-
-        LLVMBuildStore(builder, sizeVal, sizePtr);
-
-        return structPtr;
-    }
+//    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+//
+//
+//    }
 
     private LLVMValueRef visit(BoundPrintExpression printExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 

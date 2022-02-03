@@ -1,15 +1,3 @@
-fn multiReturn(a: Int): (String, Bool) {
-    ret: (String, Bool) = ("dummy", true)
-    match (a) {
-        1    => ret = ("Hello\n", true)
-        else => ret = ("World\n", false)
-    }
-    return ret
-}
-
-fn main() {
-    t := multiReturn(1)
-
-    s: String = t.0
-    print(s)
+fn main(args: String[]) {
+    print(false)
 }
