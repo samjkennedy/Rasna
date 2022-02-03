@@ -25,10 +25,12 @@ import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
+import static com.skennedy.rasna.typebinding.TypeSymbol.FILE;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
+import static org.bytedeco.llvm.global.LLVM.LLVMAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
@@ -130,10 +132,13 @@ public class LLVMCompiler {
     private LLVMTypeRef i8Type;
     private LLVMTypeRef i32Type;
     private LLVMTypeRef i64Type;
+    private LLVMTypeRef fileType;
     private LLVMTypeRef realType;
+
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
+    private LLVMValueRef fopen; //"%d\n"
 
     private Scope scope;
 
@@ -158,8 +163,17 @@ public class LLVMCompiler {
         i64Type = LLVMInt64TypeInContext(context);
         realType = LLVMDoubleTypeInContext(context);
 
+        PointerPointer<Pointer> structTypes = new PointerPointer<>(1)
+                .put(0, LLVMPointerType(i8Type, 0)); //TODO: Doesn't support beyond utf-8
+        fileType = LLVMStructTypeInContext(context, structTypes, 1, 0);
+
         //Declare printf function and string formatter once
         printf = LLVMAddFunction(module, "printf", LLVMFunctionType(i32Type, LLVMPointerType(LLVMInt8TypeInContext(context), 0), 1, 1));//No idea what AddressSpace is for yet
+
+        PointerPointer<Pointer> fopenTypes = new PointerPointer<>(2)
+                .put(0, LLVMPointerType(i8Type, 0))
+                .put(1, LLVMPointerType(i8Type, 0));
+        fopen = LLVMAddFunction(module, "fopen", LLVMFunctionType(fileType, fopenTypes, 2, 0));
 
         buildPrintbMethod(context, module, builder);
 
@@ -325,6 +339,8 @@ public class LLVMCompiler {
                 return visit((BoundLiteralExpression) expression, builder, context, function);
             case PRINT_INTRINSIC:
                 return visit((BoundPrintExpression) expression, builder, context, function);
+            case OPEN_INTRINSIC:
+                return visit((BoundOpenExpression) expression, builder, context, function);
             case BINARY_EXPRESSION:
                 return visit((BoundBinaryExpression) expression, builder, context, function);
             case VARIABLE_DECLARATION:
@@ -991,6 +1007,11 @@ public class LLVMCompiler {
             }
             return LLVMStructTypeInContext(context, llvmTypes, types.size(), 0);
         }
+
+        if (typeSymbol == FILE) {
+            return fileType;
+        }
+
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {
             return type.get();
@@ -1197,10 +1218,19 @@ public class LLVMCompiler {
         return stringPtr;
     }
 
-//    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-//
-//
-//    }
+    private LLVMValueRef visit(BoundOpenExpression openExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        LLVMValueRef filenameStr = visit(openExpression.getFilename(), builder, context, function);
+        LLVMValueRef filename = LLVMBuildStructGEP(builder, filenameStr, 1, "filename");
+
+        LLVMValueRef modeStr = visit(openExpression.getMode(), builder, context, function);
+        LLVMValueRef mode = LLVMBuildStructGEP(builder, modeStr, 1, "mode");
+
+        PointerPointer<Pointer> fopenArgs = new PointerPointer<>(2)
+                .put(0, dereference(builder, filename, ""))
+                .put(1, dereference(builder, mode, ""));
+        return LLVMBuildCall(builder, fopen, fopenArgs, 2, "opencall");
+    }
 
     private LLVMValueRef visit(BoundPrintExpression printExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 

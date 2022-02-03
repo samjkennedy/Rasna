@@ -91,6 +91,8 @@ public abstract class BoundProgramRewriter {
                 return rewriteForInExpression((BoundForInExpression) expression);
             case PRINT_INTRINSIC:
                 return rewritePrintIntrinsic((BoundPrintExpression) expression);
+            case OPEN_INTRINSIC:
+                return rewriteOpenIntrinsic((BoundOpenExpression) expression);
             case TYPEOF_INTRINSIC:
                 return rewriteTypeofIntrinsic((BoundTypeofExpression) expression);
             case VARIABLE_DECLARATION:
@@ -806,6 +808,18 @@ public abstract class BoundProgramRewriter {
             return printExpression;
         }
         return new BoundPrintExpression(expression);
+    }
+
+    private BoundExpression rewriteOpenIntrinsic(BoundOpenExpression openExpression) {
+
+        BoundExpression filename = rewriteExpression(openExpression.getFilename());
+        BoundExpression mode = rewriteExpression(openExpression.getMode());
+
+        if (filename == openExpression.getFilename()
+                && mode == openExpression.getMode()) {
+            return openExpression;
+        }
+        return new BoundOpenExpression(filename, mode);
     }
 
     private static <T extends BoundExpression> BoundExpression rewriteBlockInitialiser(BoundBlockExpression initialiser, Function<BoundExpression, T> remapper) {

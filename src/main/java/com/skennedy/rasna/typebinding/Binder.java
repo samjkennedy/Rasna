@@ -84,6 +84,8 @@ public class Binder {
                 return bind(((ParenthesisedExpression) expression).getExpression());
             case PRINT_EXPR:
                 return bindPrintIntrinsic((PrintExpression) expression);
+            case OPEN_INTR:
+                return bindOpenIntrinsic((OpenExpression) expression);
             case TYPEOF_EXPR:
                 return bindTypeofIntrinsic((TypeofExpression) expression);
             case IDENTIFIER_EXPR:
@@ -784,6 +786,9 @@ public class Binder {
             case ANY_KEYWORD:
                 typeSymbol = ANY;
                 break;
+            case FILE_KEYWORD:
+                typeSymbol = FILE;
+                break;
             default:
                 Optional<TypeSymbol> type = currentScope.tryLookupType((String) identifier.getValue()).or(() -> currentScope.tryLookupGenericType((String) identifier.getValue()));
                 if (type.isEmpty()) {
@@ -1020,6 +1025,21 @@ public class Binder {
         }
 
         return new BoundPrintExpression(boundExpression);
+    }
+
+    private BoundExpression bindOpenIntrinsic(OpenExpression openExpression) {
+
+        BoundExpression filename = bind(openExpression.getFilename());
+        BoundExpression mode = bind(openExpression.getMode());
+
+        if (filename.getType() != STRING) {
+            errors.add(BindingError.raiseTypeMismatch(STRING, filename.getType(), openExpression.getFilename().getSpan()));
+        }
+        if (mode.getType() != STRING) {
+            errors.add(BindingError.raiseTypeMismatch(STRING, mode.getType(), openExpression.getMode().getSpan()));
+        }
+
+        return new BoundOpenExpression(filename, mode);
     }
 
     private BoundExpression bindTypeofIntrinsic(TypeofExpression typeofExpression) {

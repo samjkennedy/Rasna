@@ -1,0 +1,7 @@
+//struct File {
+//    data: Char[]
+//}
+//
+//fn open(filename: String, mode: String): File {
+//
+//}
