@@ -77,55 +77,69 @@ fn toColor(i: Int): Color {
     return Color{r, g, b}
 }
 
-fn toAscii(i: Int): Char {
-    if (i >= 50) {
-        return '@'
+fn writeStr(f: File, s: String) {
+    for (c in s) {
+        f.writeChar(c)
     }
-    if (i >= 25) {
-        return '+'
-    }
-    if (i >= 7) {
-        return '.'
-    }
-    return ' '
 }
 
-fn printCol(col: Color, maxVal: Real) {
-    print((col.r * maxVal) as Int)
-    print((col.g * maxVal) as Int)
-    print((col.b * maxVal) as Int)
+fn reverse(i: Int): Int {
+    r: Int = 0
+    sum: Int = 0
+    n := i
+    while (n > 0) {
+        r = n mod 10
+        sum = (sum * 10) + r
+        n = n / 10
+    }
+    return sum
 }
 
+fn writeInt(f: File, i: Int) {
+    if (i == 0) {
+        f.writeChar('0')
+        return ()
+    }
+    n := reverse(i)
+    while (n > 0) {
+        r := n mod 10
+        f.writeChar((r + 48) as Char)
+        n = n / 10
+    }
+}
+
+fn writeCol(f: File, col: Color, maxVal: Int) {
+    f.writeInt((col.r * maxVal) as Int)
+    f.writeChar(' ')
+    f.writeInt((col.g * maxVal) as Int)
+    f.writeChar(' ')
+    f.writeInt((col.b * maxVal) as Int)
+    f.writeChar('\n')
+}
 
 fn main() {
-
-//    Uncomment this for an ascii mandelbrot instead
-//    print('\n')
-//    for (y := -1.0 to 1.05 by 0.05) {
-//        for (x := -2.0 to 0.5 by 0.0315) {
-//            print(mandelbrot(Complex{x, y}).toAscii())
-//        }
-//        print('\n')
-//    }
-
-    const SCALE := 20.
     const FORMAT := "P3"
-    WIDTH := 16. * SCALE
-    HEIGHT := 8. * SCALE
-    const MAX_VAL := 255.
+    const WIDTH := 256
+    const HEIGHT := 128
+    const MAX_VAL := 255
 
-    print(FORMAT)
-    print('\n')
-    print(WIDTH as Int)
-    print(HEIGHT as Int)
-    print(MAX_VAL as Int)
+    f := open("uv.ppm", "w")
+    f.writeStr(FORMAT)
+    f.writeChar('\n')
+    f.writeInt(WIDTH)
+    f.writeChar('\n')
+    f.writeInt(HEIGHT)
+    f.writeChar('\n')
+    f.writeInt(MAX_VAL)
+    f.writeChar('\n')
 
     yStep := 2. / HEIGHT
     xStep := 2.5 / WIDTH
 
     for (y := -1.0 to 1.05 by yStep) {
         for (x := -2.0 to 0.5 by xStep) {
-            mandelbrot(Complex{x, y}).toColor().printCol(255.)
+            f.writeCol(mandelbrot(Complex{x, y}).toColor(), MAX_VAL)
         }
     }
+    f.close()
 }

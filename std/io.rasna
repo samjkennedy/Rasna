@@ -1,0 +1,6 @@
+fn writeStr(file: File, s: String): File {
+    for (c in s) {
+        file.writeChar(c)
+    }
+    return file
+}

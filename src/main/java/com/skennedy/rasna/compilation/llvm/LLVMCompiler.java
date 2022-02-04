@@ -23,8 +23,14 @@ import java.util.Optional;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.CLOSE;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.OPEN;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.OPEN_R;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.READ_CHAR;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.WRITE_CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
+import static com.skennedy.rasna.typebinding.TypeSymbol.FILE;
 import static com.skennedy.rasna.typebinding.TypeSymbol.INT;
 import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
@@ -84,7 +90,6 @@ import static org.bytedeco.llvm.global.LLVM.LLVMInitializeCore;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmParser;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeAsmPrinter;
 import static org.bytedeco.llvm.global.LLVM.LLVMInitializeNativeTarget;
-import static org.bytedeco.llvm.global.LLVM.LLVMInt16TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt1TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt32TypeInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMInt64TypeInContext;
@@ -130,7 +135,9 @@ public class LLVMCompiler {
     private LLVMTypeRef i8Type;
     private LLVMTypeRef i32Type;
     private LLVMTypeRef i64Type;
+    private LLVMTypeRef fileType;
     private LLVMTypeRef realType;
+
     private LLVMValueRef printf;
     private LLVMValueRef printB; //for printing bools nicely
     private LLVMValueRef formatStr; //"%d\n"
@@ -158,10 +165,16 @@ public class LLVMCompiler {
         i64Type = LLVMInt64TypeInContext(context);
         realType = LLVMDoubleTypeInContext(context);
 
+        PointerPointer<Pointer> structTypes = new PointerPointer<>(1)
+                .put(0, LLVMPointerType(i8Type, 0)); //TODO: Doesn't support beyond utf-8
+        fileType = LLVMStructTypeInContext(context, structTypes, 1, 0);
+
         //Declare printf function and string formatter once
         printf = LLVMAddFunction(module, "printf", LLVMFunctionType(i32Type, LLVMPointerType(LLVMInt8TypeInContext(context), 0), 1, 1));//No idea what AddressSpace is for yet
 
         buildPrintbMethod(context, module, builder);
+
+        buildBuiltInFunctions(context, module, builder);
 
         for (BoundExpression expression : program.getExpressions()) {
             if (expression instanceof BoundFunctionDeclarationExpression) {
@@ -265,6 +278,152 @@ public class LLVMCompiler {
         LLVMDisposeModule(module);
         LLVMDisposeBuilder(builder);
         LLVMContextDispose(context);
+    }
+
+    private void buildBuiltInFunctions(LLVMContextRef context, LLVMModuleRef module, LLVMBuilderRef builder) {
+
+        PointerPointer<Pointer> fopenTypes = new PointerPointer<>(2)
+                .put(0, LLVMPointerType(i8Type, 0))
+                .put(1, LLVMPointerType(i8Type, 0));
+        LLVMValueRef fopen = LLVMAddFunction(module, "fopen", LLVMFunctionType(fileType, fopenTypes, 2, 0));
+
+        for (FunctionSymbol builtInFunction : BuiltInFunctions.getBuiltinFunctions()) {
+            if (builtInFunction == READ_CHAR) {
+                LLVMValueRef fgetc = LLVMAddFunction(module, "fgetc", LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
+                LLVMValueRef readChar = LLVMAddFunction(module, "readChar", LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
+
+                LLVMSetFunctionCallConv(readChar, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, readChar, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef fp = LLVMGetParam(readChar, 0);
+                PointerPointer<Pointer> readArgs = new PointerPointer<>(1)
+                        .put(0, fp);
+
+                LLVMBuildRet(builder, LLVMBuildCall(builder, fgetc, readArgs, 1, "readchar"));
+
+                if (LLVMVerifyFunction(readChar, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating readChar function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(builtInFunction, readChar);
+
+            } else if (builtInFunction == WRITE_CHAR) {
+
+                LLVMValueRef fputc = LLVMAddFunction(module, "fputc", LLVMFunctionType(LLVMInt32TypeInContext(context), new PointerPointer<>(2)
+                        .put(0, getLlvmTypeRef(CHAR, context))
+                        .put(1, getLlvmTypeRef(FILE, context)), 2, 0));
+
+                LLVMValueRef writeChar = LLVMAddFunction(module, "writeChar", LLVMFunctionType(LLVMVoidTypeInContext(context), new PointerPointer<>(2)
+                        .put(0, getLlvmTypeRef(FILE, context))
+                        .put(1, getLlvmTypeRef(CHAR, context)), 2, 0));
+                LLVMSetFunctionCallConv(writeChar, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, writeChar, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef c = LLVMGetParam(writeChar, 0);
+                LLVMValueRef fp = LLVMGetParam(writeChar, 1);
+                PointerPointer<Pointer> writeArgs = new PointerPointer<>(2)
+                        .put(0, fp)
+                        .put(1, c);
+                LLVMBuildCall(builder, fputc, writeArgs, 2, "writechar");
+
+                LLVMBuildRetVoid(builder);
+
+                if (LLVMVerifyFunction(writeChar, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating writeChar function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(builtInFunction, writeChar);
+            } else if (builtInFunction == OPEN) {
+
+                PointerPointer<Pointer> openTypes = new PointerPointer<>(2)
+                        .put(0, getLlvmTypeRef(STRING, context))
+                        .put(1, getLlvmTypeRef(STRING, context));
+                LLVMValueRef open = LLVMAddFunction(module, "open", LLVMFunctionType(getLlvmTypeRef(FILE, context), openTypes, 2, 0));
+
+                LLVMSetFunctionCallConv(open, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, open, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef filenameStr = LLVMGetParam(open, 0);
+                LLVMValueRef filename = LLVMBuildStructGEP(builder, ref(builder, filenameStr, new ArrayTypeSymbol(CHAR), context), 1, "filename");
+                LLVMValueRef modeStr = LLVMGetParam(open, 1);
+                LLVMValueRef mode = LLVMBuildStructGEP(builder, ref(builder, modeStr, new ArrayTypeSymbol(CHAR), context), 1, "mode");
+
+                PointerPointer<Pointer> fopenArgs = new PointerPointer<>(2)
+                        .put(0, dereference(builder, filename, ""))
+                        .put(1, dereference(builder, mode, ""));
+                LLVMBuildRet(builder, LLVMBuildCall(builder, fopen, fopenArgs, 2, "opencall"));
+
+                if (LLVMVerifyFunction(open, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating open function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(OPEN, open);
+
+            } else if (builtInFunction == OPEN_R) {
+
+                PointerPointer<Pointer> openTypes = new PointerPointer<>(1)
+                        .put(0, getLlvmTypeRef(STRING, context));
+                LLVMValueRef open_r = LLVMAddFunction(module, "open", LLVMFunctionType(getLlvmTypeRef(FILE, context), openTypes, 1, 0));
+
+                LLVMSetFunctionCallConv(open_r, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, open_r, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef filenameStr = LLVMGetParam(open_r, 0);
+                LLVMValueRef filename = LLVMBuildStructGEP(builder, ref(builder, filenameStr, new ArrayTypeSymbol(CHAR), context), 1, "filename");
+                LLVMValueRef mode = LLVMBuildGlobalStringPtr(builder, "r", "file_mode_read");
+
+                PointerPointer<Pointer> fopenArgs = new PointerPointer<>(2)
+                        .put(0, dereference(builder, filename, ""))
+                        .put(1, mode);
+                LLVMBuildRet(builder, LLVMBuildCall(builder, fopen, fopenArgs, 2, "opencall"));
+
+                if (LLVMVerifyFunction(open_r, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating open function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(OPEN_R, open_r);
+            } else if (builtInFunction == CLOSE) {
+
+                PointerPointer<Pointer> closeType = new PointerPointer<>(1)
+                        .put(0, getLlvmTypeRef(FILE, context));
+                LLVMValueRef fclose = LLVMAddFunction(module, "fclose", LLVMFunctionType(i32Type, closeType, 1, 0));
+
+                LLVMValueRef close = LLVMAddFunction(module, "close", LLVMFunctionType(getLlvmTypeRef(BOOL, context), closeType, 1, 0));
+
+                LLVMSetFunctionCallConv(close, LLVMCCallConv);
+                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, close, "entry");
+                LLVMPositionBuilderAtEnd(builder, entry);
+
+                LLVMValueRef fp = LLVMGetParam(close, 0);
+                PointerPointer<Pointer> closeArgs = new PointerPointer<>(1)
+                        .put(0, fp);
+                LLVMValueRef code = LLVMBuildCall(builder, fclose, closeArgs, 1, "writechar");
+
+                LLVMBuildRet(builder, LLVMBuildICmp(builder, LLVMIntEQ, code, LLVMConstInt(i32Type, 0, 0), ""));
+
+                if (LLVMVerifyFunction(close, LLVMPrintMessageAction) != 0) {
+                    log.error("Error when validating open function:");
+                    LLVMDumpModule(module);
+                    System.exit(1);
+                }
+
+                scope.declareFunction(CLOSE, close);
+            } else {
+                throw new UnsupportedOperationException("Built in function `" + builtInFunction.getSignature() + "` has not been implemented in LLVM");
+            }
+        }
     }
 
     private void buildPrintbMethod(LLVMContextRef context, LLVMModuleRef module, LLVMBuilderRef builder) {
@@ -391,6 +550,9 @@ public class LLVMCompiler {
         if (castExpression.getExpression().getType() == INT) {
             if (castExpression.getType() == REAL) {
                 return LLVMBuildCast(builder, LLVMSIToFP, dereference(builder, expression, ""), getLlvmTypeRef(REAL, context), "");
+            }
+            if (castExpression.getType() == CHAR) {
+                return LLVMBuildCast(builder, LLVMTrunc, dereference(builder, expression, ""), getLlvmTypeRef(CHAR, context), "");
             }
         }
         if (castExpression.getExpression().getType() == REAL) {
@@ -904,7 +1066,9 @@ public class LLVMCompiler {
 
             ptr = LLVMBuildStructGEP(builder, ptr, offset, "");
         }
-        return LLVMBuildStore(builder, val, ptr);
+        LLVMBuildStore(builder, val, ptr);
+
+        return val;
     }
 
     private LLVMTypeRef getLlvmTypeRef(TypeSymbol typeSymbol, LLVMContextRef context) {
@@ -991,6 +1155,11 @@ public class LLVMCompiler {
             }
             return LLVMStructTypeInContext(context, llvmTypes, types.size(), 0);
         }
+
+        if (typeSymbol == FILE) {
+            return fileType;
+        }
+
         Optional<LLVMTypeRef> type = scope.tryLookupType(typeSymbol);
         if (type.isPresent()) {
             return type.get();
@@ -1196,11 +1365,6 @@ public class LLVMCompiler {
 
         return stringPtr;
     }
-
-//    private LLVMValueRef concatenate(LLVMValueRef left, LLVMValueRef right, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
-//
-//
-//    }
 
     private LLVMValueRef visit(BoundPrintExpression printExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 

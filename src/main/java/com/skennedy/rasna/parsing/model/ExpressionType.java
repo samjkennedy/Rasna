@@ -37,6 +37,7 @@ public enum ExpressionType {
     NOOP,
     PARENTHESISED_EXPR,
     PRINT_EXPR,
+    OPEN_INTR,
     RANGE_EXPR,
     RETURN_EXPR,
     STRUCT_DECLARATION_EXPR,

@@ -88,6 +88,7 @@ public enum TokenType {
     STRING_KEYWORD("String"),
     FUNCTION_KEYWORD("Function"),
     ERROR_KEYWORD("Error"),
+    FILE_KEYWORD("File"), //TODO: Temporary until a proper io library is written in rasna
 
     //Intrinsics
     PRINT_INTR("print"),

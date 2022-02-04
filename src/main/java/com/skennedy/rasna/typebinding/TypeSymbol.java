@@ -18,7 +18,8 @@ public class TypeSymbol extends Symbol {
     public static final TypeSymbol TYPE = new TypeSymbol("Type", new LinkedHashMap<>());
     public static final TypeSymbol ANY = new TypeSymbol("Any", new LinkedHashMap<>());
     public static final TypeSymbol ERROR = new TypeSymbol("Error", new LinkedHashMap<>());
-    public static final TypeSymbol FUNCTION = new TypeSymbol("Function", new LinkedHashMap<>()); //TODO: Should be similar to ArrayTypeSymbol
+    public static final TypeSymbol FUNCTION = new TypeSymbol("Function", new LinkedHashMap<>());
+    public static final TypeSymbol FILE = new TypeSymbol("File", new LinkedHashMap<>());
 
     private final LinkedHashMap<String, VariableSymbol> fields;
 
@@ -33,7 +34,7 @@ public class TypeSymbol extends Symbol {
     }
 
     public static List<TypeSymbol> getPrimitives() {
-        return Arrays.asList(UNIT, BOOL, CHAR, INT, REAL, STRING, TYPE, ANY);
+        return Arrays.asList(UNIT, BOOL, CHAR, INT, REAL, STRING, TYPE, ANY, FILE);
     }
 
     public Map<String, VariableSymbol> getFields() {

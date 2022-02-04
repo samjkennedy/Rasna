@@ -876,6 +876,9 @@ public class Parser {
             case ANY_KEYWORD:
                 typeKeyword = matchToken(TokenType.ANY_KEYWORD);
                 break;
+            case FILE_KEYWORD:
+                typeKeyword = matchToken(TokenType.FILE_KEYWORD);
+                break;
             default:
                 typeKeyword = matchToken(TokenType.IDENTIFIER);
                 break;
@@ -1051,11 +1054,9 @@ public class Parser {
     private Expression parseTypeofIntrinsic() {
 
         IdentifierExpression typeofKeyword = matchToken(TokenType.TYPEOF_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
         Expression expression = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
-        return new TypeofExpression(typeofKeyword, openParen, expression, closeParen);
+        return new TypeofExpression(typeofKeyword, expression);
     }
 
     private Expression parseStructLiteralExpression(TypeExpression typeExpression) {
