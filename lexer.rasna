@@ -1,0 +1,102 @@
+//TODO: This is mostly just a test, in the real lexer there'd be imports from a string library and better int handling
+enum TokenType {
+    Whitespace
+    IntLiteral
+    Plus
+    Minus
+    BadToken
+    EndOfFile
+}
+
+struct Token {
+    text: Char
+    tokenType: TokenType
+}
+
+struct BinExp {
+    left: Token
+    op: Token
+    right: Token
+}
+
+fn isNumeric(c: Char): Bool {
+    isNumeric := false
+    match (c) {
+        '0' => isNumeric = true
+        '1' => isNumeric = true
+        '2' => isNumeric = true
+        '3' => isNumeric = true
+        '4' => isNumeric = true
+        '5' => isNumeric = true
+        '6' => isNumeric = true
+        '7' => isNumeric = true
+        '8' => isNumeric = true
+        '9' => isNumeric = true
+        else => isNumeric = false
+    }
+    return isNumeric
+}
+
+fn parseInt(c: Char): Int {
+    val := -1
+    match (c) {
+        '0' => val = 0
+        '1' => val = 1
+        '2' => val = 2
+        '3' => val = 3
+        '4' => val = 4
+        '5' => val = 5
+        '6' => val = 6
+        '7' => val = 7
+        '8' => val = 8
+        '9' => val = 9
+        else => val = -1
+    }
+    return val
+}
+
+fn parseTokenType(c: Char): TokenType {
+    tokenType := TokenType.BadToken
+
+    if (c.isNumeric()) {
+        return TokenType.IntLiteral
+    }
+
+    match (c) {
+        ' ' => tokenType = TokenType.Whitespace
+        '+' => tokenType = TokenType.Plus
+        '-' => tokenType = TokenType.Minus
+        '-' => tokenType = TokenType.Minus
+        'ÿ' => tokenType = TokenType.EndOfFile
+        else => tokenType = TokenType.BadToken
+    }
+    return tokenType
+}
+
+fn printToken(token: Token) {
+    match(token.tokenType) {
+        TokenType.Whitespace => print("Whitespace: '")
+        TokenType.IntLiteral => print("IntLiteral: '")
+        TokenType.Plus => print("Plus: '")
+        TokenType.Minus => print("Minus: '")
+        TokenType.BadToken => print("BadToken: '")
+        TokenType.EndOfFile => print("EndOfFile: '")
+    }
+    print(token.text)
+    print("'\n")
+}
+
+fn main() {
+    const EOF := 'ÿ'
+    f := open("eval.rasna")
+
+    c := f.readChar()
+    while (c != EOF) {
+        tokenType := parseTokenType(c)
+
+        token := Token{c, tokenType}
+        token.printToken()
+        c = f.readChar()
+    }
+    f.close()
+}
