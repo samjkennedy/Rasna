@@ -25,7 +25,7 @@ public class BoundBlockExpression implements BoundExpression {
 
     @Override
     public TypeSymbol getType() {
-        return expressions.get(expressions.size()-1).getType();
+        return TypeSymbol.UNIT; //TODO: WHat type is a block?
     }
 
     @Override

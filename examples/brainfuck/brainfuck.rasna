@@ -1,0 +1,122 @@
+enum Op {
+    DataInc // +
+    DataDec // -
+    PtrInc  // >
+    PtrDec  // <
+    Out     // .
+    In      // ,
+    JmpFwd  // [
+    JmpBck  // ]
+    Comment // other
+}
+
+fn parseOp(c: Char): Op {
+    op := Op.Comment
+    match(c) {
+        '+' => op = Op.DataInc
+        '-' => op = Op.DataDec
+        '>' => op = Op.PtrInc
+        '<' => op = Op.PtrDec
+        '.' => op = Op.Out
+        ',' => op = Op.In
+        '[' => op = Op.JmpFwd
+        ']' => op = Op.JmpBck
+        else => op = Op.Comment
+    }
+    return op
+}
+
+struct Stack {
+    stack: Int[]
+    ptr: Int
+}
+
+fn push(ref stack: Stack, val: Int) {
+    if (stack.ptr >= stack.stack.len) {
+        print("Stack overflow\n")
+        return()
+    }
+    stack.stack[stack.ptr] = val
+    stack.ptr = stack.ptr + 1
+}
+
+fn pop(ref stack: Stack): Int {
+    if (stack.ptr <= 0) {
+        print("Stack underflow\n")
+        return -1 //TODO: Have a fn exit(Int)
+    }
+    stack.ptr = stack.ptr - 1
+    return stack.stack[stack.ptr]
+}
+
+struct Instruction {
+    operator: Op
+    operand: Int
+}
+
+fn main() {
+
+    //Read in program
+    stack := Stack{Array[2048, Int], 0} //TODO consts and constructors
+    program := Array[2048, Instruction]
+    f := open("examples/brainfuck/helloworld.bf")
+    ptr := 0
+    c := f.readChar()
+    while(c != (-1 as Char)) {
+        //match statements kinda suck when the types have to be the same
+        match(c) {
+            '+' => {program[ptr] = Instruction{Op.DataInc, 0}}
+            '-' => {program[ptr] = Instruction{Op.DataDec, 0}}
+            '>' => {program[ptr] = Instruction{Op.PtrInc, 0}}
+            '<' => {program[ptr] = Instruction{Op.PtrDec, 0}}
+            '.' => {program[ptr] = Instruction{Op.Out, 0}}
+            ',' => {program[ptr] = Instruction{Op.In, 0}}
+            '[' => {
+                program[ptr] = Instruction{Op.JmpFwd, 0}
+                stack->push(ptr)
+            }
+            ']' => {
+                jmpPtr := stack->pop()
+                program[ptr] = Instruction{Op.JmpBck, jmpPtr}
+                program[jmpPtr] = Instruction{Op.JmpFwd, ptr} //TODO: Have to completely reassign the element, can't reassign members
+            }
+            else => {}
+        }
+        ptr++
+        c = f.readChar()
+    }
+    f.close()
+
+    prgLen := ptr
+    pc := 0
+    ptr = 0
+    tape := Array[2048, Int]
+    while (pc < prgLen) {
+        ins := program[pc]
+
+        match (ins.operator) {
+            Op.DataInc => {
+                tape[ptr] = (tape[ptr] + 1) //TODO ++ and -- for expressions
+            }
+            Op.DataDec => {
+                tape[ptr] = tape[ptr] - 1
+            }
+            Op.PtrInc => {ptr++}
+            Op.PtrDec => {ptr--}
+            Op.Out => print((tape[ptr]) as Char)
+            Op.In => print("Input not implemented") //TODO: Read stdin
+            Op.JmpFwd => {
+                if ((tape[ptr] as Int) == 0) {
+                    pc = ins.operand
+                }
+            }
+            Op.JmpBck => {
+                if ((tape[ptr] as Int) != 0) {
+                    pc = ins.operand
+                }
+            }
+            Op.Comment => {}
+        }
+        pc++
+    }
+}

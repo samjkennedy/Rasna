@@ -9,32 +9,45 @@ import java.util.Iterator;
 
 public class ArrayDeclarationExpression extends Expression {
 
-    private final TypeExpression typeExpression;
-    private final IdentifierExpression openSquareBrace;
+    private final IdentifierExpression arrayKeyword;
+    private final IdentifierExpression openSquare;
     private final Expression elementCount;
-    private final IdentifierExpression closeSquareBrace;
+    private final IdentifierExpression comma;
+    private final TypeExpression typeExpression;
+    private final IdentifierExpression closeSquare;
 
-    public ArrayDeclarationExpression(TypeExpression typeExpression, IdentifierExpression openSquareBrace, Expression elementCount, IdentifierExpression closeSquareBrace) {
-        this.typeExpression = typeExpression;
-        this.openSquareBrace = openSquareBrace;
+    public ArrayDeclarationExpression(IdentifierExpression arrayKeyword, IdentifierExpression openSquare, Expression elementCount, IdentifierExpression comma, TypeExpression typeExpression, IdentifierExpression closeSquare) {
+
+        this.arrayKeyword = arrayKeyword;
+        this.openSquare = openSquare;
         this.elementCount = elementCount;
-        this.closeSquareBrace = closeSquareBrace;
+        this.comma = comma;
+        this.typeExpression = typeExpression;
+        this.closeSquare = closeSquare;
     }
 
-    public TypeExpression getTypeExpression() {
-        return typeExpression;
+    public IdentifierExpression getArrayKeyword() {
+        return arrayKeyword;
     }
 
-    public IdentifierExpression getOpenSquareBrace() {
-        return openSquareBrace;
+    public IdentifierExpression getOpenSquare() {
+        return openSquare;
     }
 
     public Expression getElementCount() {
         return elementCount;
     }
 
-    public IdentifierExpression getCloseSquareBrace() {
-        return closeSquareBrace;
+    public IdentifierExpression getComma() {
+        return comma;
+    }
+
+    public TypeExpression getTypeExpression() {
+        return typeExpression;
+    }
+
+    public IdentifierExpression getCloseSquare() {
+        return closeSquare;
     }
 
     @Override
@@ -44,6 +57,6 @@ public class ArrayDeclarationExpression extends Expression {
 
     @Override
     public Iterator<SyntaxNode> getChildren() {
-        return Arrays.asList((SyntaxNode)typeExpression, openSquareBrace, elementCount, closeSquareBrace).iterator();
+        return Arrays.asList((SyntaxNode)arrayKeyword, openSquare, elementCount, comma, typeExpression, closeSquare).iterator();
     }
 }
