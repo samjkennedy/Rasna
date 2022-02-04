@@ -41,6 +41,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAdd;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAlloca;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAnd;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildBitCast;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildBr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildCall;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildCast;
@@ -56,6 +57,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildGlobalStringPtr;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildICmp;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildInBoundsGEP;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildLoad;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildMemSet;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildNot;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
@@ -113,6 +115,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMRealOGT;
 import static org.bytedeco.llvm.global.LLVM.LLVMRealOLE;
 import static org.bytedeco.llvm.global.LLVM.LLVMRealOLT;
 import static org.bytedeco.llvm.global.LLVM.LLVMRealONE;
+import static org.bytedeco.llvm.global.LLVM.LLVMSExt;
 import static org.bytedeco.llvm.global.LLVM.LLVMSIToFP;
 import static org.bytedeco.llvm.global.LLVM.LLVMSetFunctionCallConv;
 import static org.bytedeco.llvm.global.LLVM.LLVMStructCreateNamed;
@@ -562,6 +565,11 @@ public class LLVMCompiler {
                 return LLVMBuildCast(builder, LLVMFPToSI, dereference(builder, expression, ""), getLlvmTypeRef(INT, context), "");
             }
         }
+        if (castExpression.getExpression().getType() == CHAR) {
+            if (castExpression.getType() == INT) {
+                return LLVMBuildCast(builder, LLVMSExt, dereference(builder, expression, ""), getLlvmTypeRef(INT, context), "");
+            }
+        }
         throw new UnsupportedOperationException("Casts from `" + castExpression.getExpression().getType() + "` to `" + castExpression.getType() + "` are not supported");
     }
 
@@ -625,14 +633,23 @@ public class LLVMCompiler {
     }
 
     private LLVMValueRef visit(BoundArrayDeclarationExpression arrayDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
+
+        TypeSymbol elementType = ((ArrayTypeSymbol) arrayDeclarationExpression.getType()).getType();
+        int elementCount = (int) arrayDeclarationExpression.getElementCount().getConstValue();
+        LLVMTypeRef sizeInBytes = LLVMArrayType(getLlvmTypeRef(elementType, context), elementCount);
+        LLVMValueRef array = LLVMBuildAlloca(builder, sizeInBytes, "array");
+
+        LLVMValueRef ptr = LLVMBuildBitCast(builder, array, LLVMPointerType(getLlvmTypeRef(elementType, context), 0), "");
+
+        //TODO: The i8type only works for Char arrays
+        LLVMBuildMemSet(builder, ptr, LLVMConstInt(i8Type, 0, 0), LLVMConstInt(i32Type, elementCount, 0), 0);
+
         LLVMTypeRef arrayStructType = getLlvmTypeRef(arrayDeclarationExpression.getType(), context);
-
-        LLVMValueRef elementCount = dereference(builder, visit(arrayDeclarationExpression.getElementCount(), builder, context, function), "elCount");
-
         LLVMValueRef structPtr = LLVMBuildAlloca(builder, arrayStructType, "tmp.array.struct");
-
         LLVMValueRef sizePtr = LLVMBuildStructGEP(builder, structPtr, 0, "size");
-        LLVMBuildStore(builder, elementCount, sizePtr);
+        LLVMBuildStore(builder, LLVMConstInt(i32Type, elementCount, 0), sizePtr);
+        LLVMValueRef arrPtr = LLVMBuildStructGEP(builder, structPtr, 1, "arr");
+        LLVMBuildStore(builder, ptr, arrPtr);
 
         return structPtr;
     }

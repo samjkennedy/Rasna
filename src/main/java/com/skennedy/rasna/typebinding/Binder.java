@@ -143,6 +143,8 @@ public class Binder {
                 return bindEnumDeclarationExpression((EnumDeclarationExpression) expression);
             case INTERFACE_EXPR:
                 return bindInterface((InterfaceExpression) expression);
+            case FUNC_CALL_PARAM_EXPR:
+                return bind(((FunctionCallArgumentExpression)expression).getExpression());
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
@@ -405,7 +407,15 @@ public class Binder {
             //UFCS https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax
             FunctionCallExpression functionCallExpression = (FunctionCallExpression) member;
 
-            Optional<FunctionSymbol> function = currentScope.tryLookupFunction((String) functionCallExpression.getIdentifier().getValue());
+            List<String> argumentTypes = new ArrayList<>();
+            argumentTypes.add(boundOwner.getType().getName());
+            functionCallExpression.getArguments().stream()
+                    .map(this::bind)
+                    .map(BoundExpression::getType)
+                    .map(TypeSymbol::getName)
+                    .forEach(argumentTypes::add);
+
+            Optional<FunctionSymbol> function = currentScope.tryLookupFunction(buildSignature((String) functionCallExpression.getIdentifier().getValue(), argumentTypes));
             IdentifierExpression dummyRefKeyword = null;
             if (function.isPresent()) {
                 BoundFunctionParameterExpression firstArg = function.get().getArguments().get(0);
@@ -457,8 +467,11 @@ public class Binder {
 
     private BoundExpression bindArrayDeclarationExpression(ArrayDeclarationExpression arrayDeclarationExpression) {
         BoundExpression elementCount = bind(arrayDeclarationExpression.getElementCount());
-        if (!elementCount.getType().isAssignableFrom(INT)) {
-            throw new IllegalStateException("Element count must be of type int");
+
+        elementCount = typeCheck(INT, elementCount, arrayDeclarationExpression.getElementCount().getSpan());
+
+        if (!elementCount.isConstExpression()) {
+            throw new IllegalStateException("Element count must be a const int"); //TODO: Raise a proper error
         }
         ArrayTypeSymbol typeSymbol = new ArrayTypeSymbol(parseType(arrayDeclarationExpression.getTypeExpression()));
 
