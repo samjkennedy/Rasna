@@ -54,12 +54,12 @@ struct Instruction {
     operand: Int
 }
 
-fn main() {
+fn main(args: String[]) {
 
     //Read in program
     stack := Stack{Array[2048, Int], 0} //TODO consts and constructors
     program := Array[2048, Instruction]
-    f := open("examples/brainfuck/helloworld.bf")
+    f := open(args[0])
     ptr := 0
     c := f.readChar()
     while(c != (-1 as Char)) {
