@@ -118,8 +118,6 @@ public class Parser {
                 return parseTypeofIntrinsic();
             case PRINT_INTR:
                 return parsePrintIntrinsic();
-            case OPEN_INTR:
-                return parseOpenIntrinsic();
             case IF_KEYWORD:
                 return parseIfExpression();
             case WHILE_KEYWORD:
@@ -1053,26 +1051,12 @@ public class Parser {
         return new PrintExpression(printInstr, openParen, expression, closeParen);
     }
 
-    //TODO: Rather than parsing like this, have built in functions
-    private Expression parseOpenIntrinsic() {
-        IdentifierExpression openInstr = matchToken(TokenType.OPEN_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
-        Expression filename = parseExpression();
-        IdentifierExpression comma = matchToken(TokenType.COMMA);
-        Expression mode = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
-
-        return new OpenExpression(openInstr, openParen, filename, comma, mode, closeParen);
-    }
-
     private Expression parseTypeofIntrinsic() {
 
         IdentifierExpression typeofKeyword = matchToken(TokenType.TYPEOF_INTR);
-        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
         Expression expression = parseExpression();
-        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
-        return new TypeofExpression(typeofKeyword, openParen, expression, closeParen);
+        return new TypeofExpression(typeofKeyword, expression);
     }
 
     private Expression parseStructLiteralExpression(TypeExpression typeExpression) {

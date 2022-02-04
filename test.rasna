@@ -1,8 +1,13 @@
 fn main() {
     f := open("test.txt", "w")
+    defer {
+        print("Closing file!")
+        f.close()
+        print("File closed!")
+    }
 
-    for (c in "Hello, world!\n") {
+    for (c in "New String!\n") {
         f.writeChar(c)
     }
-    print("Finished!\n")
+    print("Done writing!")
 }

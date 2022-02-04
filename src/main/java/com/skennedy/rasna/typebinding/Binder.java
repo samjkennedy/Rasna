@@ -18,7 +18,6 @@ import com.skennedy.rasna.parsing.model.ExpressionType;
 import com.skennedy.rasna.parsing.model.IdentifierExpression;
 import com.skennedy.rasna.parsing.model.SyntaxNode;
 
-import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,7 +47,11 @@ public class Binder {
 
     public Binder() {
         currentScope = new BoundScope(null);
-        BuiltInFunctions.getBuiltinFunctions().forEach(function -> currentScope.declareFunction(buildSignature(function.getName(), function.getArguments().stream().map(BoundFunctionParameterExpression::getType).map(TypeSymbol::toString).collect(Collectors.toList())), function));
+        BuiltInFunctions.getBuiltinFunctions()
+                .forEach(function -> currentScope.declareFunction(buildSignature(function.getName(), function.getArguments().stream()
+                        .map(BoundFunctionParameterExpression::getType)
+                        .map(TypeSymbol::toString)
+                        .collect(Collectors.toList())), function));
     }
 
     public BoundProgram bind(Program program) {
@@ -90,8 +93,6 @@ public class Binder {
                 return bind(((ParenthesisedExpression) expression).getExpression());
             case PRINT_EXPR:
                 return bindPrintIntrinsic((PrintExpression) expression);
-            case OPEN_INTR:
-                return bindOpenIntrinsic((OpenExpression) expression);
             case TYPEOF_EXPR:
                 return bindTypeofIntrinsic((TypeofExpression) expression);
             case IDENTIFIER_EXPR:
@@ -1033,25 +1034,10 @@ public class Binder {
         return new BoundPrintExpression(boundExpression);
     }
 
-    private BoundExpression bindOpenIntrinsic(OpenExpression openExpression) {
-
-        BoundExpression filename = bind(openExpression.getFilename());
-        BoundExpression mode = bind(openExpression.getMode());
-
-        if (filename.getType() != STRING) {
-            errors.add(BindingError.raiseTypeMismatch(STRING, filename.getType(), openExpression.getFilename().getSpan()));
-        }
-        if (mode.getType() != STRING) {
-            errors.add(BindingError.raiseTypeMismatch(STRING, mode.getType(), openExpression.getMode().getSpan()));
-        }
-
-        return new BoundOpenExpression(filename, mode);
-    }
-
     private BoundExpression bindTypeofIntrinsic(TypeofExpression typeofExpression) {
         BoundExpression boundExpression = bind(typeofExpression.getExpression());
 
-        return new BoundTypeofExpression(boundExpression);
+        return new BoundLiteralExpression(boundExpression.getType().getName() + "\n");
     }
 
     private BoundExpression bindAssignmentExpression(AssignmentExpression assignmentExpression) {
