@@ -1,0 +1,11 @@
+enum Command {
+    PtrInc
+    PtrDec
+    DataInc
+    DataDec
+}
+
+fn main() {
+    tape := Array[30000, Char]
+
+}

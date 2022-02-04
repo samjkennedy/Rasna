@@ -535,6 +535,8 @@ public class LLVMCompiler {
                 return visit((BoundUnaryExpression) expression, builder, context, function);
             case CAST_EXPRESSION:
                 return visit((BoundCastExpression) expression, builder, context, function);
+            case ARRAY_DECLARATION_EXPRESSION:
+                return visit((BoundArrayDeclarationExpression)expression, builder, context, function);
             default:
                 throw new UnsupportedOperationException("Compilation for `" + expression.getBoundExpressionType() + "` is not yet implemented in LLVM");
         }

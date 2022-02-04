@@ -169,12 +169,26 @@ public class Parser {
                 return parseEnumDeclaration();
             case INTERFACE_KEYWORD:
                 return parseInterface();
+            case ARRAY_KEYWORD:
+                return parseArrayDeclarationExpression();
             case EOF_TOKEN:
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
                 return new NoOpExpression();
         }
+    }
+
+    private Expression parseArrayDeclarationExpression() {
+
+        IdentifierExpression arrayKeyword = matchToken(TokenType.ARRAY_KEYWORD);
+        IdentifierExpression openSquare = matchToken(TokenType.OPEN_SQUARE_BRACE);
+        Expression elementCount = parseExpression();
+        IdentifierExpression comma = matchToken(TokenType.COMMA);
+        TypeExpression typeExpression = parseTypeExpression();
+        IdentifierExpression closeSquare = matchToken(TokenType.CLOSE_SQUARE_BRACE);
+
+        return new ArrayDeclarationExpression(arrayKeyword, openSquare, elementCount, comma, typeExpression, closeSquare);
     }
 
     private Expression parseInterface() {

@@ -80,6 +80,7 @@ public enum TokenType {
 
     //Types
     ANY_KEYWORD("Any"),
+    ARRAY_KEYWORD("Array"),
     UNIT_KEYWORD("Unit"),
     BOOL_KEYWORD("Bool"),
     CHAR_KEYWORD("Char"),
