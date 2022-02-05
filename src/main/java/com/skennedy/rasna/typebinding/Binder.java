@@ -1193,6 +1193,11 @@ public class Binder {
 
             interfaceBodies.put(functionSymbol, functionDeclarationExpression.getBody());
 
+            //quickly check the body
+            currentScope = new BoundScope(currentScope);
+            bindBlockExpression(functionDeclarationExpression.getBody());
+            currentScope = currentScope.getParentScope();
+
             currentScope = currentScope.getParentScope();
             return new BoundNoOpExpression();
         }
@@ -1402,9 +1407,15 @@ public class Binder {
             throw new IllegalStateException("No such body for interface function `" + interfaceFunction.getSignature() + "`");
         }
 
-        currentScope = new BoundScope(currentScope);
+        BoundScope savedScope = currentScope;
+
+        //Need to declare this in the top scope
+        while (currentScope.getParentScope() != null) {
+            currentScope = currentScope.getParentScope();
+        }
 
         //Declare the arguments within the function's scope
+        currentScope = new BoundScope(currentScope);
         for (BoundFunctionParameterExpression implFunctionParam : implFunctionParams) {
             currentScope.declareVariable(implFunctionParam.getArgument().getName(), implFunctionParam.getArgument());
         }
@@ -1414,7 +1425,7 @@ public class Binder {
                 .map(TypeSymbol::toString)
                 .collect(Collectors.toList());
         try {
-            currentScope.getParentScope().declareFunction(buildSignature(impl.getName(), argumentIdentifiers), impl);
+            currentScope.declareFunction(buildSignature(impl.getName(), argumentIdentifiers), impl);
         } catch (FunctionAlreadyDeclaredException fade) {
             return impl;
         }
@@ -1424,7 +1435,7 @@ public class Binder {
         //TODO: No analysis done on the interface method
         //errors.addAll(FunctionAnalyser.analyzeBody(impl, boundBody.getExpressions(), body.getExpressions(), functionDeclarationExpression));
 
-        currentScope = currentScope.getParentScope();
+        currentScope = savedScope;
 
         boundExpressions.add(new BoundFunctionDeclarationExpression(impl, implFunctionParams, boundBody));
 

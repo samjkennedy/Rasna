@@ -2,6 +2,10 @@ interface Shape {
     area(): Real
 }
 
+interface Named {
+    name(): String
+}
+
 struct Rect {
     width: Real
     height: Real
@@ -15,24 +19,27 @@ fn area(rect: Rect): Real {
     return rect.width * rect.height
 }
 
+fn name(rect: Rect): String {
+    return "Rect"
+}
+
+fn name(rect: Circle): String {
+    return "Circle"
+}
+
 fn area(circle: Circle): Real {
     return 3.14159 * circle.radius * circle.radius
 }
 
-fn differenceInAreas(s1: Shape, s2: Shape): Real {
-    return s2.area() - s1.area()
-}
-
 fn measure(s: Shape) {
+    print("The shape's area is: ")
     print(s.area())
 }
 
 fn main() {
     r := Rect{2.0, 3.0}
     c := Circle{2.0}
-    r.measure()
+
     r.measure()
     c.measure()
-
-    print(differenceInAreas(r, c))
 }
