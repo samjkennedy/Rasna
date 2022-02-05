@@ -11,7 +11,7 @@ enum Op {
 }
 
 fn parseOp(c: Char): Op {
-    op := Op.Comment
+    op := Op.Comment //TODO: Have to assign a value or else the compiler thinks it's unassigned
     match(c) {
         '+' => op = Op.DataInc
         '-' => op = Op.DataDec
@@ -29,6 +29,11 @@ fn parseOp(c: Char): Op {
 struct Stack {
     stack: Int[]
     ptr: Int
+}
+
+fn Stack(): Stack {
+    //TODO consts in functions
+    return Stack{Array[2048, Int], 0}
 }
 
 fn push(ref stack: Stack, val: Int) {
@@ -57,7 +62,7 @@ struct Instruction {
 fn main(args: String[]) {
 
     //Read in program
-    stack := Stack{Array[2048, Int], 0} //TODO consts and constructors
+    stack := Stack()
     program := Array[2048, Instruction]
     f := open(args[0])
     ptr := 0
