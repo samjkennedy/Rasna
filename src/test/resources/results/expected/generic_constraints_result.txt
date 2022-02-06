@@ -1,0 +1,90 @@
+Function area is not defined in the scope for arguments (T):
+24: fn <T> compareAreas(s1: T, s2: T) {
+25:     diff := s2.area() - s1.area()
+26:     print("The ")
+
+Function area is not defined in the scope for arguments (T):
+24: fn <T> compareAreas(s1: T, s2: T) {
+25:     diff := s2.area() - s1.area()
+26:     print("The ")
+
+Operation `subtract` is not defined for types `Error` and `Error`:
+24: fn <T> compareAreas(s1: T, s2: T) {
+25:     diff := s2.area() - s1.area()
+26:     print("The ")
+
+Operation `greater than` is not defined for types `Error` and `Real`:
+26:     print("The ")
+27:     if (diff > 0.) {
+28:         print(s2.name())
+
+Expected type `Bool` but got `Error`:
+26:     print("The ")
+27:     if (diff > 0.) {
+28:         print(s2.name())
+
+Function name is not defined in the scope for arguments (T):
+27:     if (diff > 0.) {
+28:         print(s2.name())
+29:     } else {
+
+Function name is not defined in the scope for arguments (T):
+29:     } else {
+30:         print(s1.name())
+31:     }
+
+Function name is not defined in the scope for arguments (Rect):
+18:     print("The ")
+19:     print(s.name())
+20:     print("'s area is: ")
+
+Function area is not defined in the scope for arguments (Rect):
+20:     print("'s area is: ")
+21:     print(s.area())
+22: }
+
+Function name is not defined in the scope for arguments (Circle):
+18:     print("The ")
+19:     print(s.name())
+20:     print("'s area is: ")
+
+Function area is not defined in the scope for arguments (Circle):
+20:     print("'s area is: ")
+21:     print(s.area())
+22: }
+
+Function area is not defined in the scope for arguments (Circle):
+24: fn <T> compareAreas(s1: T, s2: T) {
+25:     diff := s2.area() - s1.area()
+26:     print("The ")
+
+Function area is not defined in the scope for arguments (Rect):
+24: fn <T> compareAreas(s1: T, s2: T) {
+25:     diff := s2.area() - s1.area()
+26:     print("The ")
+
+Operation `subtract` is not defined for types `Error` and `Error`:
+24: fn <T> compareAreas(s1: T, s2: T) {
+25:     diff := s2.area() - s1.area()
+26:     print("The ")
+
+Operation `greater than` is not defined for types `Error` and `Real`:
+26:     print("The ")
+27:     if (diff > 0.) {
+28:         print(s2.name())
+
+Expected type `Bool` but got `Error`:
+26:     print("The ")
+27:     if (diff > 0.) {
+28:         print(s2.name())
+
+Function name is not defined in the scope for arguments (Circle):
+27:     if (diff > 0.) {
+28:         print(s2.name())
+29:     } else {
+
+Function name is not defined in the scope for arguments (Rect):
+29:     } else {
+30:         print(s1.name())
+31:     }
+

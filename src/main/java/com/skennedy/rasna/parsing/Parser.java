@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -810,7 +811,7 @@ public class Parser {
     private Expression parseTypeParameterExpression() {
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         if (current().getTokenType() != TokenType.COLON) {
-            return new TypeExpression(identifier);
+            return new TypeParameterExpression(identifier, null, null, Collections.emptyList(), null);
         }
         IdentifierExpression colon = matchToken(TokenType.COLON);
 

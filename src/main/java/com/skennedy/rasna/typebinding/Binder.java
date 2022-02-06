@@ -1167,35 +1167,37 @@ public class Binder {
                     throw new UnsupportedOperationException("Generic function parameters can only be of type TYPE_EXPR, got `" + genericParam.getExpressionType() + "`");
                 }
                 IdentifierExpression generic = getTypeIdentifier((TypeExpression) genericParam);
-                if (genericParam instanceof TypeParameterExpression) {
+                if (!(genericParam instanceof TypeParameterExpression)) {
+                    continue;
+                }
 
-                    TypeSymbol genericType = new TypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
-                    List<TypeExpression> constraints = ((TypeParameterExpression) genericParam).getConstraints();
-                    for (TypeExpression constraint : constraints) {
-                        TypeSymbol constraintType = getTypeSymbol(getTypeIdentifier(constraint));
+                GenericTypeSymbol genericType = new GenericTypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
+                currentScope.declareType((String) generic.getValue(), genericType);
+                List<TypeExpression> constraints = ((TypeParameterExpression) genericParam).getConstraints();
+                for (TypeExpression constraint : constraints) {
+                    TypeSymbol constraintType = getTypeSymbol(getTypeIdentifier(constraint));
 
-                        if (constraintType instanceof InterfaceTypeSymbol) {
-                            List<BoundFunctionSignatureExpression> signatures = ((InterfaceTypeSymbol) constraintType).getSignatures();
-                            for (BoundFunctionSignatureExpression functionSignatureExpression : signatures) {
+                    if (!(constraintType instanceof InterfaceTypeSymbol)) {
+                        errors.add(BindingError.raise("Generic type parameters can only be constrained by interface types", constraint.getSpan()));
+                        continue;
+                    }
+                    List<BoundFunctionSignatureExpression> signatures = ((InterfaceTypeSymbol) constraintType).getSignatures();
+                    for (BoundFunctionSignatureExpression functionSignatureExpression : signatures) {
 
-                                List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
-                                VariableSymbol self = new VariableSymbol("self", genericType, null, true, null);
-                                functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
-                                functionParameterExpressions.addAll(functionSignatureExpression.getFunctionParameterExpressions());
+                        List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
+                        VariableSymbol self = new VariableSymbol("self", genericType, null, true, null);
+                        functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
+                        functionParameterExpressions.addAll(functionSignatureExpression.getFunctionParameterExpressions());
 
-                                FunctionSymbol interfaceFunction = new FunctionSymbol(functionSignatureExpression.getIdentifier(), functionSignatureExpression.getReturnType(), functionParameterExpressions, null);
+                        FunctionSymbol interfaceFunction = new FunctionSymbol(functionSignatureExpression.getIdentifier(), functionSignatureExpression.getReturnType(), functionParameterExpressions, null);
 
-                                List<String> argumentIdentifiers = functionParameterExpressions.stream()
-                                        .map(BoundFunctionParameterExpression::getType)
-                                        .map(Object::toString)
-                                        .collect(Collectors.toList());
-                                currentScope.declareFunction(buildSignature(functionSignatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
-                            }
-                        }
+                        List<String> argumentIdentifiers = functionParameterExpressions.stream()
+                                .map(BoundFunctionParameterExpression::getType)
+                                .map(Object::toString)
+                                .collect(Collectors.toList());
+                        currentScope.declareFunction(buildSignature(functionSignatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
                     }
                 }
-                GenericTypeSymbol genericType = new GenericTypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
-                currentScope.declareType((String) generic.getValue(), genericType);
             }
         }
         TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
