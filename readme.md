@@ -276,6 +276,75 @@ The variable `c` will be of the type `Color`, which compiles down to a const i32
         ...
 ```
 
+### Interfaces and Generics
+
+Like Go, Rasna supports Interfaces, declared like so:
+
+```go
+interface Shape {
+    area(): Real
+    perim(): Real
+}
+```
+
+Then any type with functions matching the signatures of an interface automatically implement that interface:
+
+```rust
+struct Circle {
+    radius: Real
+}
+fn area(c: Circle): Real {
+    return PI * c.radius * c.radius
+}
+fn perim(c: Circle): Real {
+    return PI * c.radius * 2
+}
+```
+
+Now `Circle` implements `Shape` and can be passed into functions that require a `Shape`:
+
+```rust
+fn measure(shape: Shape) {
+    print(shape.area())
+    print(shape.perim())
+}
+
+fn main() {
+    c := Circle{2.5}
+    c.measure() //compiles
+}
+```
+
+For functions that require their inputs implement multiple interfaces, generics can be used with interface constraints.
+Let's define a new Interface `Named`
+
+```go
+interface Named {
+    name(): String
+}
+```
+And implement it with our `Circle` type:
+```rust
+fn name(c: Circle): String {
+    return "Circle"
+}
+```
+Now `Circle` implements `Shape` and `Named`. To write a function that requires a type implements these two interfaces, define it with a generic type parameter with the interfaces as constraints:
+
+```rust
+fn <T: (Shape, Named)> measure(shape: T) {
+    print("The ")
+    print(shape.name())
+    print("'s area is: ")
+    print(shape.area())
+}
+
+fn main() {
+    c := Circle{2.5}
+    c.measure() //prints "The Circle's area is 19.63495
+}
+```
+
 ## Acknowledgements
 
 The architecture of this compiler is heavily based on the one built by Immo Landwerth in his Building a Compiler series:
