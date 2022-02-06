@@ -11,6 +11,5 @@
 - Global variables
 - cmdline args
 - Write to file
-- Generic functions
 - Function types
 - Currying?

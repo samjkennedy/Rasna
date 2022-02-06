@@ -5,10 +5,14 @@ import java.util.List;
 
 public class InterfaceTypeSymbol extends TypeSymbol {
 
-    private final List<BoundFunctionSignatureExpression> functions;
+    private final List<BoundFunctionSignatureExpression> signatures;
 
-    public InterfaceTypeSymbol(String name, List<BoundFunctionSignatureExpression> functions) {
+    public InterfaceTypeSymbol(String name, List<BoundFunctionSignatureExpression> signatures) {
         super(name, new LinkedHashMap<>());
-        this.functions = functions;
+        this.signatures = signatures;
+    }
+
+    public List<BoundFunctionSignatureExpression> getSignatures() {
+        return signatures;
     }
 }

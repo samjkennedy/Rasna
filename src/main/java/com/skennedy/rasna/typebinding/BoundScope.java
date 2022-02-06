@@ -1,20 +1,26 @@
 package com.skennedy.rasna.typebinding;
 
+import com.google.common.collect.LinkedHashMultimap;
 import com.skennedy.rasna.exceptions.FunctionAlreadyDeclaredException;
 import com.skennedy.rasna.exceptions.TypeAlreadyDeclaredException;
 import com.skennedy.rasna.exceptions.UndefinedVariableException;
 import com.skennedy.rasna.exceptions.VariableAlreadyDeclaredException;
+import org.apache.commons.collections4.CollectionUtils;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class BoundScope {
 
     private final BoundScope parentScope;
     private final LinkedHashMap<String, VariableSymbol> definedVariables;
     private final LinkedHashMap<String, FunctionSymbol> definedFunctions;
+    private final LinkedHashMultimap<String, FunctionSymbol> definedInterfaceFunctions;
     private final Map<String, TypeSymbol> definedTypes;
     private final Map<String, TypeSymbol> definedGenericTypes;
     private final Map<TypeSymbol, TypeSymbol> boundGenericTypes;
@@ -24,6 +30,7 @@ public class BoundScope {
         this.parentScope = parentScope;
         this.definedVariables = new LinkedHashMap<>();
         this.definedFunctions = new LinkedHashMap<>();
+        this.definedInterfaceFunctions = LinkedHashMultimap.create();
         this.definedTypes = new HashMap<>();
         this.definedGenericTypes = new HashMap<>();
         this.boundGenericTypes = new HashMap<>();
@@ -35,6 +42,7 @@ public class BoundScope {
 
         secondary.definedVariables.forEach(merged::declareVariable);
         secondary.definedFunctions.forEach(merged::declareFunction);
+        secondary.definedInterfaceFunctions.forEach(merged::declareInterfaceFunction);
         secondary.definedTypes.forEach(merged::declareType);
         secondary.definedGenericTypes.forEach(merged::declareGenericType);
         secondary.boundGenericTypes.forEach(merged::bindGenericType);
@@ -58,15 +66,26 @@ public class BoundScope {
         return Optional.empty();
     }
 
-    public Optional<FunctionSymbol> tryLookupFunction(String name) {
+    public Optional<FunctionSymbol> tryLookupFunction(String signature) {
 
-        if (definedFunctions.containsKey(name)) {
-            return Optional.of(definedFunctions.get(name));
+        if (definedFunctions.containsKey(signature)) {
+            return Optional.of(definedFunctions.get(signature));
         }
         if (parentScope != null) {
-            return parentScope.tryLookupFunction(name);
+            return parentScope.tryLookupFunction(signature);
         }
         return Optional.empty();
+    }
+
+    public Set<FunctionSymbol> tryLookupInterfaceFunctions(String name) {
+
+        if (definedInterfaceFunctions.containsKey(name)) {
+            return definedInterfaceFunctions.get(name);
+        }
+        if (parentScope != null) {
+            return parentScope.tryLookupInterfaceFunctions(name);
+        }
+        return Collections.emptySet();
     }
 
     public Optional<TypeSymbol> tryLookupType(String name) {
@@ -130,11 +149,15 @@ public class BoundScope {
         definedVariables.replace(name, variable);
     }
 
-    public void declareFunction(String name, FunctionSymbol function) {
-        if (tryLookupFunction(name).isPresent()) {
-            throw new FunctionAlreadyDeclaredException(name);
+    public void declareFunction(String signature, FunctionSymbol function) {
+        if (tryLookupFunction(signature).isPresent()) {
+            throw new FunctionAlreadyDeclaredException(signature);
         }
-        definedFunctions.put(name, function);
+        definedFunctions.put(signature, function);
+    }
+
+    public void declareInterfaceFunction(String name, FunctionSymbol functionSymbol) {
+        definedInterfaceFunctions.put(name, functionSymbol);
     }
 
     public void declareType(String name, TypeSymbol type) {
@@ -183,5 +206,4 @@ public class BoundScope {
     public LinkedHashMap<String, VariableSymbol> getDefinedVariables() {
         return definedVariables;
     }
-
 }

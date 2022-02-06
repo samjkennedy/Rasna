@@ -1,0 +1,3 @@
+The Rect's area is: 16.000000
+The Circle's area is: 12.566360
+The Rect's area is bigger

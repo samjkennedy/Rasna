@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.skennedy.rasna.typebinding.TypeSymbol.ANY;
@@ -45,6 +46,10 @@ public class Binder {
     private List<BindingWarning> warnings;
     private BoundScope currentScope;
 
+    private List<BoundExpression> boundExpressions = new ArrayList<>();
+
+    private Map<FunctionSymbol, BlockExpression> interfaceBodies;//TODO: This is merely temporary as a proof of concept
+
     public Binder() {
         currentScope = new BoundScope(null);
         BuiltInFunctions.getBuiltinFunctions()
@@ -58,8 +63,7 @@ public class Binder {
 
         errors = new ArrayList<>();
         warnings = new ArrayList<>();
-
-        List<BoundExpression> boundExpressions = new ArrayList<>();
+        interfaceBodies = new HashMap<>();
 
         List<Expression> expressions = program.getExpressions();
         for (Expression expression : expressions) {
@@ -144,7 +148,7 @@ public class Binder {
             case INTERFACE_EXPR:
                 return bindInterface((InterfaceExpression) expression);
             case FUNC_CALL_PARAM_EXPR:
-                return bind(((FunctionCallArgumentExpression)expression).getExpression());
+                return bind(((FunctionCallArgumentExpression) expression).getExpression());
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
@@ -171,7 +175,7 @@ public class Binder {
                     .map(BoundFunctionParameterExpression::getType)
                     .map(Object::toString)
                     .collect(Collectors.toList());
-            currentScope.declareFunction(buildSignature((String)signatureExpression.getIdentifier().getValue(), argumentIdentifiers), interfaceFunction);
+            currentScope.declareFunction(buildSignature((String) signatureExpression.getIdentifier().getValue(), argumentIdentifiers), interfaceFunction);
 
             boundFunctionSignatureExpressions.add(functionSignatureExpression);
         }
@@ -1011,7 +1015,7 @@ public class Binder {
         if (variable.get().getDeclaration().getExpressionType() != ExpressionType.VAR_DECLARATION_EXPR) {
             return new BoundVariableExpression(variable.get());
         }
-        if (((VariableDeclarationExpression)variable.get().getDeclaration()).getInitialiser() == null) {
+        if (((VariableDeclarationExpression) variable.get().getDeclaration()).getInitialiser() == null) {
             errors.add(BindingError.raiseUninitialisedVariable((String) identifierExpression.getValue(), identifierExpression.getSpan()));
             return new BoundErrorExpression();
         }
@@ -1155,14 +1159,45 @@ public class Binder {
 
         currentScope = new BoundScope(currentScope);
 
+        boolean genericFunction = false;
         if (!functionDeclarationExpression.getGenericParameters().isEmpty()) {
+            genericFunction = true;
             for (Expression genericParam : functionDeclarationExpression.getGenericParameters()) {
                 if (genericParam.getExpressionType() != ExpressionType.TYPE_EXPR) {
                     throw new UnsupportedOperationException("Generic function parameters can only be of type TYPE_EXPR, got `" + genericParam.getExpressionType() + "`");
                 }
                 IdentifierExpression generic = getTypeIdentifier((TypeExpression) genericParam);
-                TypeSymbol genericType = new TypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
+                if (!(genericParam instanceof TypeParameterExpression)) {
+                    continue;
+                }
+
+                GenericTypeSymbol genericType = new GenericTypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
                 currentScope.declareType((String) generic.getValue(), genericType);
+                List<TypeExpression> constraints = ((TypeParameterExpression) genericParam).getConstraints();
+                for (TypeExpression constraint : constraints) {
+                    TypeSymbol constraintType = getTypeSymbol(getTypeIdentifier(constraint));
+
+                    if (!(constraintType instanceof InterfaceTypeSymbol)) {
+                        errors.add(BindingError.raise("Generic type parameters can only be constrained by interface types", constraint.getSpan()));
+                        continue;
+                    }
+                    List<BoundFunctionSignatureExpression> signatures = ((InterfaceTypeSymbol) constraintType).getSignatures();
+                    for (BoundFunctionSignatureExpression functionSignatureExpression : signatures) {
+
+                        List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
+                        VariableSymbol self = new VariableSymbol("self", genericType, null, true, null);
+                        functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
+                        functionParameterExpressions.addAll(functionSignatureExpression.getFunctionParameterExpressions());
+
+                        FunctionSymbol interfaceFunction = new FunctionSymbol(functionSignatureExpression.getIdentifier(), functionSignatureExpression.getReturnType(), functionParameterExpressions, null);
+
+                        List<String> argumentIdentifiers = functionParameterExpressions.stream()
+                                .map(BoundFunctionParameterExpression::getType)
+                                .map(Object::toString)
+                                .collect(Collectors.toList());
+                        currentScope.declareFunction(buildSignature(functionSignatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
+                    }
+                }
             }
         }
         TypeSymbol type = parseType(functionDeclarationExpression.getTypeExpression());
@@ -1175,14 +1210,31 @@ public class Binder {
         }
 
         FunctionSymbol functionSymbol = new FunctionSymbol((String) identifier.getValue(), type, arguments, null);
+        List<String> argumentIdentifiers = functionDeclarationExpression.getArguments().stream()
+                .map(FunctionParameterExpression::getTypeExpression)
+                .map(this::getTypeIdentifier)
+                .map(IdentifierExpression::getValue)
+                .map(Object::toString)
+                .collect(Collectors.toList());
+        boolean deferredFunction = genericFunction || functionSymbol.getArguments().stream()
+                .anyMatch(arg -> arg.getType() instanceof InterfaceTypeSymbol);
+
+        if (deferredFunction) {
+            currentScope.getParentScope().declareInterfaceFunction((String) functionDeclarationExpression.getIdentifier().getValue(), functionSymbol);
+
+            interfaceBodies.put(functionSymbol, functionDeclarationExpression.getBody());
+
+            //quickly check the body
+            currentScope = new BoundScope(currentScope);
+            bindBlockExpression(functionDeclarationExpression.getBody());
+            currentScope = currentScope.getParentScope();
+
+            currentScope = currentScope.getParentScope();
+            return new BoundNoOpExpression();
+        }
+
         try {
-            List<String> argumentIdentifiers = functionDeclarationExpression.getArguments().stream()
-                    .map(FunctionParameterExpression::getTypeExpression)
-                    .map(this::getTypeIdentifier)
-                    .map(IdentifierExpression::getValue)
-                    .map(Object::toString)
-                    .collect(Collectors.toList());
-            currentScope.getParentScope().declareFunction(buildSignature((String)functionDeclarationExpression.getIdentifier().getValue(), argumentIdentifiers), functionSymbol);
+            currentScope.getParentScope().declareFunction(buildSignature((String) functionDeclarationExpression.getIdentifier().getValue(), argumentIdentifiers), functionSymbol);
         } catch (FunctionAlreadyDeclaredException fade) {
             List<SyntaxNode> children = new ArrayList<>();
             children.add(functionDeclarationExpression.getFnKeyword());
@@ -1192,6 +1244,7 @@ public class Binder {
             children.add(functionDeclarationExpression.getCloseParen());
             errors.add(BindingError.raiseFunctionAlreadyDeclared(functionSymbol.getSignature(), Expression.getSpan(children)));
         }
+
 
         BoundBlockExpression body = bindBlockExpression(functionDeclarationExpression.getBody());
 
@@ -1307,13 +1360,33 @@ public class Binder {
                 .map(BoundExpression::getType)
                 .map(TypeSymbol::toString)
                 .collect(Collectors.toList());
-        String signature = buildSignature((String)functionCallExpression.getIdentifier().getValue(), argumentTypeIdentifiers);
+        String signature = buildSignature((String) functionCallExpression.getIdentifier().getValue(), argumentTypeIdentifiers);
 
         Optional<FunctionSymbol> scopedFunction = currentScope.tryLookupFunction(signature);
 
         if (scopedFunction.isEmpty()) {
-            errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
-            return new BoundErrorExpression();
+
+            Set<FunctionSymbol> potentialFunctions = currentScope.tryLookupInterfaceFunctions(identifier.getValue().toString());
+            if (potentialFunctions.isEmpty()) {
+                errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+                return new BoundErrorExpression();
+            }
+
+            List<FunctionSymbol> compatibleFunctions = potentialFunctions.stream()
+                    .filter(func -> isCompatible(boundArguments, func))
+                    .collect(Collectors.toList());
+            if (compatibleFunctions.isEmpty()) {
+                errors.add(BindingError.raiseUnknownFunction((String) identifier.getValue(), boundArguments, functionCallExpression.getSpan()));
+                return new BoundErrorExpression();
+            }
+            if (compatibleFunctions.size() > 1) {
+                throw new IllegalStateException("More than one function with matching signature found");
+            }
+
+            //Build function for the provided type
+            FunctionSymbol implementation = buildImplementationFunction(boundArguments, compatibleFunctions.get(0));
+
+            scopedFunction = Optional.of(implementation);
         }
 
         FunctionSymbol function = scopedFunction.get();
@@ -1342,6 +1415,84 @@ public class Binder {
         }
 
         return new BoundFunctionCallExpression(function, boundArguments);
+    }
+
+    private FunctionSymbol buildImplementationFunction(List<BoundExpression> boundArguments, FunctionSymbol interfaceFunction) {
+
+        List<BoundFunctionParameterExpression> implFunctionParams = new ArrayList<>();
+        for (int i = 0; i < boundArguments.size(); i++) {
+            BoundExpression boundArg = boundArguments.get(i);
+            BoundFunctionParameterExpression funcArg = interfaceFunction.getArguments().get(i);
+
+            VariableSymbol implVariable = (funcArg.getType() instanceof InterfaceTypeSymbol || funcArg.getType() instanceof GenericTypeSymbol)
+                    ? new VariableSymbol(funcArg.getArgument().getName(), boundArg.getType(), funcArg.getArgument().getGuard(), funcArg.getArgument().isReadOnly(), funcArg.getArgument().getDeclaration())
+                    : funcArg.getArgument();
+
+            implFunctionParams.add(new BoundFunctionParameterExpression(funcArg.isReference(), implVariable, funcArg.getGuard()));
+        }
+        FunctionSymbol impl = new FunctionSymbol(interfaceFunction.getName(), interfaceFunction.getType(), implFunctionParams, interfaceFunction.getGuard());
+
+        //Build body
+        BlockExpression body = interfaceBodies.get(interfaceFunction);
+        if (body == null) {
+            throw new IllegalStateException("No such body for interface function `" + interfaceFunction.getSignature() + "`");
+        }
+
+        BoundScope savedScope = currentScope;
+
+        //Need to declare this in the top scope
+        while (currentScope.getParentScope() != null) {
+            currentScope = currentScope.getParentScope();
+        }
+
+        //Declare the arguments within the function's scope
+        currentScope = new BoundScope(currentScope);
+        for (BoundFunctionParameterExpression implFunctionParam : implFunctionParams) {
+            currentScope.declareVariable(implFunctionParam.getArgument().getName(), implFunctionParam.getArgument());
+        }
+
+        List<String> argumentIdentifiers = implFunctionParams.stream()
+                .map(BoundFunctionParameterExpression::getType)
+                .map(TypeSymbol::toString)
+                .collect(Collectors.toList());
+        try {
+            currentScope.declareFunction(buildSignature(impl.getName(), argumentIdentifiers), impl);
+        } catch (FunctionAlreadyDeclaredException fade) {
+            return impl;
+        }
+
+        BoundBlockExpression boundBody = bindBlockExpression(body);
+
+        //TODO: No analysis done on the interface method
+        //errors.addAll(FunctionAnalyser.analyzeBody(impl, boundBody.getExpressions(), body.getExpressions(), functionDeclarationExpression));
+
+        currentScope = savedScope;
+
+        boundExpressions.add(new BoundFunctionDeclarationExpression(impl, implFunctionParams, boundBody));
+
+        return impl;
+    }
+
+    private boolean isCompatible(List<BoundExpression> arguments, FunctionSymbol func) {
+        if (func.getArguments().size() != arguments.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < arguments.size(); i++) {
+            TypeSymbol expectedType = func.getArguments().get(i).getType();
+            TypeSymbol actualType = arguments.get(i).getType();
+
+            if (expectedType instanceof InterfaceTypeSymbol) {
+                continue;
+            }
+            if (expectedType instanceof GenericTypeSymbol) {
+                continue;
+            }
+            if (!expectedType.isAssignableFrom(actualType)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private BoundExpression bindVariableDeclaration(VariableDeclarationExpression variableDeclarationExpression) {

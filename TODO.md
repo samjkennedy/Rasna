@@ -4,11 +4,12 @@
 - Proper concatenation
 - do/while loops
 - Union and error types
-- `break`, `continue`, and void method `return` operations
+- Generic assignment to expressions
+- `break` and `continue`
 - Nested accessors . and ::
 - Proper pattern matching
     - Array matching
 - Longs
 - Multidimensional arrays
-- Generic functions
+- Generic signatures
 - REPL
