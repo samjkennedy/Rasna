@@ -1159,13 +1159,15 @@ public class Binder {
 
         currentScope = new BoundScope(currentScope);
 
+        boolean genericFunction = false;
         if (!functionDeclarationExpression.getGenericParameters().isEmpty()) {
+            genericFunction = true;
             for (Expression genericParam : functionDeclarationExpression.getGenericParameters()) {
                 if (genericParam.getExpressionType() != ExpressionType.TYPE_EXPR) {
                     throw new UnsupportedOperationException("Generic function parameters can only be of type TYPE_EXPR, got `" + genericParam.getExpressionType() + "`");
                 }
                 IdentifierExpression generic = getTypeIdentifier((TypeExpression) genericParam);
-                TypeSymbol genericType = new TypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
+                GenericTypeSymbol genericType = new GenericTypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
                 currentScope.declareType((String) generic.getValue(), genericType);
             }
         }
@@ -1185,18 +1187,18 @@ public class Binder {
                 .map(IdentifierExpression::getValue)
                 .map(Object::toString)
                 .collect(Collectors.toList());
-        boolean interfaceMethod = functionSymbol.getArguments().stream()
+        boolean deferredFunction = genericFunction || functionSymbol.getArguments().stream()
                 .anyMatch(arg -> arg.getType() instanceof InterfaceTypeSymbol);
 
-        if (interfaceMethod) {
+        if (deferredFunction) {
             currentScope.getParentScope().declareInterfaceFunction((String) functionDeclarationExpression.getIdentifier().getValue(), functionSymbol);
 
             interfaceBodies.put(functionSymbol, functionDeclarationExpression.getBody());
 
-            //quickly check the body
-            currentScope = new BoundScope(currentScope);
-            bindBlockExpression(functionDeclarationExpression.getBody());
-            currentScope = currentScope.getParentScope();
+//            //quickly check the body
+//            currentScope = new BoundScope(currentScope);
+//            bindBlockExpression(functionDeclarationExpression.getBody());
+//            currentScope = currentScope.getParentScope();
 
             currentScope = currentScope.getParentScope();
             return new BoundNoOpExpression();
@@ -1393,7 +1395,7 @@ public class Binder {
             BoundExpression boundArg = boundArguments.get(i);
             BoundFunctionParameterExpression funcArg = interfaceFunction.getArguments().get(i);
 
-            VariableSymbol implVariable = funcArg.getType() instanceof InterfaceTypeSymbol
+            VariableSymbol implVariable = (funcArg.getType() instanceof InterfaceTypeSymbol || funcArg.getType() instanceof GenericTypeSymbol)
                     ? new VariableSymbol(funcArg.getArgument().getName(), boundArg.getType(), funcArg.getArgument().getGuard(), funcArg.getArgument().isReadOnly(), funcArg.getArgument().getDeclaration())
                     : funcArg.getArgument();
 
@@ -1452,6 +1454,9 @@ public class Binder {
             TypeSymbol actualType = arguments.get(i).getType();
 
             if (expectedType instanceof InterfaceTypeSymbol) {
+                continue;
+            }
+            if (expectedType instanceof GenericTypeSymbol) {
                 continue;
             }
             if (!expectedType.isAssignableFrom(actualType)) {
