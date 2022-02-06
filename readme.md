@@ -191,8 +191,8 @@ xs: Int = for (N: Int= 0 to 100 if N mod 2 == 0) {
  v3: V3R = V3R{1.0, 2.0, 3.0}
  ```
  
- Unlike languages like c++ and Rust, structs cannot contain member functions. 
- Once defined, a struct can be used in the return types and arguments of functions just like any other type:
+ Unlike languages like c++ and Rust, structs cannot contain member signatures. 
+ Once defined, a struct can be used in the return types and arguments of signatures just like any other type:
  
  ```rust
  fn mag3(v: V3R): Real {

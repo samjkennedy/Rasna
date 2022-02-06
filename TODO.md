@@ -11,5 +11,5 @@
     - Array matching
 - Longs
 - Multidimensional arrays
-- Generic functions
+- Generic signatures
 - REPL

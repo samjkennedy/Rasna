@@ -1,3 +1,11 @@
+interface Shape {
+    area(): Real
+}
+
+interface Named {
+    name(): String
+}
+
 struct Rect {
     width: Real
     height: Real
@@ -15,14 +23,14 @@ fn name(rect: Rect): String { return "Rect" }
 
 fn name(rect: Circle): String { return "Circle" }
 
-fn <T> measure(s: T) {
+fn <T: (Shape, Named)> measure(s: T) {
     print("The ")
     print(s.name())
     print("'s area is: ")
     print(s.area())
 }
 
-fn <T> compareAreas(s1: T, s2: T) {
+fn <T: (Shape, Named)> compareAreas(s1: T, s2: T) {
     diff := s2.area() - s1.area()
     print("The ")
     if (diff > 0.) {

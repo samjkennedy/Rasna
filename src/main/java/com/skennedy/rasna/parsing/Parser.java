@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class Parser {
 
@@ -695,12 +696,12 @@ public class Parser {
         if (current().getTokenType() == TokenType.OPEN_ANGLE_BRACE) {
             IdentifierExpression openAngle = matchToken(TokenType.OPEN_ANGLE_BRACE);
 
-            genericParameters.add(parseTypeExpression());
+            genericParameters.add(parseTypeParameterExpression());
             while (current().getTokenType() != TokenType.CLOSE_ANGLE_BRACE
                     && current().getTokenType() != TokenType.EOF_TOKEN
                     && current().getTokenType() != TokenType.BAD_TOKEN) {
                 matchToken(TokenType.COMMA);
-                genericParameters.add(parseTypeExpression());
+                genericParameters.add(parseTypeParameterExpression());
             }
             IdentifierExpression closeAngle = matchToken(TokenType.CLOSE_ANGLE_BRACE);
         }
@@ -804,6 +805,31 @@ public class Parser {
         IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
 
         return parseAhead(new ParenthesisedExpression(openParen, expression, closeParen));
+    }
+
+    private Expression parseTypeParameterExpression() {
+        IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
+        if (current().getTokenType() != TokenType.COLON) {
+            return new TypeExpression(identifier);
+        }
+        IdentifierExpression colon = matchToken(TokenType.COLON);
+
+        List<TypeExpression> constraints = new ArrayList<>();
+        IdentifierExpression openParenthesis = null;
+        IdentifierExpression closeParenthesis = null;
+        if (current().getTokenType() == TokenType.OPEN_PARENTHESIS) {
+            openParenthesis = matchToken(TokenType.OPEN_PARENTHESIS);
+
+            List<DelimitedExpression<TypeExpression>> delimitedExpressions = parseDelimitedList(TokenType.COMMA, this::parseTypeExpression, TokenType.CLOSE_PARENTHESIS);
+
+            closeParenthesis = matchToken(TokenType.CLOSE_PARENTHESIS);
+
+            constraints.addAll(delimitedExpressions.stream().map(DelimitedExpression::getExpression).collect(Collectors.toList()));
+        } else {
+            constraints.add(new TypeExpression(parseTypeKeyword()));
+        }
+
+        return new TypeParameterExpression(identifier, colon, openParenthesis, constraints, closeParenthesis);
     }
 
     private TypeExpression parseTypeExpression() {
