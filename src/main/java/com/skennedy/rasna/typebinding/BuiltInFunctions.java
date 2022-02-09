@@ -7,6 +7,8 @@ import java.util.List;
 //TODO: Have an opt in system, like `import io.rasna`
 public class BuiltInFunctions {
 
+    //IO
+    public static FunctionSymbol READ_IN = new FunctionSymbol("readIn", TypeSymbol.CHAR, Collections.emptyList(), null);
     //Files
     public static FunctionSymbol OPEN_R = new FunctionSymbol("open", TypeSymbol.FILE, Collections.singletonList(buildArg("filename", TypeSymbol.STRING)), null);
     public static FunctionSymbol OPEN = new FunctionSymbol("open", TypeSymbol.FILE, Arrays.asList(buildArg("filename", TypeSymbol.STRING), buildArg("mode", TypeSymbol.STRING)), null);
@@ -19,6 +21,6 @@ public class BuiltInFunctions {
     }
 
     public static List<FunctionSymbol> getBuiltinFunctions() {
-        return Arrays.asList(OPEN, OPEN_R, READ_CHAR, WRITE_CHAR, CLOSE);
+        return Arrays.asList(READ_IN, OPEN, OPEN_R, READ_CHAR, WRITE_CHAR, CLOSE);
     }
 }

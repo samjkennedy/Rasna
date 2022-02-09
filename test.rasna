@@ -14,9 +14,15 @@ fn parseColor(c: Char): Color {
     }
 }
 
+fn printColor(c: Color) {
+    match (c) {
+        Color.Red => print("Red\n")
+        Color.Green => print("Green\n")
+        Color.Blue => print("Blue\n")
+        Color.Unknown => print("Unknown\n")
+    }
+}
+
 fn main() {
-    print(parseColor('r'))
-    print(parseColor('g'))
-    print(parseColor('b'))
-    print(parseColor('z'))
+    printColor('g'.parseColor())
 }

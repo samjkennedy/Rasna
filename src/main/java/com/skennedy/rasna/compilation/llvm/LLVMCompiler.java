@@ -27,6 +27,7 @@ import static com.skennedy.rasna.typebinding.BuiltInFunctions.CLOSE;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.OPEN;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.OPEN_R;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.READ_CHAR;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.READ_IN;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.WRITE_CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
@@ -425,6 +426,24 @@ public class LLVMCompiler {
                 }
 
                 scope.declareFunction(CLOSE, close);
+            }  else if (builtInFunction == READ_IN) {
+//
+//                LLVMValueRef scanf = LLVMAddFunction(module, "scanf", LLVMFunctionType(i8Type, new PointerPointer(0), 0, 0));
+//                LLVMValueRef readIn = LLVMAddFunction(module, "readIn", LLVMFunctionType(getLlvmTypeRef(CHAR, context), new PointerPointer(0), 0, 0));
+//
+//                LLVMSetFunctionCallConv(readIn, LLVMCCallConv);
+//                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, readIn, "entry");
+//                LLVMPositionBuilderAtEnd(builder, entry);
+//
+//                LLVMBuildRet(builder, LLVMBuildCall(builder, scanf, new PointerPointer(0), 0, "readIn"));
+//
+//                if (LLVMVerifyFunction(readIn, LLVMPrintMessageAction) != 0) {
+//                    log.error("Error when validating readIn function:");
+//                    LLVMDumpModule(module);
+//                    System.exit(1);
+//                }
+//
+//                scope.declareFunction(READ_IN, readIn);
             } else {
                 throw new UnsupportedOperationException("Built in function `" + builtInFunction.getSignature() + "` has not been implemented in LLVM");
             }
@@ -1376,7 +1395,8 @@ public class LLVMCompiler {
             PointerPointer<Pointer> printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%s", "str"))
                     .put(1, val);
-            return LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+            LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+            return null;
         }
 
         LLVMValueRef res = visit(printExpression.getExpression(), builder, context, function);
@@ -1394,7 +1414,8 @@ public class LLVMCompiler {
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%.*s", "str"))
                     .put(1, size)
                     .put(2, string);
-            return LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
+            LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
+            return null;
         } else if (printExpression.getExpression().getType() == CHAR) {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%c", "real"))
@@ -1406,7 +1427,8 @@ public class LLVMCompiler {
         } else if (printExpression.getExpression().getType() == BOOL) {
             printArgs = new PointerPointer<>(1)
                     .put(0, res);
-            return LLVMBuildCall(builder, printB, printArgs, 1, "");
+            LLVMBuildCall(builder, printB, printArgs, 1, "");
+            return null;
         } else if (printExpression.getExpression().getType() instanceof EnumTypeSymbol) {
             printArgs = new PointerPointer<>(1)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%d\n", "str")) //TODO: Need to associate the name with the ordinal. A struct? struct Color { int ord; char* name; }?
@@ -1417,7 +1439,8 @@ public class LLVMCompiler {
                     .put(1, res);
         }
 
-        return LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+        LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+        return null;
     }
 
     private void visitMainMethod(BoundFunctionDeclarationExpression mainMethodDeclaration, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
