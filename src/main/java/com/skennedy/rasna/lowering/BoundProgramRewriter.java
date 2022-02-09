@@ -270,18 +270,18 @@ public abstract class BoundProgramRewriter {
     private BoundExpression rewriteReturnCall(BoundReturnExpression returnExpression) {
         BoundExpression returnValue = rewriteExpression(returnExpression.getReturnValue());
 
-        if (returnExpression.getReturnValue() instanceof BoundIfExpression) {
-
-            List<BoundExpression> expressions = (flatten(new BoundBlockExpression(returnValue))).getExpressions();
-
-            for (int i = 0; i < expressions.size(); i++) {
-                BoundExpression expression = expressions.get(i);
-                if (expression instanceof BoundLiteralExpression) {
-                    expressions.set(i, new BoundReturnExpression(expression));
-                }
-            }
-            return new BoundBlockExpression(expressions);
-        }
+//        if (returnExpression.getReturnValue() instanceof BoundIfExpression) {
+//
+//            List<BoundExpression> expressions = (flatten(new BoundBlockExpression(returnValue))).getExpressions();
+//
+//            for (int i = 0; i < expressions.size(); i++) {
+//                BoundExpression expression = expressions.get(i);
+//                if (expression instanceof BoundLiteralExpression) {
+//                    expressions.set(i, new BoundReturnExpression(expression));
+//                }
+//            }
+//            return new BoundBlockExpression(expressions);
+//        }
 
         if (returnValue != returnExpression.getReturnValue()) {
             return new BoundReturnExpression(returnValue);

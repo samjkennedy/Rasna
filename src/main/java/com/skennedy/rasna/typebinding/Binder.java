@@ -784,6 +784,9 @@ public class Binder {
     }
 
     private TypeSymbol getTypeSymbol(IdentifierExpression identifier) {
+        if (identifier == null) {
+            return UNIT;
+        }
         TypeSymbol typeSymbol;
         switch (identifier.getTokenType()) {
             case UNIT_KEYWORD:
@@ -1172,7 +1175,12 @@ public class Binder {
                 }
 
                 GenericTypeSymbol genericType = new GenericTypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
-                currentScope.declareType((String) generic.getValue(), genericType);
+
+                try {
+                    currentScope.declareType((String) generic.getValue(), genericType);
+                } catch (TypeAlreadyDeclaredException tade) {
+                    errors.add(BindingError.raiseTypeAlreadyDeclared((String) generic.getValue(), generic.getSpan()));
+                }
                 List<TypeExpression> constraints = ((TypeParameterExpression) genericParam).getConstraints();
                 for (TypeExpression constraint : constraints) {
                     TypeSymbol constraintType = getTypeSymbol(getTypeIdentifier(constraint));
@@ -1195,7 +1203,11 @@ public class Binder {
                                 .map(BoundFunctionParameterExpression::getType)
                                 .map(Object::toString)
                                 .collect(Collectors.toList());
-                        currentScope.declareFunction(buildSignature(functionSignatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
+                        try {
+                            currentScope.declareFunction(buildSignature(functionSignatureExpression.getIdentifier(), argumentIdentifiers), interfaceFunction);
+                        } catch (FunctionAlreadyDeclaredException fade) {
+                            errors.add(BindingError.raiseFunctionAlreadyDeclared(functionSignatureExpression.getIdentifier(), constraint.getSpan()));
+                        }
                     }
                 }
             }
@@ -1586,6 +1598,9 @@ public class Binder {
 
     private IdentifierExpression getTypeIdentifier(TypeExpression typeExpression) {
 
+        if (typeExpression == null) {
+            return null;
+        }
         if (typeExpression.getTypeExpression() instanceof IdentifierExpression) {
             return (IdentifierExpression) typeExpression.getTypeExpression();
         }
