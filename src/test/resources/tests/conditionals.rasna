@@ -1,8 +1,6 @@
+//Purposefully obtuse to check nested ternaries
 fn max(a: Int, b: Int): Int {
-    if (a > b) {
-        return a
-    }
-    return b
+    return if (a > b) a else if (a == b) a else b
 }
 
 fn puti(i: Int) {

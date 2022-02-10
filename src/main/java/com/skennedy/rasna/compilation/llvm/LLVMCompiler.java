@@ -27,6 +27,7 @@ import static com.skennedy.rasna.typebinding.BuiltInFunctions.CLOSE;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.OPEN;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.OPEN_R;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.READ_CHAR;
+import static com.skennedy.rasna.typebinding.BuiltInFunctions.READ_IN;
 import static com.skennedy.rasna.typebinding.BuiltInFunctions.WRITE_CHAR;
 import static com.skennedy.rasna.typebinding.TypeSymbol.BOOL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.CHAR;
@@ -36,6 +37,7 @@ import static com.skennedy.rasna.typebinding.TypeSymbol.REAL;
 import static com.skennedy.rasna.typebinding.TypeSymbol.STRING;
 import static com.skennedy.rasna.typebinding.TypeSymbol.UNIT;
 import static org.bytedeco.llvm.global.LLVM.LLVMAddFunction;
+import static org.bytedeco.llvm.global.LLVM.LLVMAddIncoming;
 import static org.bytedeco.llvm.global.LLVM.LLVMAppendBasicBlockInContext;
 import static org.bytedeco.llvm.global.LLVM.LLVMArrayType;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildAdd;
@@ -61,6 +63,7 @@ import static org.bytedeco.llvm.global.LLVM.LLVMBuildMemSet;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildMul;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildNot;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildOr;
+import static org.bytedeco.llvm.global.LLVM.LLVMBuildPhi;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRet;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildRetVoid;
 import static org.bytedeco.llvm.global.LLVM.LLVMBuildSDiv;
@@ -423,6 +426,24 @@ public class LLVMCompiler {
                 }
 
                 scope.declareFunction(CLOSE, close);
+            }  else if (builtInFunction == READ_IN) {
+//
+//                LLVMValueRef scanf = LLVMAddFunction(module, "scanf", LLVMFunctionType(i8Type, new PointerPointer(0), 0, 0));
+//                LLVMValueRef readIn = LLVMAddFunction(module, "readIn", LLVMFunctionType(getLlvmTypeRef(CHAR, context), new PointerPointer(0), 0, 0));
+//
+//                LLVMSetFunctionCallConv(readIn, LLVMCCallConv);
+//                LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, readIn, "entry");
+//                LLVMPositionBuilderAtEnd(builder, entry);
+//
+//                LLVMBuildRet(builder, LLVMBuildCall(builder, scanf, new PointerPointer(0), 0, "readIn"));
+//
+//                if (LLVMVerifyFunction(readIn, LLVMPrintMessageAction) != 0) {
+//                    log.error("Error when validating readIn function:");
+//                    LLVMDumpModule(module);
+//                    System.exit(1);
+//                }
+//
+//                scope.declareFunction(READ_IN, readIn);
             } else {
                 throw new UnsupportedOperationException("Built in function `" + builtInFunction.getSignature() + "` has not been implemented in LLVM");
             }
@@ -875,7 +896,9 @@ public class LLVMCompiler {
         LLVMValueRef val = visit(assignmentExpression.getExpression(), builder, context, function);
         val = dereference(builder, val, "val");
 
-        return LLVMBuildStore(builder, val, ptr);
+        LLVMBuildStore(builder, val, ptr);
+
+        return null;
     }
 
     //TODO: You cannot mutate a function argument - callers should clone and pass a reference
@@ -977,7 +1000,7 @@ public class LLVMCompiler {
     private LLVMValueRef visit(BoundIfExpression ifExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         if (ifExpression.getElseBody() == null) {
-            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.then");
+            LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.true");
             LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
 
             LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
@@ -986,9 +1009,7 @@ public class LLVMCompiler {
 
             LLVMPositionBuilderAtEnd(builder, thenBlock);
             LLVMValueRef thenVal = visit(ifExpression.getBody(), builder, context, function);
-            if (thenVal == null) {
-                throw new IllegalStateException("ThenVal must not be null");
-            }
+            thenBlock = LLVMGetInsertBlock(builder);
             LLVMValueRef terminator = LLVMGetBasicBlockTerminator(thenBlock);
             if (terminator == null) {
                 LLVMBuildBr(builder, endBlock);
@@ -997,46 +1018,9 @@ public class LLVMCompiler {
             return thenVal;
         }
 
-
-        /*
-        define dso_local i32 @main() #0 {
-        entry:
-          %retval = alloca i32, align 4
-          %n = alloca i32, align 4
-          store i32 0, i32* %retval, align 4
-          store i32 1, i32* %n, align 4
-          %0 = load i32, i32* %n, align 4
-          %cmp = icmp eq i32 %0, 0
-          br i1 %cmp, label %if.then, label %if.else
-
-        if.then:                                          ; preds = %entry
-          %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03OFAPEBGM@?$CFs?6?$AA@", i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @"??_C@_04PCJGBDOP@Zero?$AA@", i64 0, i64 0))
-          br label %if.end6
-
-        if.else:                                          ; preds = %entry
-          %1 = load i32, i32* %n, align 4
-          %cmp1 = icmp eq i32 %1, 1
-          br i1 %cmp1, label %if.then2, label %if.else4
-
-        if.then2:                                         ; preds = %if.else
-          %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03OFAPEBGM@?$CFs?6?$AA@", i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03EHAPBBEA@One?$AA@", i64 0, i64 0))
-          br label %if.end
-
-        if.else4:                                         ; preds = %if.else
-          %call5 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"??_C@_03OFAPEBGM@?$CFs?6?$AA@", i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @"??_C@_07NBCGADJA@Unknown?$AA@", i64 0, i64 0))
-          br label %if.end
-
-        if.end:                                           ; preds = %if.else4, %if.then2
-          br label %if.end6
-
-        if.end6:                                          ; preds = %if.end, %if.then
-          %2 = load i32, i32* %retval, align 4
-          ret i32 %2
-        }
-         */
-        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "if.then");
-        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "if.else");
-        LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "if.end");
+        LLVMBasicBlockRef thenBlock = LLVMAppendBasicBlockInContext(context, function, "cond.true");
+        LLVMBasicBlockRef elseBlock = LLVMAppendBasicBlockInContext(context, function, "cond.false");
+        LLVMBasicBlockRef endBlock = LLVMAppendBasicBlockInContext(context, function, "cond.end");
 
         LLVMValueRef condition = visit(ifExpression.getCondition(), builder, context, function);
         condition = dereference(builder, condition, "");
@@ -1053,14 +1037,27 @@ public class LLVMCompiler {
 
         LLVMPositionBuilderAtEnd(builder, elseBlock);
         LLVMValueRef elseVal = visit(ifExpression.getElseBody(), builder, context, function);
+        elseBlock = LLVMGetInsertBlock(builder);
 
         LLVMBuildBr(builder, endBlock);
         LLVMPositionBuilderAtEnd(builder, endBlock);
 
-        if (elseVal != null && thenVal != null) {
-            //return LLVMBuildSelect(builder, condition, thenVal, elseVal, "");
+        if (thenVal == null || elseVal == null) {
+            return null;
         }
-        return null;
+        if (LLVMGetTypeKind(LLVMTypeOf(thenVal)) != LLVMGetTypeKind(LLVMTypeOf(elseVal))) {
+            return null;
+        }
+
+        LLVMValueRef phi = LLVMBuildPhi(builder, getLlvmTypeRef(ifExpression.getType(), context), "");
+        PointerPointer<Pointer> phiValues = new PointerPointer<>(2)
+                .put(0, thenVal)
+                .put(1, elseVal);
+        PointerPointer<Pointer> phiBlocks = new PointerPointer<>(2)
+                .put(0, thenBlock)
+                .put(1, elseBlock);
+        LLVMAddIncoming(phi, phiValues, phiBlocks, 2);
+        return phi;
     }
 
     private LLVMValueRef visit(BoundVariableDeclarationExpression variableDeclarationExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -1398,7 +1395,8 @@ public class LLVMCompiler {
             PointerPointer<Pointer> printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%s", "str"))
                     .put(1, val);
-            return LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+            LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+            return null;
         }
 
         LLVMValueRef res = visit(printExpression.getExpression(), builder, context, function);
@@ -1416,7 +1414,8 @@ public class LLVMCompiler {
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%.*s", "str"))
                     .put(1, size)
                     .put(2, string);
-            return LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
+            LLVMBuildCall(builder, printf, printArgs, 3, "printcall");
+            return null;
         } else if (printExpression.getExpression().getType() == CHAR) {
             printArgs = new PointerPointer<>(2)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%c", "real"))
@@ -1428,7 +1427,8 @@ public class LLVMCompiler {
         } else if (printExpression.getExpression().getType() == BOOL) {
             printArgs = new PointerPointer<>(1)
                     .put(0, res);
-            return LLVMBuildCall(builder, printB, printArgs, 1, "");
+            LLVMBuildCall(builder, printB, printArgs, 1, "");
+            return null;
         } else if (printExpression.getExpression().getType() instanceof EnumTypeSymbol) {
             printArgs = new PointerPointer<>(1)
                     .put(0, LLVMBuildGlobalStringPtr(builder, "%d\n", "str")) //TODO: Need to associate the name with the ordinal. A struct? struct Color { int ord; char* name; }?
@@ -1439,7 +1439,8 @@ public class LLVMCompiler {
                     .put(1, res);
         }
 
-        return LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+        LLVMBuildCall(builder, printf, printArgs, 2, "printcall");
+        return null;
     }
 
     private void visitMainMethod(BoundFunctionDeclarationExpression mainMethodDeclaration, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
@@ -1506,7 +1507,13 @@ public class LLVMCompiler {
     private LLVMValueRef visit(BoundReturnExpression returnExpression, LLVMBuilderRef builder, LLVMContextRef context, LLVMValueRef function) {
 
         LLVMValueRef retVal = visit(returnExpression.getReturnValue(), builder, context, function);
+        LLVMBasicBlockRef lastBlock = LLVMGetInsertBlock(builder);
+
         retVal = dereference(builder, retVal, "retVal");
+        if (lastBlock != null) {
+            LLVMPositionBuilderAtEnd(builder, lastBlock);
+        }
+
         LLVMBuildStore(builder, retVal, returnStack.peek());
         return LLVMBuildBr(builder, returnBlocks.peek());
     }

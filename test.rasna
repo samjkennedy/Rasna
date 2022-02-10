@@ -1,0 +1,28 @@
+enum Color {
+    Red
+    Green
+    Blue
+    Unknown
+}
+
+fn parseColor(c: Char): Color {
+    return match (c) {
+        'r' => Color.Red
+        'g' => Color.Green
+        'b' => Color.Blue
+        else => Color.Unknown
+    }
+}
+
+fn printColor(c: Color) {
+    match (c) {
+        Color.Red => print("Red\n")
+        Color.Green => print("Green\n")
+        Color.Blue => print("Blue\n")
+        Color.Unknown => print("Unknown\n")
+    }
+}
+
+fn main() {
+    printColor('g'.parseColor())
+}
