@@ -31,7 +31,7 @@ fn main() {
         book->read()
     }
 
-    with (f := open("test.rasna")) {
+    with (f := open("src/test/resources/tests/with_resources.rasna")) {
         c := f.readChar()
         while (c != ((-1) as Char)) {
             print(c)
