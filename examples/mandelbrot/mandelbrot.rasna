@@ -77,12 +77,6 @@ fn toColor(i: Int): Color {
     return Color{r, g, b}
 }
 
-fn writeStr(f: File, s: String) {
-    for (c in s) {
-        f.writeChar(c)
-    }
-}
-
 fn reverse(i: Int): Int {
     r: Int = 0
     sum: Int = 0
@@ -95,26 +89,32 @@ fn reverse(i: Int): Int {
     return sum
 }
 
-fn writeInt(f: File, i: Int) {
+fn write(f: File, i: Int) {
     if (i == 0) {
-        f.writeChar('0')
+        f.write('0')
         return ()
     }
     n := reverse(i)
     while (n > 0) {
         r := n mod 10
-        f.writeChar((r + 48) as Char)
+        f.write((r + 48) as Char)
         n = n / 10
     }
 }
 
-fn writeCol(f: File, col: Color, maxVal: Int) {
-    f.writeInt((col.r * maxVal) as Int)
-    f.writeChar(' ')
-    f.writeInt((col.g * maxVal) as Int)
-    f.writeChar(' ')
-    f.writeInt((col.b * maxVal) as Int)
-    f.writeChar('\n')
+fn write(f: File, s: String) {
+    for (c in s) {
+        f.write(c)
+    }
+}
+
+fn write(f: File, col: Color, maxVal: Int) {
+    f.write((col.r * maxVal) as Int)
+    f.write(' ')
+    f.write((col.g * maxVal) as Int)
+    f.write(' ')
+    f.write((col.b * maxVal) as Int)
+    f.write('\n')
 }
 
 fn main() {
@@ -123,23 +123,25 @@ fn main() {
     const HEIGHT := 128
     const MAX_VAL := 255
 
-    f := open("uv.ppm", "w")
-    f.writeStr(FORMAT)
-    f.writeChar('\n')
-    f.writeInt(WIDTH)
-    f.writeChar('\n')
-    f.writeInt(HEIGHT)
-    f.writeChar('\n')
-    f.writeInt(MAX_VAL)
-    f.writeChar('\n')
+    with (f := open("uv.ppm", "w")) {
+        f.write(FORMAT)
+        f.write('\n')
+        f.write(WIDTH)
+        f.write('\n')
+        f.write(HEIGHT)
+        f.write('\n')
+        f.write(MAX_VAL)
+        f.write('\n')
 
-    yStep := 2. / HEIGHT
-    xStep := 2.5 / WIDTH
+        yStep := 2. / HEIGHT
+        xStep := 2.5 / WIDTH
 
-    for (y := -1.0 to 1.05 by yStep) {
-        for (x := -2.0 to 0.5 by xStep) {
-            f.writeCol(mandelbrot(Complex{x, y}).toColor(), MAX_VAL)
+        for (y := -1.0 to 1.05 by yStep) {
+            for (x := -2.0 to 0.5 by xStep) {
+                f.write(mandelbrot(Complex{x, y}).toColor(), MAX_VAL)
+            }
         }
+    } defer {
+        f.close()
     }
-    f.close()
 }

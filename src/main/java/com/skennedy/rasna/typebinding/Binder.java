@@ -57,6 +57,25 @@ public class Binder {
                         .map(BoundFunctionParameterExpression::getType)
                         .map(TypeSymbol::toString)
                         .collect(Collectors.toList())), function));
+
+        //What a nightmare
+        InterfaceTypeSymbol.getBuiltinInterfaces().stream().peek(i -> i.getSignatures().forEach(sig -> {
+            List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
+            VariableSymbol self = new VariableSymbol("self", i, null, true, null);
+            functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
+            functionParameterExpressions.addAll(sig.getFunctionParameterExpressions());
+
+            FunctionSymbol interfaceFunction = new FunctionSymbol(sig.getIdentifier(), sig.getReturnType(), functionParameterExpressions, null);
+
+            List<String> argumentIdentifiers = functionParameterExpressions.stream()
+                    .map(BoundFunctionParameterExpression::getArgument)
+                    .map(VariableSymbol::getType)
+                    .map(TypeSymbol::toString)
+                    .collect(Collectors.toList());
+            currentScope.declareFunction(buildSignature(sig.getIdentifier(), argumentIdentifiers), interfaceFunction);
+        })).forEach(i -> currentScope.declareType(i.getName(), i));
+
+        int i = 0;
     }
 
     public BoundProgram bind(Program program) {
@@ -1174,7 +1193,7 @@ public class Binder {
                     continue;
                 }
 
-                GenericTypeSymbol genericType = new GenericTypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
+                GenericTypeSymbol genericType = new GenericTypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
 
                 try {
                     currentScope.declareType((String) generic.getValue(), genericType);

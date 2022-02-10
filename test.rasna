@@ -1,28 +1,19 @@
-enum Color {
-    Red
-    Green
-    Blue
-    Unknown
+struct Book {
+    page: String
+    open: Bool
 }
 
-fn parseColor(c: Char): Color {
-    return match (c) {
-        'r' => Color.Red
-        'g' => Color.Green
-        'b' => Color.Blue
-        else => Color.Unknown
-    }
+fn Book(): Book {
+    return Book{"", true}
 }
 
-fn printColor(c: Color) {
-    match (c) {
-        Color.Red => print("Red\n")
-        Color.Green => print("Green\n")
-        Color.Blue => print("Blue\n")
-        Color.Unknown => print("Unknown\n")
-    }
+fn close(ref book: Book): Bool {
+    book.open = false
+    print("Book closed")
+    return true
 }
 
 fn main() {
-    printColor('g'.parseColor())
+    book := Book()
+    book->close()
 }

@@ -13,7 +13,7 @@ public class BuiltInFunctions {
     public static FunctionSymbol OPEN_R = new FunctionSymbol("open", TypeSymbol.FILE, Collections.singletonList(buildArg("filename", TypeSymbol.STRING)), null);
     public static FunctionSymbol OPEN = new FunctionSymbol("open", TypeSymbol.FILE, Arrays.asList(buildArg("filename", TypeSymbol.STRING), buildArg("mode", TypeSymbol.STRING)), null);
     public static FunctionSymbol READ_CHAR = new FunctionSymbol("readChar", TypeSymbol.CHAR, Collections.singletonList(buildArg("file", TypeSymbol.FILE)), null);
-    public static FunctionSymbol WRITE_CHAR = new FunctionSymbol("writeChar", TypeSymbol.UNIT, Arrays.asList(buildArg("file", TypeSymbol.FILE), buildArg("c", TypeSymbol.CHAR)), null);
+    public static FunctionSymbol WRITE_CHAR = new FunctionSymbol("write", TypeSymbol.UNIT, Arrays.asList(buildArg("file", TypeSymbol.FILE), buildArg("c", TypeSymbol.CHAR)), null);
     public static FunctionSymbol CLOSE = new FunctionSymbol("close", TypeSymbol.BOOL, Collections.singletonList(buildArg("file", TypeSymbol.FILE)), null);
 
     private static BoundFunctionParameterExpression buildArg(String name, TypeSymbol type) {
