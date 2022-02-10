@@ -4,6 +4,7 @@ import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.parsing.BlockExpression;
 import com.skennedy.rasna.parsing.Expression;
 import com.skennedy.rasna.parsing.FunctionDeclarationExpression;
+import com.skennedy.rasna.parsing.model.ExpressionType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -114,7 +115,9 @@ public class FunctionAnalyser {
                 errors.add(BindingError.raiseUnreachableExpression(expressions.get(i).getSpan()));
             }
             if (boundExpression.getBoundExpressionType() == BoundExpressionType.BLOCK) {
-                errors.addAll(analyzeBlock((BoundBlockExpression) boundExpression, (BlockExpression) expressions.get(i), returnType));
+                if (expressions.get(i).getExpressionType() == ExpressionType.BLOCK_EXPR) {
+                    errors.addAll(analyzeBlock((BoundBlockExpression) boundExpression, (BlockExpression) expressions.get(i), returnType));
+                }
             }
         }
         return errors;

@@ -173,12 +173,25 @@ public class Parser {
                 return parseInterface();
             case ARRAY_KEYWORD:
                 return parseArrayDeclarationExpression();
+            case WITH_KEYWORD:
+                return parseWithBlockExpression();
             case EOF_TOKEN:
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
                 return new NoOpExpression();
         }
+    }
+
+    private Expression parseWithBlockExpression() {
+
+        IdentifierExpression withKeyword = matchToken(TokenType.WITH_KEYWORD);
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+        VariableDeclarationExpression resource = parseVariableDeclarationExpression();
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+        BlockExpression body = parseBlockExpression();
+
+        return new WithBlockExpression(withKeyword, openParen, resource, closeParen, body);
     }
 
     private Expression parseArrayDeclarationExpression() {

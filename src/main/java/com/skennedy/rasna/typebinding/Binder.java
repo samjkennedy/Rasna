@@ -168,9 +168,36 @@ public class Binder {
                 return bindInterface((InterfaceExpression) expression);
             case FUNC_CALL_PARAM_EXPR:
                 return bind(((FunctionCallArgumentExpression) expression).getExpression());
+            case WITH_BLOCK_EXPR:
+                return bindWithBlockExpression((WithBlockExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindWithBlockExpression(WithBlockExpression withBlockExpression) {
+        BoundExpression boundResource = bind(withBlockExpression.getResource());
+
+        if (boundResource.getBoundExpressionType() != BoundExpressionType.VARIABLE_DECLARATION) {
+            errors.add(BindingError.raise("Resource in a `with` declaration must be a variable declaration expression", withBlockExpression.getResource().getSpan()));
+        }
+
+        BoundVariableDeclarationExpression boundVariableDeclarationExpression = (BoundVariableDeclarationExpression) boundResource;
+        Optional<FunctionSymbol> close = currentScope.tryLookupFunction(buildSignature("close", Collections.singletonList(boundResource.getType().getName())));
+        if (close.isEmpty()) {
+            errors.add(BindingError.raise("Resource `" + boundVariableDeclarationExpression.getVariable().getName() + "` in  `with` declaration must inherit the `Closable` interface", withBlockExpression.getResource().getIdentifier().getSpan()));
+            return new BoundErrorExpression();
+        }
+        BoundExpression boundBody = bind(withBlockExpression.getBody());
+
+        BoundFunctionCallExpression closeCallExpression = new BoundFunctionCallExpression(close.get(), Collections.singletonList(new BoundVariableExpression(boundVariableDeclarationExpression.getVariable())));
+
+        List<BoundExpression> withBlockExpressions = new ArrayList<>();
+        withBlockExpressions.add(boundVariableDeclarationExpression);
+        withBlockExpressions.addAll(((BoundBlockExpression)boundBody).getExpressions());
+        withBlockExpressions.add(closeCallExpression);
+
+        return new BoundBlockExpression(withBlockExpressions);
     }
 
     private BoundExpression bindInterface(InterfaceExpression interfaceExpression) {

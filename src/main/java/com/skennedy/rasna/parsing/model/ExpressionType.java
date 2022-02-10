@@ -35,9 +35,9 @@ public enum ExpressionType {
     NAMESPACE,
     NAMESPACE_ACCESSOR_EXPR,
     NOOP,
+    OPEN_INTR,
     PARENTHESISED_EXPR,
     PRINT_EXPR,
-    OPEN_INTR,
     RANGE_EXPR,
     RETURN_EXPR,
     STRUCT_DECLARATION_EXPR,
@@ -49,7 +49,8 @@ public enum ExpressionType {
     TYPE_TEST_EXPR,
     UNARY_EXPR,
     VAR_DECLARATION_EXPR,
-    WHILE_EXPR
+    WHILE_EXPR,
+    WITH_BLOCK_EXPR
 
 
 }

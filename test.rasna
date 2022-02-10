@@ -1,19 +1,41 @@
 struct Book {
     page: String
-    open: Bool
+    closed: Bool
 }
 
 fn Book(): Book {
-    return Book{"", true}
+    return Book{"", false}
+}
+
+fn write(ref book: Book, str: String) {
+    if (book.closed) {
+        print("Book is closed for writing\n")
+        return()
+    }
+    book.page = str
+}
+
+fn read(ref book: Book) {
+    print(book.page)
 }
 
 fn close(ref book: Book): Bool {
-    book.open = false
-    print("Book closed")
+    book.closed = true
+    print("Book closed\n")
     return true
 }
 
 fn main() {
-    book := Book()
-    book->close()
+    with (book := Book()) {
+        book->write("Hello world!\n")
+        book->read()
+    }
+//
+//    with (f := open("test.rasna")) {
+//        c := f.readChar()
+//        while (c != ((-1) as Char)) {
+//            print(c)
+//            c = f.readChar()
+//        }
+//    }
 }
