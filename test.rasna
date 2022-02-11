@@ -25,11 +25,18 @@ fn close(ref book: Book): Bool {
     return true
 }
 
+fn flush(ref c: Closable) {
+    c->close()
+}
+
+
 fn main() {
-    with (book := Book()) {
-        book->write("Hello world!\n")
-        book->read()
-    }
+    book := Book()
+    book->write("Hello world!\n")
+    book->read()
+    book->flush()
+    book->write("Goodbye world!\n")
+    book->read()
 
     with (f := open("test.rasna")) {
         c := f.readChar()

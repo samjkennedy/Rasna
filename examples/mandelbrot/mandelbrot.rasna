@@ -141,7 +141,5 @@ fn main() {
                 f.write(mandelbrot(Complex{x, y}).toColor(), MAX_VAL)
             }
         }
-    } defer {
-        f.close()
     }
 }
