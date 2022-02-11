@@ -212,7 +212,7 @@ public class Binder {
 
             List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
             VariableSymbol self = new VariableSymbol("self", tempType, null, true, null);
-            functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
+            functionParameterExpressions.add(new BoundFunctionParameterExpression(signatureExpression.getRefKeyword() != null, self, null));
             functionParameterExpressions.addAll(functionSignatureExpression.getFunctionParameterExpressions());
 
             FunctionSymbol interfaceFunction = new FunctionSymbol(functionSignatureExpression.getIdentifier(), functionSignatureExpression.getReturnType(), functionParameterExpressions, null);

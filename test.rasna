@@ -1,48 +1,46 @@
-struct Book {
-    page: String
-    closed: Bool
+interface Stack {
+    ref push(el: Int)
+    ref pop(): Int
+    isEmpty(): Bool
 }
 
-fn Book(): Book {
-    return Book{"", false}
+struct ArrayStack {
+    stack: Int[]
+    head: Int
 }
 
-fn write(ref book: Book, str: String) {
-    if (book.closed) {
-        print("Book is closed for writing\n")
-        return()
+fn NewStack(): ArrayStack {
+    return ArrayStack{Array[128, Int], 0}
+}
+
+fn push(ref stack: ArrayStack, el: Int) {
+    stack.stack[stack.head] = el
+    stack.head = stack.head + 1
+}
+
+fn pop(ref stack: ArrayStack): Int {
+    stack.head = stack.head - 1
+    el := stack.stack[stack.head]
+    return el
+}
+
+fn isEmpty(stack: ArrayStack): Bool {
+    return stack.head == 0
+}
+
+fn empty(ref stack: Stack) {
+    while (not stack.isEmpty()) {
+        stack->pop()
     }
-    book.page = str
 }
-
-fn read(ref book: Book) {
-    print(book.page)
-}
-
-fn close(ref book: Book): Bool {
-    book.closed = true
-    print("Book closed\n")
-    return true
-}
-
-fn flush(ref c: Closable) {
-    c->close()
-}
-
 
 fn main() {
-    book := Book()
-    book->write("Hello world!\n")
-    book->read()
-    book->flush()
-    book->write("Goodbye world!\n")
-    book->read()
+    stack := NewStack()
 
-    with (f := open("test.rasna")) {
-        c := f.readChar()
-        while (c != ((-1) as Char)) {
-            print(c)
-            c = f.readChar()
-        }
-    }
+    stack->push(1)
+    stack->push(2)
+    stack->push(3)
+    print(stack.isEmpty())
+    stack->empty()
+    print(stack.isEmpty())
 }
