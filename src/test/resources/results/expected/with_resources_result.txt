@@ -1,3 +1,5 @@
+Hello world!
+Book closed
 struct Book {
     page: String
     closed: Bool
@@ -61,3 +63,8 @@ fn main() {
     print(returnInWith(1))
     print(returnInWith(2))
 }
+Closing foo
+false
+Closing foo
+Exited `with` normally
+true

@@ -57,6 +57,25 @@ public class Binder {
                         .map(BoundFunctionParameterExpression::getType)
                         .map(TypeSymbol::toString)
                         .collect(Collectors.toList())), function));
+
+        //What a nightmare
+        InterfaceTypeSymbol.getBuiltinInterfaces().stream().peek(i -> i.getSignatures().forEach(sig -> {
+            List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
+            VariableSymbol self = new VariableSymbol("self", i, null, true, null);
+            functionParameterExpressions.add(new BoundFunctionParameterExpression(true, self, null));
+            functionParameterExpressions.addAll(sig.getFunctionParameterExpressions());
+
+            FunctionSymbol interfaceFunction = new FunctionSymbol(sig.getIdentifier(), sig.getReturnType(), functionParameterExpressions, null);
+
+            List<String> argumentIdentifiers = functionParameterExpressions.stream()
+                    .map(BoundFunctionParameterExpression::getArgument)
+                    .map(VariableSymbol::getType)
+                    .map(TypeSymbol::toString)
+                    .collect(Collectors.toList());
+            currentScope.declareFunction(buildSignature(sig.getIdentifier(), argumentIdentifiers), interfaceFunction);
+        })).forEach(i -> currentScope.declareType(i.getName(), i));
+
+        int i = 0;
     }
 
     public BoundProgram bind(Program program) {
@@ -149,9 +168,31 @@ public class Binder {
                 return bindInterface((InterfaceExpression) expression);
             case FUNC_CALL_PARAM_EXPR:
                 return bind(((FunctionCallArgumentExpression) expression).getExpression());
+            case WITH_BLOCK_EXPR:
+                return bindWithBlockExpression((WithBlockExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getExpressionType());
         }
+    }
+
+    private BoundExpression bindWithBlockExpression(WithBlockExpression withBlockExpression) {
+        BoundExpression boundResource = bind(withBlockExpression.getResource());
+
+        if (boundResource.getBoundExpressionType() != BoundExpressionType.VARIABLE_DECLARATION) {
+            errors.add(BindingError.raise("Resource in a `with` declaration must be a variable declaration expression", withBlockExpression.getResource().getSpan()));
+        }
+
+        BoundVariableDeclarationExpression boundVariableDeclarationExpression = (BoundVariableDeclarationExpression) boundResource;
+        Optional<FunctionSymbol> close = currentScope.tryLookupFunction(buildSignature("close", Collections.singletonList(boundResource.getType().getName())));
+        if (close.isEmpty()) {
+            errors.add(BindingError.raise("Resource `" + boundVariableDeclarationExpression.getVariable().getName() + "` in  `with` declaration must inherit the `Closable` interface", withBlockExpression.getResource().getIdentifier().getSpan()));
+            return new BoundErrorExpression();
+        }
+        BoundBlockExpression boundBody = bindBlockExpression(withBlockExpression.getBody());
+
+        BoundFunctionCallExpression closeCallExpression = new BoundFunctionCallExpression(close.get(), Collections.singletonList(new BoundVariableExpression(boundVariableDeclarationExpression.getVariable())));
+
+        return new BoundWithBlockExpression(boundVariableDeclarationExpression, boundBody, closeCallExpression);
     }
 
     private BoundExpression bindInterface(InterfaceExpression interfaceExpression) {
@@ -166,7 +207,7 @@ public class Binder {
 
             List<BoundFunctionParameterExpression> functionParameterExpressions = new ArrayList<>();
             VariableSymbol self = new VariableSymbol("self", tempType, null, true, null);
-            functionParameterExpressions.add(new BoundFunctionParameterExpression(false, self, null));
+            functionParameterExpressions.add(new BoundFunctionParameterExpression(signatureExpression.getRefKeyword() != null, self, null));
             functionParameterExpressions.addAll(functionSignatureExpression.getFunctionParameterExpressions());
 
             FunctionSymbol interfaceFunction = new FunctionSymbol(functionSignatureExpression.getIdentifier(), functionSignatureExpression.getReturnType(), functionParameterExpressions, null);
@@ -411,34 +452,58 @@ public class Binder {
             //UFCS https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax
             FunctionCallExpression functionCallExpression = (FunctionCallExpression) member;
 
-            List<String> argumentTypes = new ArrayList<>();
-            argumentTypes.add(boundOwner.getType().getName());
+
+            List<BoundExpression> boundArguments = new ArrayList<>();
+            boundArguments.add(boundOwner);
             functionCallExpression.getArguments().stream()
-                    .map(this::bind)
+                    .map(this::bind).forEach(boundArguments::add);
+
+            List<String> argumentTypes = new ArrayList<>();
+            boundArguments.stream()
                     .map(BoundExpression::getType)
                     .map(TypeSymbol::getName)
                     .forEach(argumentTypes::add);
 
-            Optional<FunctionSymbol> function = currentScope.tryLookupFunction(buildSignature((String) functionCallExpression.getIdentifier().getValue(), argumentTypes));
+            String identifier = (String) functionCallExpression.getIdentifier().getValue();
+            Optional<FunctionSymbol> function = currentScope.tryLookupFunction(buildSignature(identifier, argumentTypes));
             IdentifierExpression dummyRefKeyword = null;
-            if (function.isPresent()) {
-                BoundFunctionParameterExpression firstArg = function.get().getArguments().get(0);
-                if (firstArg.isReference()) {
-                    if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.DOT) {
-                        errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by reference. Perhaps you meant to use `->` instead of `.`", memberAccessorExpression.getAccessor().getSpan()));
-                        return new BoundErrorExpression();
-                    }
-                    //Add the dummy anyway to avoid irrelevant errors
-                    Location dummyLocation = Location.fromOffset(
-                            functionCallExpression.getIdentifier().getSpan().getStart(),
-                            //This looks ridiculous, but it's calculating the start of the member owner
-                            //minus the dot     |                minus the function identifier              |                                                    minus the length of the owner
-                            -1 - ((String) functionCallExpression.getIdentifier().getValue()).length() - (memberAccessorExpression.getOwner().getSpan().getEnd().getColumn() - memberAccessorExpression.getOwner().getSpan().getStart().getColumn()));
-                    dummyRefKeyword = new IdentifierExpression(new Token(TokenType.REF_KEYWORD, dummyLocation), TokenType.REF_KEYWORD, "ref");
-                } else if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.ARROW) {
-                    errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by value. Perhaps you meant to use `.` instead of `->`", memberAccessorExpression.getAccessor().getSpan()));
+            if (function.isEmpty()) {
+                Set<FunctionSymbol> potentialFunctions = currentScope.tryLookupInterfaceFunctions(identifier);
+                if (potentialFunctions.isEmpty()) {
+                    errors.add(BindingError.raiseUnknownFunction(identifier, boundArguments, functionCallExpression.getSpan()));
                     return new BoundErrorExpression();
                 }
+
+                List<FunctionSymbol> compatibleFunctions = potentialFunctions.stream()
+                        .filter(func -> isCompatible(boundArguments, func))
+                        .collect(Collectors.toList());
+                if (compatibleFunctions.isEmpty()) {
+                    errors.add(BindingError.raiseUnknownFunction(identifier, boundArguments, functionCallExpression.getSpan()));
+                    return new BoundErrorExpression();
+                }
+                if (compatibleFunctions.size() > 1) {
+                    throw new IllegalStateException("More than one function with matching signature found");
+                }
+
+                function = Optional.of(compatibleFunctions.get(0));
+            }
+
+            BoundFunctionParameterExpression firstArg = function.get().getArguments().get(0);
+            if (firstArg.isReference()) {
+                if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.DOT) {
+                    errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by reference. Perhaps you meant to use `->` instead of `.`", memberAccessorExpression.getAccessor().getSpan()));
+                    return new BoundErrorExpression();
+                }
+                //Add the dummy anyway to avoid irrelevant errors
+                Location dummyLocation = Location.fromOffset(
+                        functionCallExpression.getIdentifier().getSpan().getStart(),
+                        //This looks ridiculous, but it's calculating the start of the member owner
+                        //minus the dot     |                minus the function identifier              |                                                    minus the length of the owner
+                        -1 - (identifier).length() - (memberAccessorExpression.getOwner().getSpan().getEnd().getColumn() - memberAccessorExpression.getOwner().getSpan().getStart().getColumn()));
+                dummyRefKeyword = new IdentifierExpression(new Token(TokenType.REF_KEYWORD, dummyLocation), TokenType.REF_KEYWORD, "ref");
+            } else if (memberAccessorExpression.getAccessor().getTokenType() == TokenType.ARROW) {
+                errors.add(BindingError.raise("Receiver of function `" + function.get().getSignature() + "` must be accessed by value. Perhaps you meant to use `.` instead of `->`", memberAccessorExpression.getAccessor().getSpan()));
+                return new BoundErrorExpression();
             }
 
             List<FunctionCallArgumentExpression> ufscArgs = new ArrayList<>();
@@ -1174,7 +1239,7 @@ public class Binder {
                     continue;
                 }
 
-                GenericTypeSymbol genericType = new GenericTypeSymbol((String)generic.getValue(), new LinkedHashMap<>());
+                GenericTypeSymbol genericType = new GenericTypeSymbol((String) generic.getValue(), new LinkedHashMap<>());
 
                 try {
                     currentScope.declareType((String) generic.getValue(), genericType);

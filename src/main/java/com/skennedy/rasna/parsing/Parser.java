@@ -173,12 +173,25 @@ public class Parser {
                 return parseInterface();
             case ARRAY_KEYWORD:
                 return parseArrayDeclarationExpression();
+            case WITH_KEYWORD:
+                return parseWithBlockExpression();
             case EOF_TOKEN:
             default:
                 errors.add(Error.raiseUnexpectedToken(current()));
                 matchToken(current().getTokenType());
                 return new NoOpExpression();
         }
+    }
+
+    private Expression parseWithBlockExpression() {
+
+        IdentifierExpression withKeyword = matchToken(TokenType.WITH_KEYWORD);
+        IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
+        VariableDeclarationExpression resource = parseVariableDeclarationExpression();
+        IdentifierExpression closeParen = matchToken(TokenType.CLOSE_PARENTHESIS);
+        BlockExpression body = parseBlockExpression();
+
+        return new WithBlockExpression(withKeyword, openParen, resource, closeParen, body);
     }
 
     private Expression parseArrayDeclarationExpression() {
@@ -226,6 +239,11 @@ public class Parser {
             throw new UnsupportedOperationException("Generic parameters in interfaces are not yet implemented");
         }
 
+        IdentifierExpression refKeyword = null;
+        if (current().getTokenType() == TokenType.REF_KEYWORD) {
+            refKeyword = matchToken(TokenType.REF_KEYWORD);
+        }
+
         IdentifierExpression identifier = matchToken(TokenType.IDENTIFIER);
         IdentifierExpression openParen = matchToken(TokenType.OPEN_PARENTHESIS);
 
@@ -247,7 +265,7 @@ public class Parser {
             typeExpression = parseTypeExpression();
         }
 
-        return new FunctionSignatureExpression(identifier, openParen, argumentExpressions, closeParen, typeExpression);
+        return new FunctionSignatureExpression(refKeyword, identifier, openParen, argumentExpressions, closeParen, typeExpression);
     }
 
     private Expression parseEnumDeclaration() {

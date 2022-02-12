@@ -296,7 +296,7 @@ public class LLVMCompiler {
         for (FunctionSymbol builtInFunction : BuiltInFunctions.getBuiltinFunctions()) {
             if (builtInFunction == READ_CHAR) {
                 LLVMValueRef fgetc = LLVMAddFunction(module, "fgetc", LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
-                LLVMValueRef readChar = LLVMAddFunction(module, "readChar", LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
+                LLVMValueRef readChar = LLVMAddFunction(module, READ_CHAR.getName(), LLVMFunctionType(i8Type, getLlvmTypeRef(FILE, context), 1, 0));
 
                 LLVMSetFunctionCallConv(readChar, LLVMCCallConv);
                 LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, readChar, "entry");
@@ -322,7 +322,7 @@ public class LLVMCompiler {
                         .put(0, getLlvmTypeRef(CHAR, context))
                         .put(1, getLlvmTypeRef(FILE, context)), 2, 0));
 
-                LLVMValueRef writeChar = LLVMAddFunction(module, "writeChar", LLVMFunctionType(LLVMVoidTypeInContext(context), new PointerPointer<>(2)
+                LLVMValueRef writeChar = LLVMAddFunction(module, WRITE_CHAR.getName(), LLVMFunctionType(LLVMVoidTypeInContext(context), new PointerPointer<>(2)
                         .put(0, getLlvmTypeRef(FILE, context))
                         .put(1, getLlvmTypeRef(CHAR, context)), 2, 0));
                 LLVMSetFunctionCallConv(writeChar, LLVMCCallConv);
@@ -350,7 +350,7 @@ public class LLVMCompiler {
                 PointerPointer<Pointer> openTypes = new PointerPointer<>(2)
                         .put(0, getLlvmTypeRef(STRING, context))
                         .put(1, getLlvmTypeRef(STRING, context));
-                LLVMValueRef open = LLVMAddFunction(module, "open", LLVMFunctionType(getLlvmTypeRef(FILE, context), openTypes, 2, 0));
+                LLVMValueRef open = LLVMAddFunction(module, OPEN.getName(), LLVMFunctionType(getLlvmTypeRef(FILE, context), openTypes, 2, 0));
 
                 LLVMSetFunctionCallConv(open, LLVMCCallConv);
                 LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, open, "entry");
@@ -378,7 +378,7 @@ public class LLVMCompiler {
 
                 PointerPointer<Pointer> openTypes = new PointerPointer<>(1)
                         .put(0, getLlvmTypeRef(STRING, context));
-                LLVMValueRef open_r = LLVMAddFunction(module, "open", LLVMFunctionType(getLlvmTypeRef(FILE, context), openTypes, 1, 0));
+                LLVMValueRef open_r = LLVMAddFunction(module, OPEN_R.getName(), LLVMFunctionType(getLlvmTypeRef(FILE, context), openTypes, 1, 0));
 
                 LLVMSetFunctionCallConv(open_r, LLVMCCallConv);
                 LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, open_r, "entry");
@@ -406,7 +406,7 @@ public class LLVMCompiler {
                         .put(0, getLlvmTypeRef(FILE, context));
                 LLVMValueRef fclose = LLVMAddFunction(module, "fclose", LLVMFunctionType(i32Type, closeType, 1, 0));
 
-                LLVMValueRef close = LLVMAddFunction(module, "close", LLVMFunctionType(getLlvmTypeRef(BOOL, context), closeType, 1, 0));
+                LLVMValueRef close = LLVMAddFunction(module, CLOSE.getName(), LLVMFunctionType(getLlvmTypeRef(BOOL, context), closeType, 1, 0));
 
                 LLVMSetFunctionCallConv(close, LLVMCCallConv);
                 LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(context, close, "entry");

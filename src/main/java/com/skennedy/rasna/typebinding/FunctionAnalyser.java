@@ -4,8 +4,11 @@ import com.skennedy.rasna.diagnostics.BindingError;
 import com.skennedy.rasna.parsing.BlockExpression;
 import com.skennedy.rasna.parsing.Expression;
 import com.skennedy.rasna.parsing.FunctionDeclarationExpression;
+import com.skennedy.rasna.parsing.WithBlockExpression;
+import com.skennedy.rasna.parsing.model.ExpressionType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FunctionAnalyser {
@@ -114,7 +117,9 @@ public class FunctionAnalyser {
                 errors.add(BindingError.raiseUnreachableExpression(expressions.get(i).getSpan()));
             }
             if (boundExpression.getBoundExpressionType() == BoundExpressionType.BLOCK) {
-                errors.addAll(analyzeBlock((BoundBlockExpression) boundExpression, (BlockExpression) expressions.get(i), returnType));
+                if (expressions.get(i).getExpressionType() == ExpressionType.BLOCK_EXPR) {
+                    errors.addAll(analyzeBlock((BoundBlockExpression) boundExpression, (BlockExpression) expressions.get(i), returnType));
+                }
             }
         }
         return errors;
@@ -124,14 +129,18 @@ public class FunctionAnalyser {
 
         List<BindingError> errors = new ArrayList<>();
 
+        boolean ret = false;
         for (int i = 0; i < boundBlock.getExpressions().size(); i++) {
             BoundExpression boundExpression = boundBlock.getExpressions().get(i);
             if (boundExpression.getBoundExpressionType() == BoundExpressionType.RETURN) {
+                ret = true;
 
                 BoundReturnExpression returnExpression = (BoundReturnExpression) boundExpression;
                 if (!returnExpression.getType().isAssignableFrom(returnType)) {
                     errors.add(BindingError.raiseTypeMismatch(returnType, returnExpression.getType(), block.getExpressions().get(i).getSpan()));
                 }
+            } else if (ret) {
+                errors.add(BindingError.raiseUnreachableExpression(block.getExpressions().get(i).getSpan()));
             }
             if (boundExpression.getBoundExpressionType() == BoundExpressionType.BLOCK) {
                 analyzeBlock((BoundBlockExpression) boundExpression, (BlockExpression) block.getExpressions().get(i), returnType);

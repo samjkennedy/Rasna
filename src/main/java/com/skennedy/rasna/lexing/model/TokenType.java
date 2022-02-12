@@ -77,6 +77,7 @@ public enum TokenType {
     REF_KEYWORD("ref"),
     ENUM_KEYWORD("enum"),
     INTERFACE_KEYWORD("interface"),
+    WITH_KEYWORD("with"),
 
     //Types
     ANY_KEYWORD("Any"),

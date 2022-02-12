@@ -43,7 +43,8 @@ public enum BoundExpressionType {
     UNARY_OPERATOR,
     VARIABLE_DECLARATION,
     VARIABLE_EXPRESSION,
-    WHILE
+    WHILE,
+    WITH_EXPRESSION
 
 
 }
