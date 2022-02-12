@@ -1,6 +1,63 @@
-fn main() {
-    with (f := open("test.rasna")) {
-        a := 1
+struct Book {
+    page: String
+    closed: Bool
+}
+
+fn Book(): Book {
+    return Book{"", false}
+}
+
+fn write(ref book: Book, str: String) {
+    if (book.closed) {
+        print("Book is closed for writing\n")
+        return()
     }
-    a := true
+    book.page = str
+}
+
+fn read(ref book: Book) {
+    print(book.page)
+}
+
+fn close(ref book: Book): Bool {
+    book.closed = true
+    print("Book closed\n")
+    return true
+}
+
+struct Foo {
+    i: Int
+}
+
+fn close(ref foo: Foo): Bool {
+    print("Closing foo\n")
+    return true
+}
+
+fn returnInWith(i: Int): Bool {
+    with (f := Foo{i}) {
+        if (f.i == 1) {
+            return false
+        }
+    }
+    print("Exited `with` normally\n")
+    return true
+}
+
+fn main() {
+    with (book := Book()) {
+        book->write("Hello world!\n")
+        book->read()
+    }
+
+    with (f := open("src/test/resources/tests/with_resources.rasna")) {
+        c := f.readChar()
+        while (c != ((-1) as Char)) {
+            print(c)
+            c = f.readChar()
+        }
+    }
+    print('\n')
+    print(returnInWith(1))
+    print(returnInWith(2))
 }

@@ -188,16 +188,11 @@ public class Binder {
             errors.add(BindingError.raise("Resource `" + boundVariableDeclarationExpression.getVariable().getName() + "` in  `with` declaration must inherit the `Closable` interface", withBlockExpression.getResource().getIdentifier().getSpan()));
             return new BoundErrorExpression();
         }
-        BoundExpression boundBody = bind(withBlockExpression.getBody());
+        BoundBlockExpression boundBody = bindBlockExpression(withBlockExpression.getBody());
 
         BoundFunctionCallExpression closeCallExpression = new BoundFunctionCallExpression(close.get(), Collections.singletonList(new BoundVariableExpression(boundVariableDeclarationExpression.getVariable())));
 
-        List<BoundExpression> withBlockExpressions = new ArrayList<>();
-        withBlockExpressions.add(boundVariableDeclarationExpression);
-        withBlockExpressions.addAll(((BoundBlockExpression) boundBody).getExpressions());
-        withBlockExpressions.add(closeCallExpression);
-
-        return new BoundBlockExpression(withBlockExpressions);
+        return new BoundWithBlockExpression(boundVariableDeclarationExpression, boundBody, closeCallExpression);
     }
 
     private BoundExpression bindInterface(InterfaceExpression interfaceExpression) {

@@ -25,6 +25,25 @@ fn close(ref book: Book): Bool {
     return true
 }
 
+struct Foo {
+    i: Int
+}
+
+fn close(ref foo: Foo): Bool {
+    print("Closing foo\n")
+    return true
+}
+
+fn returnInWith(i: Int): Bool {
+    with (f := Foo{i}) {
+        if (f.i == 1) {
+            return false
+        }
+    }
+    print("Exited `with` normally\n")
+    return true
+}
+
 fn main() {
     with (book := Book()) {
         book->write("Hello world!\n")
@@ -38,4 +57,7 @@ fn main() {
             c = f.readChar()
         }
     }
+    print('\n')
+    print(returnInWith(1))
+    print(returnInWith(2))
 }

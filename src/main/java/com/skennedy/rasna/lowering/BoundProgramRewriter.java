@@ -115,9 +115,69 @@ public abstract class BoundProgramRewriter {
                 return rewriteCastExpression((BoundCastExpression) expression);
             case DO_WHILE:
                 return rewriteDoWhileExpression((BoundDoWhileExpression) expression);
+            case WITH_EXPRESSION:
+                return rewriteWithExpression((BoundWithBlockExpression) expression);
             default:
                 throw new IllegalStateException("Unexpected value: " + expression.getBoundExpressionType());
         }
+    }
+
+    private BoundBlockExpression rewriteWithExpression(BoundWithBlockExpression withBlockExpression) {
+        BoundVariableDeclarationExpression rewrittenVariableDeclaration = (BoundVariableDeclarationExpression) rewriteVariableDeclaration(withBlockExpression.getResource());
+
+        BoundBlockExpression body = rewriteBlockExpression(withBlockExpression.getBody());
+
+        rewriteWithBody(body, withBlockExpression.getCloseCall());
+
+        List<BoundExpression> rewrittenWithExpression = new ArrayList<>();
+        rewrittenWithExpression.add(rewrittenVariableDeclaration);
+        rewrittenWithExpression.addAll(body.getExpressions());
+
+        return new BoundBlockExpression(rewrittenWithExpression);
+    }
+
+    private void rewriteWithBody(BoundBlockExpression body, BoundFunctionCallExpression closeCall) {
+        List<BoundExpression> expressions = body.getExpressions();
+        boolean insertedCloseCall = false;
+        for (int i = 0; i < expressions.size(); i++) {
+            BoundExpression expression = expressions.get(i);
+            insertedCloseCall = insertedCloseCall || rewriteWithBodyExpression(expression, closeCall, expressions, i);
+            if (insertedCloseCall) {
+                i++;
+            }
+        }
+        if (!insertedCloseCall) {
+            body.getExpressions().add(closeCall);
+        }
+    }
+
+    //Recursively checks the with body for any returns, if one is found it inserts the close call before it to ensure the resource is closed
+    private boolean rewriteWithBodyExpression( BoundExpression expression, BoundFunctionCallExpression closeCall, List<BoundExpression> expressions, int i) {
+        boolean insertedCloseCall = false;
+        switch (expression.getBoundExpressionType()) {
+            case IF:
+                if (((BoundIfExpression) expression).getBody().getBoundExpressionType() == BoundExpressionType.BLOCK) {
+                    rewriteWithBody((BoundBlockExpression) ((BoundIfExpression) expression).getBody(), closeCall);
+                } else {
+                    rewriteWithBodyExpression(((BoundIfExpression) expression).getBody(), closeCall, expressions, i);
+                }
+                if (((BoundIfExpression) expression).getElseBody() != null) {
+                    if (((BoundIfExpression) expression).getBody().getBoundExpressionType() == BoundExpressionType.BLOCK) {
+                        rewriteWithBody((BoundBlockExpression) ((BoundIfExpression) expression).getElseBody(), closeCall);
+                    } else {
+                        rewriteWithBodyExpression(((BoundIfExpression) expression).getElseBody(), closeCall, expressions, i);
+                    }
+                }
+                break;
+            case BLOCK:
+                rewriteWithBody((BoundBlockExpression) expression, closeCall);
+                break;
+            case RETURN:
+                expressions.add(i, closeCall);
+                insertedCloseCall = true;
+                break;
+        }
+        return insertedCloseCall;
     }
 
     private BoundExpression rewriteTupleIndexExpression(BoundTupleIndexExpression tupleIndexExpression) {
