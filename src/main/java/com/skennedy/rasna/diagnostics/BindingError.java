@@ -118,7 +118,7 @@ public class BindingError {
 
     public static BindingError raiseUnknownIdentifier(String identifier, TextSpan span) {
 
-        return new BindingError("Unknown identifier `" + identifier + "`:", span);
+        return new BindingError("Identifier `" + identifier + "` is not defined within the current scope:", span);
     }
 
     public static BindingError raiseUnreachableExpression(TextSpan span) {

@@ -1,46 +1,6 @@
-interface Stack {
-    ref push(el: Int)
-    ref pop(): Int
-    isEmpty(): Bool
-}
-
-struct ArrayStack {
-    stack: Int[]
-    head: Int
-}
-
-fn NewStack(): ArrayStack {
-    return ArrayStack{Array[128, Int], 0}
-}
-
-fn push(ref stack: ArrayStack, el: Int) {
-    stack.stack[stack.head] = el
-    stack.head = stack.head + 1
-}
-
-fn pop(ref stack: ArrayStack): Int {
-    stack.head = stack.head - 1
-    el := stack.stack[stack.head]
-    return el
-}
-
-fn isEmpty(stack: ArrayStack): Bool {
-    return stack.head == 0
-}
-
-fn empty(ref stack: Stack) {
-    while (not stack.isEmpty()) {
-        stack->pop()
-    }
-}
-
 fn main() {
-    stack := NewStack()
-
-    stack->push(1)
-    stack->push(2)
-    stack->push(3)
-    print(stack.isEmpty())
-    stack->empty()
-    print(stack.isEmpty())
+    with (f := open("test.rasna")) {
+        a := 1
+    }
+    a := true
 }

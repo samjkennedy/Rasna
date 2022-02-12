@@ -27,7 +27,7 @@ public abstract class BoundProgramRewriter {
 
         BoundBlockExpression nestedProgram = new BoundBlockExpression(rewrittenExpressions);
 
-        return new BoundProgram(flatten(nestedProgram).getExpressions(), program.getErrors(), program.getWarnings());
+        return new BoundProgram(nestedProgram.getExpressions(), program.getErrors(), program.getWarnings());
     }
 
 
@@ -297,7 +297,7 @@ public abstract class BoundProgramRewriter {
             rewrittenInstructions.add(rewriteExpression(expression));
         }
 
-        BoundBlockExpression rewrittenBody = flatten(rewriteBlockExpression(new BoundBlockExpression(rewrittenInstructions)));
+        BoundBlockExpression rewrittenBody = rewriteBlockExpression(new BoundBlockExpression(rewrittenInstructions));
 
         if (rewrittenBody != functionDeclarationExpression.getBody()) {
             return new BoundFunctionDeclarationExpression(functionDeclarationExpression.getFunctionSymbol(), functionDeclarationExpression.getArguments(), rewrittenBody);
@@ -462,9 +462,9 @@ public abstract class BoundProgramRewriter {
         return new BoundBinaryExpression(left, boundBinaryExpression.getOperator(), right);
     }
 
-    BoundExpression rewriteBlockExpression(BoundBlockExpression boundBlockExpression) {
+    BoundBlockExpression rewriteBlockExpression(BoundBlockExpression boundBlockExpression) {
         if (boundBlockExpression.getExpressions().isEmpty()) {
-            return new BoundNoOpExpression();
+            return new BoundBlockExpression();
         }
         List<BoundExpression> rewrittenExpressions = new ArrayList<>();
 
